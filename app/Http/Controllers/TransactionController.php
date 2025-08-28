@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Models\Category;
 use Illuminate\Http\Request;
 
 class TransactionController extends Controller
@@ -10,7 +11,9 @@ class TransactionController extends Controller
     public function index()
     {
         $transactions = Transaction::with('category')->get();
-        return view('transactions.index', compact('transactions'));
+        $categories = Category::all();
+
+        return view('transactions.index', compact('transactions', 'categories'));
     }
 
     public function store(Request $request)
