@@ -19,7 +19,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('transactions', TransactionController::class)->except(['create', 'edit', 'show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');
-    Route::get('/debts', [DebtController::class, 'index'])->name('debts');
+    Route::resource('debts', DebtController::class);
     Route::get('/settings', [SettingController::class, 'index'])->name('settings');
 });
 
