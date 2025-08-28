@@ -5,7 +5,7 @@
   <title>{{ $title ?? 'FinanceFly' }}</title>
   @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-[var(--background-secondary)] font-sans">
+<body class="bg-gray-100 font-sans">
   <div class="relative flex size-full min-h-screen flex-col overflow-x-hidden">
     <div class="flex flex-1">
       {{-- Sidebar --}}
