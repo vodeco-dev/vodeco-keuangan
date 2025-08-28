@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Transaction;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        // kirim data ke view kalau perlu
+        $summary = Transaction::getSummary();
+
         return view('dashboard', [
             'title' => 'Dashboard',
-            'saldo' => 12345.67,
-            'pemasukan' => 5678.90,
-            'pengeluaran' => 3456.78,
+            'saldo' => $summary['saldo'],
+            'pemasukan' => $summary['pemasukan'],
+            'pengeluaran' => $summary['pengeluaran'],
         ]);
     }
 }
