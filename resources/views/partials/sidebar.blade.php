@@ -9,10 +9,10 @@
     <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-md bg-[var(--primary-color)] text-white">
       <span class="text-sm font-semibold">Dashboard</span>
     </a>
-    <a href="{{ route('transactions') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-md text-[var(--text-secondary)] hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)] transition-colors">
+    <a href="{{ route('transactions.index') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-md text-[var(--text-secondary)] hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)] transition-colors">
       <span class="text-sm font-medium">Transaksi</span>
     </a>
-    <a href="{{ route('categories') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-md text-[var(--text-secondary)] hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)] transition-colors">
+    <a href="{{ route('categories.index') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-md text-[var(--text-secondary)] hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)] transition-colors">
       <span class="text-sm font-medium">Kategori</span>
     </a>
     <a href="{{ route('reports') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-md text-[var(--text-secondary)] hover:bg-[var(--background-secondary)] hover:text-[var(--text-primary)] transition-colors">
