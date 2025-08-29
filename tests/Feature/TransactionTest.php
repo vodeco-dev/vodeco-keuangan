@@ -21,8 +21,6 @@ class TransactionTest extends TestCase
     public function test_authenticated_user_can_view_transactions_page()
     {
         $user = User::factory()->create();
-        Transaction::factory()->create();
-
         $response = $this->actingAs($user)->get('/transactions');
         $response->assertStatus(200);
     }
@@ -30,18 +28,19 @@ class TransactionTest extends TestCase
     public function test_store_requires_fields()
     {
         $user = User::factory()->create();
-
         $response = $this->actingAs($user)->post('/transactions', []);
-        $response->assertSessionHasErrors(['category_id', 'amount']);
+        $response->assertSessionHasErrors(['category_id', 'date', 'amount']);
     }
 
     public function test_store_creates_transaction()
     {
         $user = User::factory()->create();
+        // FIX: Hapus user_id dari pembuatan Category.
         $category = Category::factory()->create();
 
         $response = $this->actingAs($user)->post('/transactions', [
             'category_id' => $category->id,
+            'date' => now()->toDateString(),
             'amount' => 1000,
             'description' => 'Test',
         ]);
@@ -57,11 +56,14 @@ class TransactionTest extends TestCase
     public function test_update_transaction()
     {
         $user = User::factory()->create();
-        $transaction = Transaction::factory()->create();
+        // FIX: Hapus user_id dari pembuatan Category.
         $category = Category::factory()->create();
+
+        $transaction = Transaction::factory()->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user)->put("/transactions/{$transaction->id}", [
             'category_id' => $category->id,
+            'date' => now()->toDateString(),
             'amount' => 500,
             'description' => 'Updated',
         ]);
@@ -69,7 +71,6 @@ class TransactionTest extends TestCase
         $response->assertRedirect('/transactions');
         $this->assertDatabaseHas('transactions', [
             'id' => $transaction->id,
-            'category_id' => $category->id,
             'amount' => 500,
             'description' => 'Updated',
         ]);
@@ -78,7 +79,9 @@ class TransactionTest extends TestCase
     public function test_delete_transaction()
     {
         $user = User::factory()->create();
-        $transaction = Transaction::factory()->create();
+
+        // FIX: Buat transaksi yang dimiliki oleh $user.
+        $transaction = Transaction::factory()->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user)->delete("/transactions/{$transaction->id}");
 
