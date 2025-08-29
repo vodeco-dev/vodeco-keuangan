@@ -4,50 +4,30 @@ namespace App\Http\Controllers;
 
 use App\Models\Debt;
 use App\Models\Transaction;
+use App\Services\DebtService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class DebtController extends Controller
 {
+    public function __construct(private DebtService $debtService)
+    {
+    }
+
     public function index(Request $request)
     {
-        $query = Debt::with('payments')->latest();
+        $debts = $this->debtService->getDebts($request);
+        $summary = $this->debtService->getSummary($debts);
 
-        // Filter berdasarkan Tipe
-        if ($request->filled('type_filter')) {
-            $query->where('type', $request->type_filter);
-        }
-
-        // Filter berdasarkan Status
-        if ($request->filled('status_filter')) {
-            $query->where('status', $request->status_filter);
-        }
-
-        // Pencarian
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('description', 'like', '%' . $request->search . '%')
-                  ->orWhere('related_party', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        $debts = $query->get();
-
-        // Kalkulasi untuk kartu ringkasan
-        $totalPiutang = Debt::where('type', 'piutang')->sum('amount');
-        $totalHutang = Debt::where('type', 'hutang')->sum('amount');
-        $totalBelumLunas = $debts->where('status', 'belum lunas')->sum('remaining_amount');
-        $totalLunas = Debt::where('status', 'lunas')->sum('amount');
-
-
-        return view('debts.index', [
-            'title' => 'Hutang & Piutang',
-            'debts' => $debts,
-            'totalPiutang' => $totalPiutang,
-            'totalHutang' => $totalHutang,
-            'totalBelumLunas' => $totalBelumLunas,
-            'totalLunas' => $totalLunas,
-        ]);
+        return view(
+            'debts.index',
+            array_merge(
+                [
+                    'title' => 'Hutang & Piutang',
+                    'debts' => $debts,
+                ],
+                $summary
+            )
+        );
     }
 
     public function store(Request $request)
