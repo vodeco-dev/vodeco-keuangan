@@ -10,13 +10,11 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('category_id')->constrained()->cascadeOnDelete();
             $table->integer('amount');
             $table->string('description')->nullable();
-            
-            // TAMBAHKAN BARIS INI
-            $table->date('date')->nullable(); 
-
+            $table->date('date')->nullable();
             $table->timestamps();
         });
     }

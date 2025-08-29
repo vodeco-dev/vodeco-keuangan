@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Debt extends Model
 {
@@ -11,37 +12,39 @@ class Debt extends Model
 
     protected $fillable = [
         'description',
-        'related_party', // Tambahkan ini
+        'related_party',
         'type',
         'amount',
         'due_date',
         'status',
+        'user_id',
     ];
 
-    // Relasi ke model Payment
     public function payments()
     {
         return $this->hasMany(Payment::class);
     }
 
-    // Accessor untuk menghitung total yang sudah dibayar
     public function getPaidAmountAttribute()
     {
         return $this->payments()->sum('amount');
     }
 
-    // Accessor untuk menghitung sisa tagihan
     public function getRemainingAmountAttribute()
     {
         return $this->amount - $this->paid_amount;
     }
 
-    // Accessor untuk menghitung progres dalam persen
     public function getProgressAttribute()
     {
         if ($this->amount == 0) {
             return 100;
         }
         return ($this->paid_amount / $this->amount) * 100;
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class);
     }
 }

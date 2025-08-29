@@ -10,57 +10,46 @@ class Transaction extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'category_id',
+        'user_id',
         'amount',
         'description',
         'date',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'date' => 'date',
     ];
 
-    /**
-     * Mendefinisikan relasi ke model Category.
-     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * Menghitung ringkasan keuangan (pemasukan, pengeluaran, saldo).
-     *
-     * @return array
-     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class);
+    }
+
     public static function getSummary(): array
     {
-        // Menghitung total pemasukan
+        $userId = auth()->id();
+
         $pemasukan = self::query()
+            ->where('user_id', $userId)
             ->whereHas('category', function ($query) {
                 $query->where('type', 'pemasukan');
             })
             ->sum('amount');
 
-        // Menghitung total pengeluaran
         $pengeluaran = self::query()
+            ->where('user_id', $userId)
             ->whereHas('category', function ($query) {
                 $query->where('type', 'pengeluaran');
             })
             ->sum('amount');
 
-        // Menghitung saldo
         $saldo = $pemasukan - $pengeluaran;
 
         return [

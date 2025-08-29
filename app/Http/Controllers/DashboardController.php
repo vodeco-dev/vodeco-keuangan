@@ -12,7 +12,6 @@ class DashboardController extends Controller
     {
         $summary = Transaction::getSummary();
 
-        // ... (kode untuk $trendsQuery dan $monthly_trends tetap sama) ...
         $trendsQuery = Transaction::query()
             ->select(
                 DB::raw("strftime('%Y', date) as year, strftime('%m', date) as month"),
@@ -20,6 +19,7 @@ class DashboardController extends Controller
                 DB::raw('SUM(CASE WHEN categories.type = "pengeluaran" THEN amount ELSE 0 END) as pengeluaran')
             )
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
+            ->where('transactions.user_id', $request->user()->id)
             ->groupBy('year', 'month')
             ->orderBy('year', 'asc')
             ->orderBy('month', 'asc');
@@ -40,10 +40,10 @@ class DashboardController extends Controller
             $max_value = max($max_pemasukan, $max_pengeluaran);
         }
 
-        // (TAMBAHKAN INI) Query untuk mengambil 5 transaksi terbaru
-        $recent_transactions = Transaction::with('category') // Eager load relasi category
-            ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
-            ->take(5) // Ambil 5 data
+        $recent_transactions = Transaction::with('category')
+            ->where('user_id', $request->user()->id)
+            ->orderBy('date', 'desc')
+            ->take(5)
             ->get();
 
         return view('dashboard', [
@@ -53,7 +53,7 @@ class DashboardController extends Controller
             'pengeluaran'         => $summary['pengeluaran'],
             'monthly_trends'      => $monthly_trends,
             'max_trend_value'     => $max_value,
-            'recent_transactions' => $recent_transactions, // (TAMBAHKAN INI) Kirim data ke view
+            'recent_transactions' => $recent_transactions,
         ]);
     }
 }
