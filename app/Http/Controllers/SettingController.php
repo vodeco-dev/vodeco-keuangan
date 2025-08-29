@@ -19,15 +19,17 @@ class SettingController extends Controller
     }
 
     /**
-     * Menyimpan pengaturan aplikasi.
+     * Memperbarui pengaturan aplikasi.
      */
     public function update(Request $request): RedirectResponse
     {
+        // Logika inti untuk menyimpan pengaturan
         foreach ($request->except('_token') as $key => $value) {
             Setting::updateOrCreate(['key' => $key], ['value' => $value]);
         }
 
+        // Redirect kembali dengan pesan sukses
         return redirect()->route('settings.index')
-            ->with('success', 'Pengaturan berhasil disimpan.');
+            ->with('success', 'Pengaturan berhasil diperbarui.');
     }
 }
