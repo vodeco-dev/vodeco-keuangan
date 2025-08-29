@@ -4,12 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 
 class TransactionController extends Controller
 {
+    public function __construct(private TransactionService $transactionService)
+    {
+    }
+
     /**
      * Menampilkan daftar semua transaksi dengan filter dan paginasi.
      *
@@ -18,51 +23,17 @@ class TransactionController extends Controller
      */
     public function index(Request $request): View
     {
-        // Mengambil query builder untuk transaksi, diurutkan dari yang terbaru
-        $transactionsQuery = Transaction::with('category')->latest('date');
-
-        // Filter berdasarkan pencarian deskripsi
-        if ($request->filled('search')) {
-            $transactionsQuery->where('description', 'like', '%' . $request->search . '%');
-        }
-
-        // Filter berdasarkan tanggal (diperbaiki dari created_at menjadi date)
-        if ($request->filled('date')) {
-            $transactionsQuery->whereDate('date', $request->date);
-        }
-
-        // Filter berdasarkan ID kategori
-        if ($request->filled('category_id')) {
-            $transactionsQuery->where('category_id', $request->category_id);
-        }
-
-        // Filter berdasarkan tipe kategori (pemasukan/pengeluaran)
-        if ($request->filled('type')) {
-            $transactionsQuery->whereHas('category', function ($query) use ($request) {
-                $query->where('type', $request->type);
-            });
-        }
-        
-        // Ambil data transaksi dengan paginasi (10 item per halaman)
-        $transactions = $transactionsQuery->paginate(10);
-
-        // Ambil semua kategori untuk dropdown filter
+        $transactions = $this->transactionService->getTransactions($request);
         $categories = Category::orderBy('name')->get();
+        $summary = $this->transactionService->getSummary();
 
-        // Hitung total pemasukan untuk ringkasan
-        $totalPemasukan = Transaction::whereHas('category', function ($query) {
-            $query->where('type', 'pemasukan');
-        })->sum('amount');
-
-        // Hitung total pengeluaran untuk ringkasan
-        $totalPengeluaran = Transaction::whereHas('category', function ($query) {
-            $query->where('type', 'pengeluaran');
-        })->sum('amount');
-
-        // Hitung saldo
-        $saldo = $totalPemasukan - $totalPengeluaran;
-
-        return view('transactions.index', compact('transactions', 'categories', 'totalPemasukan', 'totalPengeluaran', 'saldo'));
+        return view(
+            'transactions.index',
+            array_merge(
+                compact('transactions', 'categories'),
+                $summary
+            )
+        );
     }
 
     /**
