@@ -5,7 +5,7 @@
   <div class="flex items-center mb-8 text-center">
     {{-- Memanggil komponen logo yang sudah Anda buat sebelumnya --}}
     <a href="{{ route('dashboard') }}">
-      <span class="text-2xl font-bold text-gray-900 text-center">Vodeco</span>
+      <span class="text-2xl font-bold text-blue-900 text-center">Manajemen Keuangan</span>
     </a>
 
   </div>
@@ -77,7 +77,7 @@
 
   {{-- Menu Pengaturan di Bagian Bawah --}}
   <div class="mt-auto flex flex-col gap-2">
-    <a href="{{ route('settings') }}"
+    <a href="{{ route('settings.index') }}"
       class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
               {{ request()->routeIs('settings') 
                  ? 'bg-purple-700 text-white font-semibold shadow-lg'

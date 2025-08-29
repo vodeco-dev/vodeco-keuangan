@@ -1,59 +1,108 @@
-{{-- resources/views/settings/index.blade.php --}}
+@extends('layouts.app')
 
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Settings') }}
-        </h2>
-    </x-slot>
+@section('content')
+    <h2 class="text-3xl font-bold text-gray-800 mb-8">Pengaturan</h2>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    <form method="POST" action="{{ route('settings.update') }}">
-                        @csrf
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {{-- Kolom 1 --}}
+        <div class="space-y-6">
+            {{-- Kartu Akun --}}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Akun</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Ubah Profil</span>
+                        {{-- Link ke halaman profil yang sudah ada --}}
+                        <a href="{{ route('profile.edit') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Ubah</a>
+                    </li>
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Keamanan (Kata Sandi)</span>
+                         {{-- Link ke halaman profil yang sama, bisa di-anchor ke bagian password --}}
+                        <a href="{{ route('profile.edit') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Ubah</a>
+                    </li>
+                </ul>
+            </div>
 
-                        <div class="mb-4">
-                            <x-input-label for="app_name" :value="__('App Name')" />
-                            <x-text-input
-                                id="app_name"
-                                name="app_name"
-                                type="text"
-                                class="mt-1 block w-full"
-                                value="{{ old('app_name', $settings['app_name'] ?? '') }}"
-                            />
-                            <x-input-error :messages="$errors->get('app_name')" class="mt-2" />
-                        </div>
+            {{-- Kartu Aplikasi --}}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Aplikasi</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Preferensi Tampilan</span>
+                        <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Kelola</button>
+                    </li>
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Pengingat</span>
+                        <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Atur</button>
+                    </li>
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Saldo Awal</span>
+                        <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Atur</button>
+                    </li>
+                </ul>
+            </div>
+        </div>
 
-                        <div class="mb-4">
-                            <x-input-label for="currency" :value="__('Currency')" />
-                            <x-text-input
-                                id="currency"
-                                name="currency"
-                                type="text"
-                                class="mt-1 block w-full"
-                                value="{{ old('currency', $settings['currency'] ?? '') }}"
-                            />
-                            <x-input-error :messages="$errors->get('currency')" class="mt-2" />
-                        </div>
+        {{-- Kolom 2 --}}
+        <div class="space-y-6">
+            {{-- Kartu Manajemen Data --}}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Manajemen Data</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Ekspor Data</span>
+                        <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Ekspor</button>
+                    </li>
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Impor Data</span>
+                        <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Impor</button>
+                    </li>
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Hapus Semua Data</span>
+                        <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Hapus</button>
+                    </li>
+                </ul>
+            </div>
 
-                        <div class="mb-4">
-                            <x-input-label for="theme" :value="__('Theme')" />
-                            <x-text-input
-                                id="theme"
-                                name="theme"
-                                type="text"
-                                class="mt-1 block w-full"
-                                value="{{ old('theme', $settings['theme'] ?? '') }}"
-                            />
-                            <x-input-error :messages="$errors->get('theme')" class="mt-2" />
-                        </div>
+            {{-- Kartu Tentang Aplikasi --}}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Tentang Aplikasi</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Versi Aplikasi</span>
+                        <span class="text-sm text-gray-500">v1.0.0</span>
+                    </li>
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Kebijakan Privasi</span>
+                        <a href="#" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Lihat</a>
+                    </li>
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Syarat & Ketentuan</span>
+                        <a href="#" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Lihat</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
 
-                        <x-primary-button>{{ __('Save') }}</x-primary-button>
-                    </form>
-                </div>
+        {{-- Kolom 3 --}}
+        <div class="lg:col-span-1 md:col-span-2">
+            <div class="bg-white rounded-lg shadow-sm p-6 h-full">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Bantuan & Dukungan</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Pusat Bantuan</span>
+                        <a href="#" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Kunjungi</a>
+                    </li>
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Hubungi Kami</span>
+                        <a href="#" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Kontak</a>
+                    </li>
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Laporkan Masalah</span>
+                        <a href="#" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Laporkan</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
-</x-app-layout>
+@endsection

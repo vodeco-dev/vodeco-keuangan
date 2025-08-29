@@ -6,21 +6,28 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('debts', function (Blueprint $table) {
             $table->id();
-            $table->string('creditor');
+            $table->string('description');
+            $table->string('related_party');
+            $table->enum('type', ['hutang', 'piutang']);
             $table->decimal('amount', 15, 2);
-            $table->date('due_date');
-            $table->string('status')->default('pending');
+            $table->date('due_date')->nullable();
+            $table->string('status')->default('belum lunas');
             $table->timestamps();
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('debts');
     }
 };
-
