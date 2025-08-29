@@ -4,19 +4,37 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB; // <-- Import DB Facade
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Transaction extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'category_id',
         'amount',
         'description',
+        'date',
     ];
 
-    public function category()
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'date' => 'date',
+    ];
+
+    /**
+     * Mendefinisikan relasi ke model Category.
+     */
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
@@ -26,19 +44,21 @@ class Transaction extends Model
      *
      * @return array
      */
-    public static function getSummary()
+    public static function getSummary(): array
     {
         // Menghitung total pemasukan
         $pemasukan = self::query()
-            ->join('categories', 'transactions.category_id', '=', 'categories.id')
-            ->where('categories.type', 'pemasukan')
-            ->sum('transactions.amount');
+            ->whereHas('category', function ($query) {
+                $query->where('type', 'pemasukan');
+            })
+            ->sum('amount');
 
         // Menghitung total pengeluaran
         $pengeluaran = self::query()
-            ->join('categories', 'transactions.category_id', '=', 'categories.id')
-            ->where('categories.type', 'pengeluaran')
-            ->sum('transactions.amount');
+            ->whereHas('category', function ($query) {
+                $query->where('type', 'pengeluaran');
+            })
+            ->sum('amount');
 
         // Menghitung saldo
         $saldo = $pemasukan - $pengeluaran;

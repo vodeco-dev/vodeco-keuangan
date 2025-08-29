@@ -4,43 +4,69 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class CategoryController extends Controller
 {
-    public function index()
+    /**
+     * Menampilkan halaman daftar kategori, dipisahkan berdasarkan tipe.
+     */
+    public function index(): View
     {
-        $categories = Category::all();
-        return view('categories.index', compact('categories'));
+        // Mengambil semua kategori dan mengelompokkannya berdasarkan 'type'
+        $categories = Category::orderBy('name')->get()->groupBy('type');
+
+        // Memisahkan koleksi menjadi pemasukan dan pengeluaran
+        $pemasukan = $categories->get('pemasukan', collect());
+        $pengeluaran = $categories->get('pengeluaran', collect());
+
+        return view('categories.index', compact('pemasukan', 'pengeluaran'));
     }
 
-    public function store(Request $request)
+    /**
+     * Menyimpan kategori baru ke database.
+     */
+    public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'string', 'max:255'],
+        $request->validate([
+            'name' => 'required|string|max:255|unique:categories,name',
+            'type' => 'required|in:pemasukan,pengeluaran',
         ]);
 
-        Category::create($validated);
+        Category::create($request->all());
 
-        return redirect()->route('categories.index');
+        return redirect()->route('categories.index')->with('success', 'Kategori baru berhasil ditambahkan.');
     }
 
-    public function update(Request $request, Category $category)
+    /**
+     * Memperbarui kategori yang sudah ada.
+     */
+    public function update(Request $request, Category $category): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'string', 'max:255'],
+        $request->validate([
+            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
+            'type' => 'required|in:pemasukan,pengeluaran',
         ]);
 
-        $category->update($validated);
+        $category->update($request->all());
 
-        return redirect()->route('categories.index');
+        return redirect()->route('categories.index')->with('success', 'Kategori berhasil diperbarui.');
     }
 
-    public function destroy(Category $category)
+    /**
+     * Menghapus kategori dari database.
+     */
+    public function destroy(Category $category): RedirectResponse
     {
+        // Mencegah penghapusan jika kategori masih digunakan oleh transaksi
+        if ($category->transactions()->exists()) {
+            return redirect()->route('categories.index')
+                ->with('error', 'Kategori "' . $category->name . '" tidak dapat dihapus karena masih digunakan oleh transaksi.');
+        }
+
         $category->delete();
 
-        return redirect()->route('categories.index');
+        return redirect()->route('categories.index')->with('success', 'Kategori berhasil dihapus.');
     }
 }

@@ -16,7 +16,7 @@ Route::get('/', function () {
 // yang bisa mengakses halaman-halaman ini.
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('transactions', TransactionController::class)->except(['create', 'edit', 'show']);
+    Route::resource('transactions', TransactionController::class)->except(['edit', 'show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');
     Route::resource('debts', DebtController::class);
