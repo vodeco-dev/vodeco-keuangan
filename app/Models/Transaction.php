@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
 
 class Transaction extends Model
 {
@@ -46,27 +47,23 @@ class Transaction extends Model
      */
     public static function getSummary(): array
     {
-        // Menghitung total pemasukan
-        $pemasukan = self::query()
-            ->whereHas('category', function ($query) {
-                $query->where('type', 'pemasukan');
-            })
-            ->sum('amount');
+        return Cache::remember('transaction_summary', 300, function () {
+            $summary = self::query()
+                ->join('categories', 'transactions.category_id', '=', 'categories.id')
+                ->selectRaw('
+                    SUM(CASE WHEN categories.type = "pemasukan" THEN transactions.amount ELSE 0 END) AS pemasukan,
+                    SUM(CASE WHEN categories.type = "pengeluaran" THEN transactions.amount ELSE 0 END) AS pengeluaran
+                ')
+                ->first();
 
-        // Menghitung total pengeluaran
-        $pengeluaran = self::query()
-            ->whereHas('category', function ($query) {
-                $query->where('type', 'pengeluaran');
-            })
-            ->sum('amount');
+            $pemasukan = $summary->pemasukan ?? 0;
+            $pengeluaran = $summary->pengeluaran ?? 0;
 
-        // Menghitung saldo
-        $saldo = $pemasukan - $pengeluaran;
-
-        return [
-            'pemasukan'   => $pemasukan,
-            'pengeluaran' => $pengeluaran,
-            'saldo'       => $saldo,
-        ];
+            return [
+                'pemasukan'   => $pemasukan,
+                'pengeluaran' => $pengeluaran,
+                'saldo'       => $pemasukan - $pengeluaran,
+            ];
+        });
     }
 }
