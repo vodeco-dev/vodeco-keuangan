@@ -26,12 +26,12 @@ class CategoryTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_store_requires_name()
+    public function test_store_requires_name_and_type()
     {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->post('/categories', []);
-        $response->assertSessionHasErrors('name');
+        $response->assertSessionHasErrors(['name', 'type']);
     }
 
     public function test_store_creates_category()
@@ -40,11 +40,13 @@ class CategoryTest extends TestCase
 
         $response = $this->actingAs($user)->post('/categories', [
             'name' => 'Food',
+            'type' => 'pemasukan',
         ]);
 
         $response->assertRedirect('/categories');
         $this->assertDatabaseHas('categories', [
             'name' => 'Food',
+            'type' => 'pemasukan',
         ]);
     }
 
@@ -55,12 +57,14 @@ class CategoryTest extends TestCase
 
         $response = $this->actingAs($user)->put("/categories/{$category->id}", [
             'name' => 'Updated',
+            'type' => 'pengeluaran',
         ]);
 
         $response->assertRedirect('/categories');
         $this->assertDatabaseHas('categories', [
             'id' => $category->id,
             'name' => 'Updated',
+            'type' => 'pengeluaran',
         ]);
     }
 
