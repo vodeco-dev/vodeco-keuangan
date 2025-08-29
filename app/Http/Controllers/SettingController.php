@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Setting;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class SettingController extends Controller
 {
@@ -20,12 +21,15 @@ class SettingController extends Controller
     /**
      * Memperbarui pengaturan aplikasi.
      */
-    public function update(Request $request)
+    public function update(Request $request): RedirectResponse
     {
+        // Logika inti untuk menyimpan pengaturan
         foreach ($request->except('_token') as $key => $value) {
             Setting::updateOrCreate(['key' => $key], ['value' => $value]);
         }
 
-        return redirect()->route('settings.index')->with('success', 'Pengaturan berhasil diperbarui.');
+        // Redirect kembali dengan pesan sukses
+        return redirect()->route('settings.index')
+            ->with('success', 'Pengaturan berhasil diperbarui.');
     }
 }

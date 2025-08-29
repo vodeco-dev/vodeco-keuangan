@@ -4,50 +4,30 @@ namespace App\Http\Controllers;
 
 use App\Models\Debt;
 use App\Models\Transaction;
+use App\Services\DebtService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class DebtController extends Controller
 {
+    public function __construct(private DebtService $debtService)
+    {
+    }
+
     public function index(Request $request)
     {
-        $query = Debt::with('payments')->latest();
+        $debts = $this->debtService->getDebts($request);
+        $summary = $this->debtService->getSummary($debts);
 
-        // Filter berdasarkan Tipe
-        if ($request->filled('type_filter')) {
-            $query->where('type', $request->type_filter);
-        }
-
-        // Filter berdasarkan Status
-        if ($request->filled('status_filter')) {
-            $query->where('status', $request->status_filter);
-        }
-
-        // Pencarian
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('description', 'like', '%' . $request->search . '%')
-                  ->orWhere('related_party', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        $debts = $query->get();
-
-        // Kalkulasi untuk kartu ringkasan
-        $totalPiutang = Debt::where('type', 'piutang')->sum('amount');
-        $totalHutang = Debt::where('type', 'hutang')->sum('amount');
-        $totalBelumLunas = $debts->where('status', 'belum lunas')->sum('remaining_amount');
-        $totalLunas = Debt::where('status', 'lunas')->sum('amount');
-
-
-        return view('debts.index', [
-            'title' => 'Hutang & Piutang',
-            'debts' => $debts,
-            'totalPiutang' => $totalPiutang,
-            'totalHutang' => $totalHutang,
-            'totalBelumLunas' => $totalBelumLunas,
-            'totalLunas' => $totalLunas,
-        ]);
+        return view(
+            'debts.index',
+            array_merge(
+                [
+                    'title' => 'Hutang & Piutang',
+                    'debts' => $debts,
+                ],
+                $summary
+            )
+        );
     }
 
     public function store(Request $request)
@@ -80,30 +60,36 @@ class DebtController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $debt->payments()->create($request->all());
+        try {
+            DB::transaction(function () use ($request, $debt) {
+                $debt->payments()->create($request->all());
 
-        // Cek jika sudah lunas
-        if ($debt->paid_amount >= $debt->amount) {
-            $debt->update(['status' => 'lunas']);
+                // Cek jika sudah lunas
+                if ($debt->paid_amount >= $debt->amount) {
+                    $debt->update(['status' => 'lunas']);
 
-            // Buat transaksi baru
-            $categoryType = $debt->type == 'piutang' ? 'pemasukan' : 'pengeluaran';
-            
-            // Cari kategori default atau buat jika tidak ada
-            $category = \App\Models\Category::firstOrCreate(
-                ['name' => 'Pelunasan ' . ucfirst($debt->type)],
-                ['type' => $categoryType]
-            );
+                    // Buat transaksi baru
+                    $categoryType = $debt->type == 'piutang' ? 'pemasukan' : 'pengeluaran';
 
-            Transaction::create([
-                'category_id' => $category->id,
-                'date' => now(),
-                'amount' => $debt->amount,
-                'description' => 'Pelunasan: ' . $debt->description,
-            ]);
+                    // Cari kategori default atau buat jika tidak ada
+                    $category = \App\Models\Category::firstOrCreate(
+                        ['name' => 'Pelunasan ' . ucfirst($debt->type)],
+                        ['type' => $categoryType]
+                    );
+
+                    Transaction::create([
+                        'category_id' => $category->id,
+                        'date' => now(),
+                        'amount' => $debt->amount,
+                        'description' => 'Pelunasan: ' . $debt->description,
+                    ]);
+                }
+            });
+
+            return back()->with('success', 'Pembayaran berhasil dicatat.');
+        } catch (\Exception $e) {
+            return back()->withErrors('Terjadi kesalahan saat menyimpan pembayaran.');
         }
-
-        return back()->with('success', 'Pembayaran berhasil dicatat.');
     }
 
     public function destroy(Debt $debt)
