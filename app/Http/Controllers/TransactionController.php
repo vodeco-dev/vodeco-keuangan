@@ -102,19 +102,6 @@ class TransactionController extends Controller
     }
 
     /**
-     * Menampilkan form untuk mengedit transaksi.
-     *
-     * @param  \App\Models\Transaction  $transaction
-     * @return \Illuminate\View\View
-     */
-    public function edit(Transaction $transaction): View
-    {
-        // Ambil kategori dan kelompokkan berdasarkan tipe
-        $categories = Category::orderBy('type')->orderBy('name')->get()->groupBy('type');
-        return view('transactions.edit', compact('transaction', 'categories'));
-    }
-
-    /**
      * Memperbarui data transaksi di dalam database.
      *
      * @param  \Illuminate\Http\Request  $request
