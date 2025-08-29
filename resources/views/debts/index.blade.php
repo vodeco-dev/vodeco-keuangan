@@ -1,119 +1,199 @@
-{{-- resources/views/debts/index.blade.php --}}
+@extends('layouts.app')
 
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Debts') }}
-        </h2>
-    </x-slot>
+@section('content')
+<div x-data="{ addModal: false, paymentModal: false, selectedDebt: {} }">
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    <form method="POST" action="{{ route('debts.store') }}" class="mb-6">
-                        @csrf
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div>
-                                <x-input-label for="creditor" :value="__('Creditor')" />
-                                <x-text-input id="creditor" name="creditor" type="text" class="mt-1 block w-full" required />
-                                <x-input-error :messages="$errors->get('creditor')" class="mt-2" />
-                            </div>
-                            <div>
-                                <x-input-label for="amount" :value="__('Amount')" />
-                                <x-text-input id="amount" name="amount" type="number" step="0.01" class="mt-1 block w-full" required />
-                                <x-input-error :messages="$errors->get('amount')" class="mt-2" />
-                            </div>
-                            <div>
-                                <x-input-label for="due_date" :value="__('Due Date')" />
-                                <x-text-input id="due_date" name="due_date" type="date" class="mt-1 block w-full" required />
-                                <x-input-error :messages="$errors->get('due_date')" class="mt-2" />
-                            </div>
-                            <div>
-                                <x-input-label for="status" :value="__('Status')" />
-                                <select id="status" name="status" class="mt-1 block w-full rounded-md border-gray-300">
-                                    <option value="pending">Pending</option>
-                                    <option value="paid">Paid</option>
-                                </select>
-                                <x-input-error :messages="$errors->get('status')" class="mt-2" />
-                            </div>
-                        </div>
-                        <div class="mt-4">
-                            <x-primary-button>{{ __('Add Debt') }}</x-primary-button>
-                        </div>
-                    </form>
+    {{-- Header --}}
+    <div class="flex justify-between items-center mb-8">
+        <h2 class="text-3xl font-bold text-gray-800">Manajemen Hutang & Piutang</h2>
+        <button @click="addModal = true" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            <span>Tambah Catatan Baru</span>
+        </button>
+    </div>
 
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creditor</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-3 py-2"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            @foreach($debts as $debt)
-                                @php
-                                    $dueClass = '';
-                                    if ($debt->status !== 'paid') {
-                                        if ($debt->due_date->isPast()) {
-                                            $dueClass = 'text-red-600';
-                                        } elseif ($debt->due_date->diffInDays(now()) <= 3) {
-                                            $dueClass = 'text-yellow-600';
-                                        }
-                                    }
-                                @endphp
-                                <tr x-data="{ edit: false }">
-                                    <td class="px-3 py-2">
-                                        <span x-show="!edit">{{ $debt->creditor }}</span>
-                                        <x-text-input x-show="edit" name="creditor" class="w-full" x-ref="creditor" value="{{ $debt->creditor }}" />
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        <span x-show="!edit">{{ number_format($debt->amount, 2) }}</span>
-                                        <x-text-input x-show="edit" name="amount" type="number" step="0.01" class="w-full" x-ref="amount" value="{{ $debt->amount }}" />
-                                    </td>
-                                    <td class="px-3 py-2 {{ $dueClass }}">
-                                        <span x-show="!edit">{{ $debt->due_date->format('Y-m-d') }}</span>
-                                        <x-text-input x-show="edit" name="due_date" type="date" class="w-full" x-ref="due_date" value="{{ $debt->due_date->format('Y-m-d') }}" />
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        <span x-show="!edit" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $debt->status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">{{ ucfirst($debt->status) }}</span>
-                                        <select x-show="edit" name="status" x-ref="status" class="rounded-md border-gray-300 w-full">
-                                            <option value="pending" @selected($debt->status === 'pending')>Pending</option>
-                                            <option value="paid" @selected($debt->status === 'paid')>Paid</option>
-                                        </select>
-                                    </td>
-                                    <td class="px-3 py-2 text-right space-x-2">
-                                        <div x-show="!edit" class="space-x-2">
-                                            <x-secondary-button x-on:click.prevent="edit = true">{{ __('Edit') }}</x-secondary-button>
-                                            <form method="POST" action="{{ route('debts.destroy', $debt) }}" class="inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <x-danger-button>{{ __('Delete') }}</x-danger-button>
-                                            </form>
-                                        </div>
-                                        <div x-show="edit" class="space-x-2">
-                                            <form method="POST" action="{{ route('debts.update', $debt) }}" class="inline">
-                                                @csrf
-                                                @method('PUT')
-                                                <input type="hidden" name="creditor" x-bind:value="$refs.creditor.value" />
-                                                <input type="hidden" name="amount" x-bind:value="$refs.amount.value" />
-                                                <input type="hidden" name="due_date" x-bind:value="$refs.due_date.value" />
-                                                <input type="hidden" name="status" x-bind:value="$refs.status.value" />
-                                                <x-primary-button>{{ __('Save') }}</x-primary-button>
-                                            </form>
-                                            <x-secondary-button x-on:click.prevent="edit = false">{{ __('Cancel') }}</x-secondary-button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    {{-- Summary Cards --}}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <p class="text-sm text-gray-500">Total Piutang</p>
+            <p class="text-2xl font-semibold text-blue-600">Rp{{ number_format($totalPiutang, 0, ',', '.') }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <p class="text-sm text-gray-500">Total Hutang</p>
+            <p class="text-2xl font-semibold text-red-600">Rp{{ number_format($totalHutang, 0, ',', '.') }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <p class="text-sm text-gray-500">Belum Lunas</p>
+            <p class="text-2xl font-semibold text-orange-500">Rp{{ number_format($totalBelumLunas, 0, ',', '.') }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <p class="text-sm text-gray-500">Sudah Lunas</p>
+            <p class="text-2xl font-semibold text-green-600">Rp{{ number_format($totalLunas, 0, ',', '.') }}</p>
         </div>
     </div>
-</x-app-layout>
 
+    {{-- Main Content Area --}}
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        {{-- Filter & Search Form --}}
+        <form method="GET" action="{{ route('debts.index') }}">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-4">
+                    <select name="type_filter" onchange="this.form.submit()" class="border-gray-300 rounded-lg text-sm">
+                        <option value="">Tipe: Semua</option>
+                        <option value="piutang" {{ request('type_filter') == 'piutang' ? 'selected' : '' }}>Piutang</option>
+                        <option value="hutang" {{ request('type_filter') == 'hutang' ? 'selected' : '' }}>Hutang</option>
+                    </select>
+                    <select name="status_filter" onchange="this.form.submit()" class="border-gray-300 rounded-lg text-sm">
+                        <option value="">Status: Semua</option>
+                        <option value="belum lunas" {{ request('status_filter') == 'belum lunas' ? 'selected' : '' }}>Belum Lunas</option>
+                        <option value="lunas" {{ request('status_filter') == 'lunas' ? 'selected' : '' }}>Lunas</option>
+                    </select>
+                </div>
+                <div class="relative">
+                    <input name="search" class="pl-10 pr-4 py-2 border rounded-lg text-sm" placeholder="Cari..." type="text" value="{{ request('search') }}">
+                    <button type="submit" class="absolute inset-y-0 left-0 pl-3 flex items-center">
+                        <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        {{-- Table --}}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="border-b">
+                    <tr>
+                        <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Deskripsi</th>
+                        <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Pihak Terkait</th>
+                        <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Tipe</th>
+                        <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Total</th>
+                        <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Dibayar</th>
+                        <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Sisa</th>
+                        <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Progres</th>
+                        <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Jatuh Tempo</th>
+                        <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Status</th>
+                        <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    @forelse ($debts as $debt)
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ $debt->description }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500">{{ $debt->related_party }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            @if ($debt->type == 'piutang')
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Piutang</span>
+                            @else
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Hutang</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Rp{{ number_format($debt->amount, 0, ',', '.') }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Rp{{ number_format($debt->paid_amount, 0, ',', '.') }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Rp{{ number_format($debt->remaining_amount, 0, ',', '.') }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="{{ $debt->type == 'piutang' ? 'bg-blue-600' : 'bg-red-600' }} h-2.5 rounded-full" style="width: {{ $debt->progress }}%"></div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-500">{{ $debt->due_date ? \Carbon\Carbon::parse($debt->due_date)->isoFormat('D MMM YYYY') : '-' }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            @if ($debt->status == 'lunas')
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Lunas</span>
+                            @else
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">Belum Lunas</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-sm text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                @if ($debt->status == 'belum lunas')
+                                <button @click="paymentModal = true; selectedDebt = {{ $debt }}" class="text-blue-600 hover:text-blue-900" title="Tambah Pembayaran">
+                                    <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                                </button>
+                                @endif
+                                <form action="{{ route('debts.destroy', $debt) }}" method="POST" onsubmit="return confirm('Anda yakin ingin menghapus catatan ini?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-500 hover:text-red-800" title="Hapus">
+                                        <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="10" class="text-center py-8 text-gray-500">Tidak ada data untuk ditampilkan.</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div x-show="addModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div @click.away="addModal = false" class="bg-white rounded-lg p-8 w-full max-w-md">
+            <h3 class="text-2xl font-bold mb-6">Tambah Catatan Baru</h3>
+            <form action="{{ route('debts.store') }}" method="POST">
+                @csrf
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Deskripsi</label>
+                        <input type="text" name="description" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Pihak Terkait</label>
+                        <input type="text" name="related_party" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tipe</label>
+                        <select name="type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                            <option value="piutang">Piutang (Orang lain berhutang ke saya)</option>
+                            <option value="hutang">Hutang (Saya berhutang ke orang lain)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Total Nilai</label>
+                        <input type="number" name="amount" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Jatuh Tempo (Opsional)</label>
+                        <input type="date" name="due_date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button" @click="addModal = false" class="px-4 py-2 bg-gray-200 rounded-lg">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div x-show="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div @click.away="paymentModal = false" class="bg-white rounded-lg p-8 w-full max-w-md">
+            <h3 class="text-2xl font-bold mb-2">Catat Pembayaran</h3>
+            <p class="text-gray-600 mb-6" x-text="selectedDebt.description"></p>
+            <form :action="`/debts/${selectedDebt.id}/payments`" method="POST">
+                @csrf
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Jumlah Pembayaran</label>
+                        <input type="number" name="amount" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tanggal Pembayaran</label>
+                        <input type="date" name="payment_date" value="{{ date('Y-m-d') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700">Catatan (Opsional)</label>
+                        <textarea name="notes" rows="2" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button" @click="paymentModal = false" class="px-4 py-2 bg-gray-200 rounded-lg">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection

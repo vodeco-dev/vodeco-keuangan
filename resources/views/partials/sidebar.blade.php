@@ -1,5 +1,5 @@
 {{-- Menggunakan warna latar belakang terang untuk tampilan modern --}}
-<aside class="flex h-screen flex-col w-64 bg-gray-100 text-gray-700 p-4">
+<aside class="flex h-screen flex-col w-64 bg-white text-gray-700 p-4">
 
   {{-- Bagian Logo dan Nama Aplikasi --}}
   <div class="flex items-center mb-8 text-center">
@@ -50,7 +50,7 @@
       <span class="text-sm">Kategori</span>
     </a>
 
-    <a href="{{ route('reports') }}"
+    <a href="{{ route('reports.index') }}"
       class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
               {{ request()->routeIs('reports') 
                  ? 'bg-purple-700 text-white font-semibold shadow-lg'
