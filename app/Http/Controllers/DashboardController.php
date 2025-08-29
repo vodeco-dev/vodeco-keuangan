@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -13,11 +13,9 @@ class DashboardController extends Controller
         $summary = Transaction::getSummary();
 
         $trendsQuery = Transaction::query()
-            ->select(
-                DB::raw("strftime('%Y', date) as year, strftime('%m', date) as month"),
-                DB::raw('SUM(CASE WHEN categories.type = "pemasukan" THEN amount ELSE 0 END) as pemasukan'),
-                DB::raw('SUM(CASE WHEN categories.type = "pengeluaran" THEN amount ELSE 0 END) as pengeluaran')
-            )
+            ->selectRaw('YEAR(date) as year, MONTH(date) as month')
+            ->selectRaw('SUM(CASE WHEN categories.type = "pemasukan" THEN amount ELSE 0 END) as pemasukan')
+            ->selectRaw('SUM(CASE WHEN categories.type = "pengeluaran" THEN amount ELSE 0 END) as pengeluaran')
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.user_id', $request->user()->id)
             ->groupBy('year', 'month')
@@ -25,10 +23,9 @@ class DashboardController extends Controller
             ->orderBy('month', 'asc');
 
         if ($request->filled('month')) {
-            $year = substr($request->month, 0, 4);
-            $month = substr($request->month, 5, 2);
-            $trendsQuery->whereRaw("strftime('%Y', date) = ?", [$year])
-                        ->whereRaw("strftime('%m', date) = ?", [$month]);
+            $date = Carbon::parse($request->month);
+            $trendsQuery->whereYear('date', $date->year)
+                        ->whereMonth('date', $date->month);
         }
 
         $monthly_trends = $trendsQuery->get();

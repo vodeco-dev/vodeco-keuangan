@@ -4,66 +4,53 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Services\TransactionService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use Illuminate\Http\RedirectResponse;
 
 class TransactionController extends Controller
 {
-    public function __construct()
+    /**
+     * Menggabungkan Service Layer dan Authorization.
+     */
+    public function __construct(private TransactionService $transactionService)
     {
+        // Menerapkan keamanan otorisasi dari branch 'codex'
         $this->authorizeResource(Transaction::class, 'transaction');
     }
 
+    /**
+     * Menampilkan daftar transaksi milik pengguna.
+     * Menggunakan TransactionService dari branch 'main' yang sudah diamankan.
+     */
     public function index(Request $request): View
     {
-        $transactionsQuery = Transaction::with('category')
-            ->where('user_id', $request->user()->id)
-            ->latest('date');
+        $transactions = $this->transactionService->getTransactionsForUser($request->user(), $request);
+        $categories = Category::where('user_id', $request->user()->id)->orderBy('name')->get();
+        $summary = $this->transactionService->getSummaryForUser($request->user());
 
-        if ($request->filled('search')) {
-            $transactionsQuery->where('description', 'like', '%' . $request->search . '%');
-        }
-
-        if ($request->filled('date')) {
-            $transactionsQuery->whereDate('date', $request->date);
-        }
-
-        if ($request->filled('category_id')) {
-            $transactionsQuery->where('category_id', $request->category_id);
-        }
-
-        if ($request->filled('type')) {
-            $transactionsQuery->whereHas('category', function ($query) use ($request) {
-                $query->where('type', $request->type);
-            });
-        }
-
-        $transactions = $transactionsQuery->paginate(10);
-
-        $categories = Category::orderBy('name')->get();
-
-        $totalPemasukan = Transaction::where('user_id', $request->user()->id)
-            ->whereHas('category', function ($query) {
-                $query->where('type', 'pemasukan');
-            })->sum('amount');
-
-        $totalPengeluaran = Transaction::where('user_id', $request->user()->id)
-            ->whereHas('category', function ($query) {
-                $query->where('type', 'pengeluaran');
-            })->sum('amount');
-
-        $saldo = $totalPemasukan - $totalPengeluaran;
-
-        return view('transactions.index', compact('transactions', 'categories', 'totalPemasukan', 'totalPengeluaran', 'saldo'));
+        return view(
+            'transactions.index',
+            array_merge(
+                compact('transactions', 'categories'),
+                $summary
+            )
+        );
     }
 
-    public function create(): View
+    /**
+     * Menampilkan form untuk membuat transaksi baru.
+     */
+    public function create(Request $request): View
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::where('user_id', $request->user()->id)->orderBy('name')->get();
         return view('transactions.create', compact('categories'));
     }
 
+    /**
+     * Menyimpan transaksi baru.
+     */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
@@ -73,18 +60,22 @@ class TransactionController extends Controller
             'description' => 'nullable|string|max:255',
         ]);
 
-        Transaction::create($request->all() + ['user_id' => $request->user()->id]);
+        // Pastikan kategori yang dipilih adalah milik user
+        $category = Category::where('user_id', $request->user()->id)->findOrFail($request->category_id);
+
+        $transactionData = $request->all();
+        $transactionData['user_id'] = $request->user()->id;
+        $transactionData['category_id'] = $category->id;
+
+        Transaction::create($transactionData);
 
         return redirect()->route('transactions.index')
-                         ->with('success', 'Transaksi berhasil ditambahkan.');
+            ->with('success', 'Transaksi berhasil ditambahkan.');
     }
 
-    public function edit(Transaction $transaction): View
-    {
-        $categories = Category::orderBy('type')->orderBy('name')->get()->groupBy('type');
-        return view('transactions.edit', compact('transaction', 'categories'));
-    }
-
+    /**
+     * Memperbarui data transaksi.
+     */
     public function update(Request $request, Transaction $transaction): RedirectResponse
     {
         $request->validate([
@@ -93,18 +84,28 @@ class TransactionController extends Controller
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
         ]);
+        
+        // Pastikan kategori yang dipilih adalah milik user
+        $category = Category::where('user_id', $request->user()->id)->findOrFail($request->category_id);
+        
+        $updateData = $request->all();
+        $updateData['category_id'] = $category->id;
 
-        $transaction->update($request->all());
+        $transaction->update($updateData);
 
         return redirect()->route('transactions.index')
-                         ->with('success', 'Transaksi berhasil diperbarui.');
+            ->with('success', 'Transaksi berhasil diperbarui.');
     }
 
+    /**
+     * Menghapus transaksi.
+     */
     public function destroy(Transaction $transaction): RedirectResponse
     {
+        // Otorisasi sudah ditangani oleh authorizeResource di constructor
         $transaction->delete();
 
         return redirect()->route('transactions.index')
-                         ->with('success', 'Transaksi berhasil dihapus.');
+            ->with('success', 'Transaksi berhasil dihapus.');
     }
 }

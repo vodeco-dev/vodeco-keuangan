@@ -29,33 +29,9 @@ class Transaction extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
-    public static function getSummary(): array
-    {
-        $userId = auth()->id();
-
-        $pemasukan = self::query()
-            ->where('user_id', $userId)
-            ->whereHas('category', function ($query) {
-                $query->where('type', 'pemasukan');
-            })
-            ->sum('amount');
-
-        $pengeluaran = self::query()
-            ->where('user_id', $userId)
-            ->whereHas('category', function ($query) {
-                $query->where('type', 'pengeluaran');
-            })
-            ->sum('amount');
-
-        $saldo = $pemasukan - $pengeluaran;
-
-        return [
-            'pemasukan'   => $pemasukan,
-            'pengeluaran' => $pengeluaran,
-            'saldo'       => $saldo,
-        ];
-    }
+    // Method getSummary() dihapus dari sini dan dipindahkan ke TransactionService
+    // untuk pemisahan tanggung jawab (separation of concerns) yang lebih baik.
 }
