@@ -27,7 +27,8 @@ class TransactionController extends Controller
     public function index(Request $request): View
     {
         $transactions = $this->transactionService->getTransactionsForUser($request->user(), $request);
-        $categories = Category::where('user_id', $request->user()->id)->orderBy('name')->get();
+        // Mengambil semua kategori untuk filter, bukan hanya milik user
+        $categories = Category::orderBy('name')->get();
         $summary = $this->transactionService->getSummaryForUser($request->user());
 
         return view(
@@ -44,7 +45,8 @@ class TransactionController extends Controller
      */
     public function create(Request $request): View
     {
-        $categories = Category::where('user_id', $request->user()->id)->orderBy('name')->get();
+        // Mengambil semua kategori agar bisa dipilih, bukan hanya milik user
+        $categories = Category::orderBy('name')->get();
         return view('transactions.create', compact('categories'));
     }
 
@@ -60,10 +62,12 @@ class TransactionController extends Controller
             'description' => 'nullable|string|max:255',
         ]);
 
-        // Pastikan kategori yang dipilih adalah milik user
-        $category = Category::where('user_id', $request->user()->id)->findOrFail($request->category_id);
+        // PERUBAHAN 1: Ganti pencarian kategori agar global
+        // Kategori dicari tanpa filter user_id
+        $category = Category::findOrFail($request->category_id);
 
         $transactionData = $request->all();
+        // PERUBAHAN 2: Pastikan user_id tetap diisi
         $transactionData['user_id'] = $request->user()->id;
         $transactionData['category_id'] = $category->id;
 
@@ -85,11 +89,14 @@ class TransactionController extends Controller
             'description' => 'nullable|string|max:255',
         ]);
         
-        // Pastikan kategori yang dipilih adalah milik user
-        $category = Category::where('user_id', $request->user()->id)->findOrFail($request->category_id);
+        // PERUBAHAN 1: Ganti pencarian kategori agar global
+        // Kategori dicari tanpa filter user_id
+        $category = Category::findOrFail($request->category_id);
         
         $updateData = $request->all();
         $updateData['category_id'] = $category->id;
+        // PERUBAHAN 2: user_id tidak perlu diubah karena sudah ada di $transaction
+        // dan tidak termasuk dalam $request->all()
 
         $transaction->update($updateData);
 
