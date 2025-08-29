@@ -30,7 +30,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::resource('debts', DebtController::class);
 
     // Route khusus untuk pembayaran Hutang/Piutang
-    Route::post('debts/{debt}/payments', [DebtController::class, 'storePayment'])->name('debts.payments.store');
+    Route::post('debts/{debt}/pay', [DebtController::class, 'storePayment'])->name('debts.pay');
 
     // Laporan
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');

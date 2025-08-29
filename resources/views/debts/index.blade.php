@@ -181,16 +181,16 @@
         <div @click.away="paymentModal = false" class="bg-white rounded-lg p-8 w-full max-w-md">
             <h3 class="text-2xl font-bold mb-2">Catat Pembayaran</h3>
             <p class="text-gray-600 mb-6" x-text="selectedDebt.description"></p>
-            <form :action="`/debts/${selectedDebt.id}/payments`" method="POST">
+            <form :action="`/debts/${selectedDebt.id}/pay`" method="POST">
                 @csrf
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Jumlah Pembayaran</label>
-                        <input type="number" name="amount" step="any" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        <input type="number" name="payment_amount" step="any" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Tanggal Pembayaran</label>
-                        <input type="date" name="payment_date" value="{{ date('Y-m-d') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        <input type="date" name="payment_date" value="{{ date('Y-m-d') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                     </div>
                      <div>
                         <label class="block text-sm font-medium text-gray-700">Catatan (Opsional)</label>
