@@ -3,30 +3,30 @@
 namespace App\Services;
 
 use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 
 class TransactionService
 {
     /**
-     * Retrieve paginated transactions with optional filters.
+     * Ambil transaksi dengan filter dan paginasi untuk pengguna tertentu.
      */
-    public function getTransactions(Request $request): LengthAwarePaginator
+    public function getTransactionsForUser(User $user, Request $request)
     {
-        $query = Transaction::with('category')->latest('date');
+        $query = Transaction::with('category')
+            ->where('user_id', $user->id) // KEAMANAN: Filter berdasarkan user
+            ->latest('date');
 
         if ($request->filled('search')) {
             $query->where('description', 'like', '%' . $request->search . '%');
         }
-
         if ($request->filled('date')) {
             $query->whereDate('date', $request->date);
         }
-
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
         }
-
         if ($request->filled('type')) {
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('type', $request->type);
@@ -37,22 +37,33 @@ class TransactionService
     }
 
     /**
-     * Get summary totals for transactions.
+     * Ambil ringkasan keuangan untuk pengguna tertentu menggunakan satu query yang efisien dan caching.
+     * INI ADALAH VERSI GABUNGAN YANG SUDAH DISEMPURNAKAN.
      */
-    public function getSummary(): array
+    public function getSummaryForUser(User $user): array
     {
-        $totalPemasukan = Transaction::whereHas('category', function ($q) {
-            $q->where('type', 'pemasukan');
-        })->sum('amount');
+        // Cache key dibuat unik untuk setiap pengguna
+        $cacheKey = 'transaction_summary_for_user_' . $user->id;
 
-        $totalPengeluaran = Transaction::whereHas('category', function ($q) {
-            $q->where('type', 'pengeluaran');
-        })->sum('amount');
+        return Cache::remember($cacheKey, 300, function () use ($user) {
+            $summary = Transaction::query()
+                ->join('categories', 'transactions.category_id', '=', 'categories.id')
+                ->where('transactions.user_id', $user->id) // KEAMANAN: Filter data milik user
+                ->selectRaw('
+                    SUM(CASE WHEN categories.type = "pemasukan" THEN transactions.amount ELSE 0 END) AS totalPemasukan,
+                    SUM(CASE WHEN categories.type = "pengeluaran" THEN transactions.amount ELSE 0 END) AS totalPengeluaran
+                ')
+                ->first();
 
-        return [
-            'totalPemasukan' => $totalPemasukan,
-            'totalPengeluaran' => $totalPengeluaran,
-            'saldo' => $totalPemasukan - $totalPengeluaran,
-        ];
+            $pemasukan = $summary->totalPemasukan ?? 0;
+            $pengeluaran = $summary->totalPengeluaran ?? 0;
+
+            return [
+                'totalPemasukan'   => $pemasukan,
+                'totalPengeluaran' => $pengeluaran,
+                'saldo'            => $pemasukan - $pengeluaran,
+            ];
+        });
     }
 }
+

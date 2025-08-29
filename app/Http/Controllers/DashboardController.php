@@ -3,32 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
-use Carbon\Carbon;
+use App\Services\TransactionService; // Tambahkan ini
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    // Inject TransactionService
+    public function __construct(private TransactionService $transactionService)
+    {
+    }
+
     public function index(Request $request)
     {
-        $summary = Transaction::getSummary();
+        // Gunakan service untuk mendapatkan ringkasan yang aman dan efisien
+        $summary = $this->transactionService->getSummaryForUser($request->user());
 
-        $trendsQuery = Transaction::query()
-            ->selectRaw('YEAR(date) as year, MONTH(date) as month')
-            ->selectRaw('SUM(CASE WHEN categories.type = "pemasukan" THEN amount ELSE 0 END) as pemasukan')
-            ->selectRaw('SUM(CASE WHEN categories.type = "pengeluaran" THEN amount ELSE 0 END) as pengeluaran')
+        // Query untuk tren bulanan (sudah aman)
+        $monthly_trends = Transaction::query()
+            ->select(
+                DB::raw("strftime('%Y', date) as year, strftime('%m', date) as month"),
+                DB::raw('SUM(CASE WHEN categories.type = "pemasukan" THEN amount ELSE 0 END) as pemasukan'),
+                DB::raw('SUM(CASE WHEN categories.type = "pengeluaran" THEN amount ELSE 0 END) as pengeluaran')
+            )
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
-            ->where('transactions.user_id', $request->user()->id)
+            ->where('transactions.user_id', $request->user()->id) // Keamanan: Pastikan tren juga milik user
             ->groupBy('year', 'month')
             ->orderBy('year', 'asc')
-            ->orderBy('month', 'asc');
-
-        if ($request->filled('month')) {
-            $date = Carbon::parse($request->month);
-            $trendsQuery->whereYear('date', $date->year)
-                        ->whereMonth('date', $date->month);
-        }
-
-        $monthly_trends = $trendsQuery->get();
+            ->orderBy('month', 'asc')
+            ->get();
 
         $max_value = 0;
         if ($monthly_trends->isNotEmpty()) {
@@ -38,7 +41,7 @@ class DashboardController extends Controller
         }
 
         $recent_transactions = Transaction::with('category')
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $request->user()->id) // Keamanan: Pastikan transaksi terbaru milik user
             ->orderBy('date', 'desc')
             ->take(5)
             ->get();
@@ -46,8 +49,8 @@ class DashboardController extends Controller
         return view('dashboard', [
             'title'               => 'Dashboard',
             'saldo'               => $summary['saldo'],
-            'pemasukan'           => $summary['pemasukan'],
-            'pengeluaran'         => $summary['pengeluaran'],
+            'pemasukan'           => $summary['totalPemasukan'],
+            'pengeluaran'         => $summary['totalPengeluaran'],
             'monthly_trends'      => $monthly_trends,
             'max_trend_value'     => $max_value,
             'recent_transactions' => $recent_transactions,
