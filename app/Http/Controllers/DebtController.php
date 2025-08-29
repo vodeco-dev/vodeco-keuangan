@@ -60,30 +60,36 @@ class DebtController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $debt->payments()->create($request->all());
+        try {
+            DB::transaction(function () use ($request, $debt) {
+                $debt->payments()->create($request->all());
 
-        // Cek jika sudah lunas
-        if ($debt->paid_amount >= $debt->amount) {
-            $debt->update(['status' => 'lunas']);
+                // Cek jika sudah lunas
+                if ($debt->paid_amount >= $debt->amount) {
+                    $debt->update(['status' => 'lunas']);
 
-            // Buat transaksi baru
-            $categoryType = $debt->type == 'piutang' ? 'pemasukan' : 'pengeluaran';
-            
-            // Cari kategori default atau buat jika tidak ada
-            $category = \App\Models\Category::firstOrCreate(
-                ['name' => 'Pelunasan ' . ucfirst($debt->type)],
-                ['type' => $categoryType]
-            );
+                    // Buat transaksi baru
+                    $categoryType = $debt->type == 'piutang' ? 'pemasukan' : 'pengeluaran';
 
-            Transaction::create([
-                'category_id' => $category->id,
-                'date' => now(),
-                'amount' => $debt->amount,
-                'description' => 'Pelunasan: ' . $debt->description,
-            ]);
+                    // Cari kategori default atau buat jika tidak ada
+                    $category = \App\Models\Category::firstOrCreate(
+                        ['name' => 'Pelunasan ' . ucfirst($debt->type)],
+                        ['type' => $categoryType]
+                    );
+
+                    Transaction::create([
+                        'category_id' => $category->id,
+                        'date' => now(),
+                        'amount' => $debt->amount,
+                        'description' => 'Pelunasan: ' . $debt->description,
+                    ]);
+                }
+            });
+
+            return back()->with('success', 'Pembayaran berhasil dicatat.');
+        } catch (\Exception $e) {
+            return back()->withErrors('Terjadi kesalahan saat menyimpan pembayaran.');
         }
-
-        return back()->with('success', 'Pembayaran berhasil dicatat.');
     }
 
     public function destroy(Debt $debt)
