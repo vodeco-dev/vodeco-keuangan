@@ -96,15 +96,19 @@ class DebtController extends Controller
         $this->authorize('update', $debt);
 
         $request->validate([
-            'amount' => 'required|numeric|min:0',
-            'payment_date' => 'required|date',
+            'payment_amount' => 'required|numeric|min:0',
+            'payment_date' => 'nullable|date',
             'notes' => 'nullable|string',
         ]);
 
         try {
             // Keandalan: Pastikan semua operasi database berhasil atau tidak sama sekali
             DB::transaction(function () use ($request, $debt) {
-                $debt->payments()->create($request->all());
+                $debt->payments()->create([
+                    'amount' => $request->payment_amount,
+                    'payment_date' => $request->payment_date ?? now(),
+                    'notes' => $request->notes,
+                ]);
 
                 // Reload relasi untuk mendapatkan paid_amount yang ter-update
                 $debt->load('payments');
@@ -129,7 +133,7 @@ class DebtController extends Controller
                 }
             });
 
-            return back()->with('success', 'Pembayaran berhasil dicatat.');
+            return redirect()->route('debts.index')->with('success', 'Pembayaran berhasil dicatat.');
         } catch (\Exception $e) {
             // Jika terjadi error, tampilkan pesan kesalahan
             return back()->withErrors('Terjadi kesalahan saat menyimpan pembayaran.');
