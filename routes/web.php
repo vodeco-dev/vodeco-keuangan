@@ -15,7 +15,7 @@ Route::get('/', function () {
 
 // Menggunakan middleware 'auth' untuk memastikan hanya user yang sudah login
 // yang bisa mengakses halaman-halaman ini.
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
