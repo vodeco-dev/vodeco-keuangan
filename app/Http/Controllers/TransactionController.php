@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Models\ServiceCost;
 use App\Services\TransactionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,7 +48,8 @@ class TransactionController extends Controller
     {
         // Mengambil semua kategori agar bisa dipilih, bukan hanya milik user
         $categories = Category::orderBy('name')->get();
-        return view('transactions.create', compact('categories'));
+        $serviceCosts = ServiceCost::orderBy('name')->get();
+        return view('transactions.create', compact('categories', 'serviceCosts'));
     }
 
     /**
@@ -58,6 +60,7 @@ class TransactionController extends Controller
         $request->validate([
             'date' => 'required|date',
             'category_id' => 'required|exists:categories,id',
+            'service_cost_id' => 'nullable|exists:service_costs,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
         ]);
@@ -86,6 +89,7 @@ class TransactionController extends Controller
         $request->validate([
             'date' => 'required|date',
             'category_id' => 'required|exists:categories,id',
+            'service_cost_id' => 'nullable|exists:service_costs,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
         ]);

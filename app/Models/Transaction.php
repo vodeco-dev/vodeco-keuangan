@@ -16,6 +16,7 @@ class Transaction extends Model
         'amount',
         'description',
         'date',
+        'service_cost_id',
     ];
 
     protected $casts = [
@@ -30,6 +31,11 @@ class Transaction extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function serviceCost(): BelongsTo
+    {
+        return $this->belongsTo(ServiceCost::class);
     }
 
     // Method getSummary() dihapus dari sini dan dipindahkan ke TransactionService

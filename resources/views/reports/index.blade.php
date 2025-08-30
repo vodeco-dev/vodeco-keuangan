@@ -73,6 +73,33 @@
     <div class="h-80"><canvas id="financial-chart"></canvas></div>
 </div>
 
+{{-- Pengeluaran per Jenis Layanan --}}
+<div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+    <h3 class="text-xl font-semibold text-gray-900 mb-4">Pengeluaran per Jenis Layanan</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b">
+                <tr>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Jenis Layanan</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Total Pengeluaran</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                @forelse($serviceCostSummary as $summary)
+                <tr>
+                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $summary->serviceCost->name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-red-600">Rp{{ number_format($summary->total, 0, ',', '.') }}</td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="2" class="px-6 py-4 text-center text-gray-500">Tidak ada data pengeluaran layanan.</td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
 {{-- Tabel Rincian Transaksi --}}
 <div class="bg-white rounded-lg shadow-sm p-6">
     <h3 class="text-xl font-semibold text-gray-900 mb-4">Rincian Transaksi</h3>

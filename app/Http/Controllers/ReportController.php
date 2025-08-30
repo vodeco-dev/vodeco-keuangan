@@ -31,6 +31,17 @@ class ReportController extends Controller
         // Siapkan data untuk chart
         $chartData = $this->prepareChartData($startDate, $endDate);
 
+        // Pengeluaran per jenis layanan
+        $serviceCostSummary = Transaction::with('serviceCost')
+            ->whereHas('category', function ($query) {
+                $query->where('type', 'pengeluaran');
+            })
+            ->whereBetween('date', [$startDate, $endDate])
+            ->whereNotNull('service_cost_id')
+            ->select('service_cost_id', DB::raw('SUM(amount) as total'))
+            ->groupBy('service_cost_id')
+            ->get();
+
         return view('reports.index', [
             'title' => 'Laporan',
             'transactions' => $transactions,
@@ -40,6 +51,7 @@ class ReportController extends Controller
             'startDate' => $startDate,
             'endDate' => $endDate,
             'chartData' => $chartData,
+            'serviceCostSummary' => $serviceCostSummary,
         ]);
     }
 
