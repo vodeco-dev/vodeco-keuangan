@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Services\TransactionService; // Tambahkan ini
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -20,14 +19,23 @@ class DashboardController extends Controller
         $summary = $this->transactionService->getSummaryForUser($request->user());
 
         // Query untuk tren bulanan (sudah aman)
-        $monthly_trends = Transaction::query()
-            ->select(
-                DB::raw("strftime('%Y', date) as year, strftime('%m', date) as month"),
-                DB::raw('SUM(CASE WHEN categories.type = "pemasukan" THEN amount ELSE 0 END) as pemasukan'),
-                DB::raw('SUM(CASE WHEN categories.type = "pengeluaran" THEN amount ELSE 0 END) as pengeluaran')
-            )
+        $year  = $request->input('year', now()->year);
+        $month = $request->input('month');
+
+        $monthly_trends_query = Transaction::query()
+            ->selectRaw('YEAR(date) as year, MONTH(date) as month')
+            ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN amount ELSE 0 END) as pemasukan")
+            ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN amount ELSE 0 END) as pengeluaran")
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
-            ->where('transactions.user_id', $request->user()->id) // Keamanan: Pastikan tren juga milik user
+            ->where('transactions.user_id', $request->user()->id); // Keamanan: Pastikan tren juga milik user
+
+        if ($month) {
+            $monthly_trends_query
+                ->whereYear('date', $year)
+                ->whereMonth('date', $month);
+        }
+
+        $monthly_trends = $monthly_trends_query
             ->groupBy('year', 'month')
             ->orderBy('year', 'asc')
             ->orderBy('month', 'asc')
