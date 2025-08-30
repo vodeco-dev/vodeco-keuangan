@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Services\TransactionService; // Tambahkan ini
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -22,8 +23,13 @@ class DashboardController extends Controller
         $year  = $request->input('year', now()->year);
         $month = $request->input('month');
 
+        $driver     = DB::getDriverName();
+        $dateSelect = $driver === 'sqlite'
+            ? "CAST(strftime('%Y', date) AS INTEGER) AS year, CAST(strftime('%m', date) AS INTEGER) AS month"
+            : "YEAR(date) AS year, MONTH(date) AS month";
+
         $monthly_trends_query = Transaction::query()
-            ->selectRaw('YEAR(date) as year, MONTH(date) as month')
+            ->selectRaw($dateSelect)
             ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN amount ELSE 0 END) as pemasukan")
             ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN amount ELSE 0 END) as pengeluaran")
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
