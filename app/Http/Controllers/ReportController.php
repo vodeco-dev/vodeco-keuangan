@@ -31,9 +31,13 @@ class ReportController extends Controller
         // Siapkan data untuk chart
         $chartData = $this->prepareChartData($startDate, $endDate);
 
-        $projectReports = Transaction::select('projects.name as project_name', 'clients.name as client_name',
-                DB::raw("SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) as income"),
-                DB::raw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN transactions.amount ELSE 0 END) as expense"))
+        // Laporan per Proyek
+        $projectReports = Transaction::select(
+            'projects.name as project_name',
+            'clients.name as client_name',
+            DB::raw("SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) as income"),
+            DB::raw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN transactions.amount ELSE 0 END) as expense")
+        )
             ->join('projects', 'transactions.project_id', '=', 'projects.id')
             ->join('clients', 'projects.client_id', '=', 'clients.id')
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
@@ -41,9 +45,12 @@ class ReportController extends Controller
             ->groupBy('projects.id', 'projects.name', 'clients.name')
             ->get();
 
-        $clientReports = Transaction::select('clients.name as client_name',
-                DB::raw("SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) as income"),
-                DB::raw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN transactions.amount ELSE 0 END) as expense"))
+        // Laporan per Klien
+        $clientReports = Transaction::select(
+            'clients.name as client_name',
+            DB::raw("SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) as income"),
+            DB::raw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN transactions.amount ELSE 0 END) as expense")
+        )
             ->join('projects', 'transactions.project_id', '=', 'projects.id')
             ->join('clients', 'projects.client_id', '=', 'clients.id')
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
@@ -52,16 +59,16 @@ class ReportController extends Controller
             ->get();
 
         return view('reports.index', [
-            'title' => 'Laporan',
-            'transactions' => $transactions,
-            'totalPemasukan' => $totalPemasukan,
+            'title'            => 'Laporan',
+            'transactions'     => $transactions,
+            'totalPemasukan'   => $totalPemasukan,
             'totalPengeluaran' => $totalPengeluaran,
-            'selisih' => $selisih,
-            'startDate' => $startDate,
-            'endDate' => $endDate,
-            'chartData' => $chartData,
-            'projectReports' => $projectReports,
-            'clientReports' => $clientReports,
+            'selisih'          => $selisih,
+            'startDate'        => $startDate,
+            'endDate'          => $endDate,
+            'chartData'        => $chartData,
+            'projectReports'   => $projectReports,
+            'clientReports'    => $clientReports,
         ]);
     }
 
@@ -69,16 +76,16 @@ class ReportController extends Controller
     private function prepareChartData($startDate, $endDate)
     {
         $pemasukanData = Transaction::whereHas('category', function ($query) {
-                $query->where('type', 'pemasukan');
-            })
+            $query->where('type', 'pemasukan');
+        })
             ->whereBetween('date', [$startDate, $endDate])
             ->select(DB::raw("DATE(date) as date"), DB::raw('SUM(amount) as total'))
             ->groupBy('date')
             ->pluck('total', 'date');
 
         $pengeluaranData = Transaction::whereHas('category', function ($query) {
-                $query->where('type', 'pengeluaran');
-            })
+            $query->where('type', 'pengeluaran');
+        })
             ->whereBetween('date', [$startDate, $endDate])
             ->select(DB::raw("DATE(date) as date"), DB::raw('SUM(amount) as total'))
             ->groupBy('date')
@@ -94,7 +101,7 @@ class ReportController extends Controller
         }
 
         return [
-            'labels' => $dates->map(function($date) {
+            'labels' => $dates->map(function ($date) {
                 return Carbon::parse($date)->format('d M');
             }),
             'pemasukan' => $dates->map(function ($date) use ($pemasukanData) {

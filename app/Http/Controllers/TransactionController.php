@@ -18,18 +18,15 @@ class TransactionController extends Controller
      */
     public function __construct(private TransactionService $transactionService)
     {
-        // Menerapkan keamanan otorisasi dari branch 'codex'
         $this->authorizeResource(Transaction::class, 'transaction');
     }
 
     /**
      * Menampilkan daftar transaksi milik pengguna.
-     * Menggunakan TransactionService dari branch 'main' yang sudah diamankan.
      */
     public function index(Request $request): View
     {
         $transactions = $this->transactionService->getTransactionsForUser($request->user(), $request);
-        // Mengambil semua kategori untuk filter, bukan hanya milik user
         $categories = Category::orderBy('name')->get();
         $clients = Client::orderBy('name')->get();
         $projects = Project::orderBy('name')->get();
@@ -49,7 +46,6 @@ class TransactionController extends Controller
      */
     public function create(Request $request): View
     {
-        // Mengambil semua kategori agar bisa dipilih, bukan hanya milik user
         $categories = Category::orderBy('name')->get();
         $clients = Client::orderBy('name')->get();
         $projects = Project::orderBy('name')->get();
@@ -70,8 +66,6 @@ class TransactionController extends Controller
             'description' => 'nullable|string|max:255',
         ]);
 
-        // PERUBAHAN 1: Ganti pencarian kategori agar global
-        // Kategori dicari tanpa filter user_id
         $category = Category::findOrFail($request->category_id);
 
         $project = Project::where('id', $request->project_id)
@@ -79,7 +73,6 @@ class TransactionController extends Controller
             ->firstOrFail();
 
         $transactionData = $request->all();
-        // PERUBAHAN 2: Pastikan user_id tetap diisi
         $transactionData['user_id'] = $request->user()->id;
         $transactionData['category_id'] = $category->id;
         $transactionData['project_id'] = $project->id;
@@ -106,11 +99,9 @@ class TransactionController extends Controller
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
         ]);
-        
-        // PERUBAHAN 1: Ganti pencarian kategori agar global
-        // Kategori dicari tanpa filter user_id
+
         $category = Category::findOrFail($request->category_id);
-        
+
         $project = Project::where('id', $request->project_id)
             ->where('client_id', $request->client_id)
             ->firstOrFail();
@@ -119,8 +110,6 @@ class TransactionController extends Controller
         $updateData['category_id'] = $category->id;
         $updateData['project_id'] = $project->id;
         unset($updateData['client_id']);
-        // PERUBAHAN 2: user_id tidak perlu diubah karena sudah ada di $transaction
-        // dan tidak termasuk dalam $request->all()
 
         $transaction->update($updateData);
         $this->transactionService->clearSummaryCacheForUser($request->user());
@@ -134,7 +123,6 @@ class TransactionController extends Controller
      */
     public function destroy(Transaction $transaction): RedirectResponse
     {
-        // Otorisasi sudah ditangani oleh authorizeResource di constructor
         $transaction->delete();
         $this->transactionService->clearSummaryCacheForUser($transaction->user);
 

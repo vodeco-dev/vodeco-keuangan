@@ -68,6 +68,21 @@
                         </div>
 
                         <div class="mb-4">
+                            <label for="service_cost_id" class="block text-sm font-medium text-gray-700">Jenis Biaya Layanan</label>
+                            <select name="service_cost_id" id="service_cost_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                <option value="">-- Pilih Jenis Layanan --</option>
+                                @foreach ($serviceCosts as $serviceCost)
+                                    <option value="{{ $serviceCost->id }}" {{ old('service_cost_id') == $serviceCost->id ? 'selected' : '' }}>
+                                        {{ $serviceCost->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('service_cost_id')
+                                <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="mb-4">
                             <label for="amount" class="block text-sm font-medium text-gray-700">Jumlah (Rp)</label>
                             <input type="number" name="amount" id="amount" value="{{ old('amount') }}" placeholder="Contoh: 50000" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
                              @error('amount')
