@@ -13,14 +13,14 @@ class DebtTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_add_debt()
+    public function test_user_can_add_pass_through_debt()
     {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->post('/debts', [
-            'description' => 'Pinjam Uang',
+            'description' => 'Pass Through Expense',
             'related_party' => 'Budi',
-            'type' => 'hutang',
+            'type' => 'pass_through',
             'amount' => 1000,
             'due_date' => now()->addMonth()->toDateString(),
         ]);
@@ -28,15 +28,15 @@ class DebtTest extends TestCase
         $response->assertRedirect('/debts');
 
         $this->assertDatabaseHas('debts', [
-            'description' => 'Pinjam Uang',
+            'description' => 'Pass Through Expense',
             'related_party' => 'Budi',
-            'type' => 'hutang',
+            'type' => 'pass_through',
             'amount' => 1000,
             'status' => 'belum lunas',
         ]);
     }
 
-    public function test_user_can_record_payment_and_mark_debt_paid()
+    public function test_user_can_record_payment_and_mark_down_payment_paid()
     {
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -44,9 +44,9 @@ class DebtTest extends TestCase
         // FIX: Kembali menggunakan create() dan pastikan user_id ada.
         $debt = Debt::create([
             'user_id' => $user->id,
-            'description' => 'Test Debt',
-            'related_party' => 'Budi',
-            'type' => 'hutang',
+            'description' => 'Down Payment Debt',
+            'related_party' => 'Andi',
+            'type' => 'down_payment',
             'amount' => 1000,
             'status' => 'belum lunas',
             'due_date' => now()->addWeek(),
