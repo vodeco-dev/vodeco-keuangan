@@ -37,6 +37,14 @@ class TransactionService
     }
 
     /**
+     * Hapus cache ringkasan transaksi untuk pengguna tertentu.
+     */
+    public function clearSummaryCacheForUser(User $user): void
+    {
+        Cache::forget('transaction_summary_for_user_' . $user->id);
+    }
+
+    /**
      * Ambil ringkasan keuangan untuk pengguna tertentu menggunakan satu query yang efisien dan caching.
      * INI ADALAH VERSI GABUNGAN YANG SUDAH DISEMPURNAKAN.
      */
