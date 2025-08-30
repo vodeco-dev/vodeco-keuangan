@@ -8,9 +8,14 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\TransactionsExport;
 use Illuminate\Support\Facades\DB;
+use App\Services\TransactionService;
 
 class ReportController extends Controller
 {
+    public function __construct(private TransactionService $transactionService)
+    {
+    }
+
     public function index(Request $request)
     {
         // Tentukan rentang tanggal. Defaultnya adalah bulan ini.
@@ -28,6 +33,9 @@ class ReportController extends Controller
         $totalPengeluaran = $transactions->where('category.type', 'pengeluaran')->sum('amount');
         $selisih = $totalPemasukan - $totalPengeluaran;
 
+        // Hitung AGI
+        $agencyGrossIncome = $this->transactionService->getAgencyGrossIncome($request->user());
+
         // Siapkan data untuk chart
         $chartData = $this->prepareChartData($startDate, $endDate);
 
@@ -37,6 +45,7 @@ class ReportController extends Controller
             'totalPemasukan'   => $totalPemasukan,
             'totalPengeluaran' => $totalPengeluaran,
             'selisih'          => $selisih,
+            'agencyGrossIncome'=> $agencyGrossIncome,
             'startDate'        => $startDate,
             'endDate'          => $endDate,
             'chartData'        => $chartData,

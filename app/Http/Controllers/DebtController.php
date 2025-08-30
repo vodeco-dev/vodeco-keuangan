@@ -48,13 +48,15 @@ class DebtController extends Controller
         $totalPiutang = Debt::where('user_id', $request->user()->id)->where('type', Debt::TYPE_DOWN_PAYMENT)->sum('amount');
         $totalHutang = Debt::where('user_id', $request->user()->id)->where('type', Debt::TYPE_PASS_THROUGH)->sum('amount');
         $totalBelumLunas = $debts->where('status', 'belum lunas')->sum('remaining_amount');
-        $totalLunas = Debt::where('user_id', $request->user()->id)->where('status', 'lunas')->sum('amount');
+        $totalLunas = Debt::where('user_id', $request->user()->id)
+            ->where('status', 'lunas')
+            ->sum('amount');
 
         return view('debts.index', [
             'title' => 'Hutang & Piutang',
             'debts' => $debts,
-            'totalPiutang' => $totalPiutang,
-            'totalHutang' => $totalHutang,
+            'totalPassThrough' => $totalPassThrough,
+            'totalDownPayment' => $totalDownPayment,
             'totalBelumLunas' => $totalBelumLunas,
             'totalLunas' => $totalLunas,
         ]);

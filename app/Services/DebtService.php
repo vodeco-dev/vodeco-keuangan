@@ -44,8 +44,8 @@ class DebtService
         $totalLunas = Debt::where('status', 'lunas')->sum('amount');
 
         return [
-            'totalPiutang' => $totalPiutang,
-            'totalHutang' => $totalHutang,
+            'totalPassThrough' => $totalPassThrough,
+            'totalDownPayment' => $totalDownPayment,
             'totalBelumLunas' => $totalBelumLunas,
             'totalLunas' => $totalLunas,
         ];

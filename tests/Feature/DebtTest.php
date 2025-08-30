@@ -13,12 +13,12 @@ class DebtTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_add_debt()
+    public function test_user_can_add_pass_through_debt()
     {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->post('/debts', [
-            'description' => 'Pinjam Uang',
+            'description' => 'Pass Through Expense',
             'related_party' => 'Budi',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
@@ -28,7 +28,7 @@ class DebtTest extends TestCase
         $response->assertRedirect('/debts');
 
         $this->assertDatabaseHas('debts', [
-            'description' => 'Pinjam Uang',
+            'description' => 'Pass Through Expense',
             'related_party' => 'Budi',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
@@ -36,7 +36,7 @@ class DebtTest extends TestCase
         ]);
     }
 
-    public function test_user_can_record_payment_and_mark_debt_paid()
+    public function test_user_can_record_payment_and_mark_down_payment_paid()
     {
         $user = User::factory()->create();
         $this->actingAs($user);

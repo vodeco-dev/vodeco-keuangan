@@ -73,5 +73,28 @@ class TransactionService
             ];
         });
     }
+
+    /**
+     * Hitung Agency Gross Income (AGI) untuk pengguna.
+     * AGI = total pemasukan - (pass-through + down payment).
+     */
+    public function getAgencyGrossIncome(User $user): float
+    {
+        $cacheKey = 'agency_gross_income_for_user_' . $user->id;
+
+        return Cache::remember($cacheKey, 300, function () use ($user) {
+            $summary = Transaction::query()
+                ->join('categories', 'transactions.category_id', '=', 'categories.id')
+                ->leftJoin('service_costs', 'transactions.service_cost_id', '=', 'service_costs.id')
+                ->where('transactions.user_id', $user->id)
+                ->selectRaw("\n                    SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) AS total_pemasukan,\n                    SUM(CASE WHEN categories.type = 'pemasukan' AND service_costs.name IN ('Pass-Through','Down Payment') THEN transactions.amount ELSE 0 END) AS total_potongan\n                ")
+                ->first();
+
+            $totalPemasukan = $summary->total_pemasukan ?? 0;
+            $totalPotongan = $summary->total_potongan ?? 0;
+
+            return $totalPemasukan - $totalPotongan;
+        });
+    }
 }
 
