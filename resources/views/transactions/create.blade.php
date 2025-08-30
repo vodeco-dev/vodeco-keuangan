@@ -25,6 +25,34 @@
                         </div>
 
                         <div class="mb-4">
+                            <label for="client_id" class="block text-sm font-medium text-gray-700">Klien</label>
+                            <select name="client_id" id="client_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                                <option value="">-- Pilih Klien --</option>
+                                @foreach ($clients as $client)
+                                    <option value="{{ $client->id }}" {{ old('client_id') == $client->id ? 'selected' : '' }}>{{ $client->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('client_id')
+                                <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="project_id" class="block text-sm font-medium text-gray-700">Proyek</label>
+                            <select name="project_id" id="project_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                                <option value="">-- Pilih Proyek --</option>
+                                @foreach ($projects as $project)
+                                    <option value="{{ $project->id }}" data-client="{{ $project->client_id }}" {{ old('project_id') == $project->id ? 'selected' : '' }}>
+                                        {{ $project->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('project_id')
+                                <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="mb-4">
                             <label for="category_id" class="block text-sm font-medium text-gray-700">Kategori</label>
                             <select name="category_id" id="category_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
                                 <option value="">-- Pilih Kategori --</option>
@@ -35,6 +63,21 @@
                                 @endforeach
                             </select>
                             @error('category_id')
+                                <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="service_cost_id" class="block text-sm font-medium text-gray-700">Jenis Biaya Layanan</label>
+                            <select name="service_cost_id" id="service_cost_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                <option value="">-- Pilih Jenis Layanan --</option>
+                                @foreach ($serviceCosts as $serviceCost)
+                                    <option value="{{ $serviceCost->id }}" {{ old('service_cost_id') == $serviceCost->id ? 'selected' : '' }}>
+                                        {{ $serviceCost->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('service_cost_id')
                                 <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
                             @enderror
                         </div>
@@ -67,4 +110,18 @@
             </div>
         </div>
     </div>
+    <script>
+        const clientSelect = document.getElementById('client_id');
+        const projectSelect = document.getElementById('project_id');
+        function filterProjects() {
+            const clientId = clientSelect.value;
+            Array.from(projectSelect.options).forEach(opt => {
+                if (!opt.value) return;
+                opt.style.display = opt.getAttribute('data-client') === clientId ? 'block' : 'none';
+            });
+            projectSelect.value = '';
+        }
+        clientSelect.addEventListener('change', filterProjects);
+        window.addEventListener('load', filterProjects);
+    </script>
 </x-app-layout>
