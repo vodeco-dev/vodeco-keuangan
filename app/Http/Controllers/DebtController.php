@@ -45,8 +45,12 @@ class DebtController extends Controller
         $debts = $query->get();
 
         // Kalkulasi ringkasan yang aman untuk multi-user
-        $totalPiutang = Debt::where('user_id', $request->user()->id)->where('type', Debt::TYPE_DOWN_PAYMENT)->sum('amount');
-        $totalHutang = Debt::where('user_id', $request->user()->id)->where('type', Debt::TYPE_PASS_THROUGH)->sum('amount');
+        $totalDownPayment = Debt::where('user_id', $request->user()->id)
+            ->where('type', Debt::TYPE_DOWN_PAYMENT)
+            ->sum('amount');
+        $totalPassThrough = Debt::where('user_id', $request->user()->id)
+            ->where('type', Debt::TYPE_PASS_THROUGH)
+            ->sum('amount');
         $totalBelumLunas = $debts->where('status', 'belum lunas')->sum('remaining_amount');
         $totalLunas = Debt::where('user_id', $request->user()->id)
             ->where('status', 'lunas')
