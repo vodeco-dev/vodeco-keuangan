@@ -3,6 +3,8 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebtController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ReportController;
@@ -20,15 +22,19 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Profile (Bawaan Laravel Breeze, sebaiknya ada di sini)
+    // Profile (Bawaan Laravel Breeze)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Resource Controllers
+    // Resource Controllers (CRUD)
     Route::resource('transactions', TransactionController::class)->except(['edit', 'show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::resource('debts', DebtController::class);
+    Route::resource('clients', ClientController::class); // Dari branch 'main'
+    Route::resource('projects', ProjectController::class); // Dari branch 'main'
+    
+    // Invoicing Routes (dari branch 'codex')
     Route::resource('invoices', InvoiceController::class)->only(['index','create','store']);
     Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
     Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'markPaid'])->name('invoices.pay');
@@ -41,7 +47,6 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
 
     // Pengaturan
-    // (FIX) Mengubah nama route dari 'settings' menjadi 'settings.index'
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
 });

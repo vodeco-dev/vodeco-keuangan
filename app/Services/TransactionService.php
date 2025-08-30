@@ -14,7 +14,7 @@ class TransactionService
      */
     public function getTransactionsForUser(User $user, Request $request)
     {
-        $query = Transaction::with('category')
+        $query = Transaction::with(['category', 'project.client'])
             ->where('user_id', $user->id) // KEAMANAN: Filter berdasarkan user
             ->latest('date');
 
@@ -30,6 +30,14 @@ class TransactionService
         if ($request->filled('type')) {
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('type', $request->type);
+            });
+        }
+        if ($request->filled('project_id')) {
+            $query->where('project_id', $request->project_id);
+        }
+        if ($request->filled('client_id')) {
+            $query->whereHas('project', function ($q) use ($request) {
+                $q->where('client_id', $request->client_id);
             });
         }
 
