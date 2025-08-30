@@ -7,6 +7,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\RecurringRevenueController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,6 +29,9 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::resource('transactions', TransactionController::class)->except(['edit', 'show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::resource('debts', DebtController::class);
+    Route::resource('recurring_revenues', RecurringRevenueController::class)->except(['create', 'edit', 'show']);
+    Route::patch('recurring_revenues/{recurring_revenue}/pause', [RecurringRevenueController::class, 'pause'])->name('recurring_revenues.pause');
+    Route::patch('recurring_revenues/{recurring_revenue}/resume', [RecurringRevenueController::class, 'resume'])->name('recurring_revenues.resume');
 
     // Route khusus untuk pembayaran Hutang/Piutang
     Route::post('debts/{debt}/pay', [DebtController::class, 'storePayment'])->name('debts.pay');
