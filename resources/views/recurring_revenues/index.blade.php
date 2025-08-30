@@ -11,14 +11,6 @@
                 <form method="POST" action="{{ route('recurring_revenues.store') }}" class="grid grid-cols-1 md:grid-cols-6 gap-4">
                     @csrf
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Client</label>
-                        <select name="client_id" class="w-full border rounded-md" required>
-                            @foreach($clients as $client)
-                                <option value="{{ $client->id }}">{{ $client->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
                         <label class="block text-sm font-medium text-gray-700">Kategori</label>
                         <select name="category_id" class="w-full border rounded-md">
                             <option value="">-</option>
@@ -58,7 +50,6 @@
                 <table class="w-full text-left">
                     <thead>
                         <tr>
-                            <th class="px-4 py-2">Client</th>
                             <th class="px-4 py-2">Amount</th>
                             <th class="px-4 py-2">Frequency</th>
                             <th class="px-4 py-2">Next Run</th>
@@ -69,7 +60,6 @@
                     <tbody>
                         @foreach($revenues as $rev)
                             <tr class="border-t">
-                                <td class="px-4 py-2">{{ $rev->client->name }}</td>
                                 <td class="px-4 py-2">{{ number_format($rev->amount,2) }}</td>
                                 <td class="px-4 py-2">{{ $rev->frequency }}</td>
                                 <td class="px-4 py-2">{{ $rev->next_run->toDateString() }}</td>

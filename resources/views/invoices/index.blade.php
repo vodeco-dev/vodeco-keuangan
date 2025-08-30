@@ -16,7 +16,6 @@
                         <thead class="border-b">
                             <tr>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{{ __('Number') }}</th>
-                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{{ __('Client') }}</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{{ __('Status') }}</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">{{ __('Total') }}</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">{{ __('Actions') }}</th>
@@ -26,7 +25,6 @@
                             @foreach ($invoices as $invoice)
                                 <tr>
                                     <td class="px-6 py-4">{{ $invoice->number }}</td>
-                                    <td class="px-6 py-4">{{ $invoice->client?->name }}</td>
                                     <td class="px-6 py-4">{{ $invoice->status }}</td>
                                     <td class="px-6 py-4 text-right">Rp {{ number_format($invoice->total, 0, ',', '.') }}</td>
                                     <td class="px-6 py-4 text-center">
