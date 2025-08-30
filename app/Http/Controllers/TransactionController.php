@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Client;
+use App\Models\Project;
 use App\Models\Transaction;
 use App\Services\TransactionService;
 use Illuminate\Http\RedirectResponse;
@@ -29,12 +31,14 @@ class TransactionController extends Controller
         $transactions = $this->transactionService->getTransactionsForUser($request->user(), $request);
         // Mengambil semua kategori untuk filter, bukan hanya milik user
         $categories = Category::orderBy('name')->get();
+        $clients = Client::orderBy('name')->get();
+        $projects = Project::orderBy('name')->get();
         $summary = $this->transactionService->getSummaryForUser($request->user());
 
         return view(
             'transactions.index',
             array_merge(
-                compact('transactions', 'categories'),
+                compact('transactions', 'categories', 'clients', 'projects'),
                 $summary
             )
         );
@@ -47,7 +51,9 @@ class TransactionController extends Controller
     {
         // Mengambil semua kategori agar bisa dipilih, bukan hanya milik user
         $categories = Category::orderBy('name')->get();
-        return view('transactions.create', compact('categories'));
+        $clients = Client::orderBy('name')->get();
+        $projects = Project::orderBy('name')->get();
+        return view('transactions.create', compact('categories', 'clients', 'projects'));
     }
 
     /**
@@ -58,6 +64,8 @@ class TransactionController extends Controller
         $request->validate([
             'date' => 'required|date',
             'category_id' => 'required|exists:categories,id',
+            'client_id' => 'required|exists:clients,id',
+            'project_id' => 'required|exists:projects,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
         ]);
@@ -66,10 +74,17 @@ class TransactionController extends Controller
         // Kategori dicari tanpa filter user_id
         $category = Category::findOrFail($request->category_id);
 
+        $project = Project::where('id', $request->project_id)
+            ->where('client_id', $request->client_id)
+            ->firstOrFail();
+
         $transactionData = $request->all();
         // PERUBAHAN 2: Pastikan user_id tetap diisi
         $transactionData['user_id'] = $request->user()->id;
         $transactionData['category_id'] = $category->id;
+        $transactionData['project_id'] = $project->id;
+
+        unset($transactionData['client_id']);
 
         Transaction::create($transactionData);
         $this->transactionService->clearSummaryCacheForUser($request->user());
@@ -86,6 +101,8 @@ class TransactionController extends Controller
         $request->validate([
             'date' => 'required|date',
             'category_id' => 'required|exists:categories,id',
+            'client_id' => 'required|exists:clients,id',
+            'project_id' => 'required|exists:projects,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
         ]);
@@ -94,8 +111,14 @@ class TransactionController extends Controller
         // Kategori dicari tanpa filter user_id
         $category = Category::findOrFail($request->category_id);
         
+        $project = Project::where('id', $request->project_id)
+            ->where('client_id', $request->client_id)
+            ->firstOrFail();
+
         $updateData = $request->all();
         $updateData['category_id'] = $category->id;
+        $updateData['project_id'] = $project->id;
+        unset($updateData['client_id']);
         // PERUBAHAN 2: user_id tidak perlu diubah karena sudah ada di $transaction
         // dan tidak termasuk dalam $request->all()
 

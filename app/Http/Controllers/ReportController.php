@@ -18,7 +18,7 @@ class ReportController extends Controller
         $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
 
         // Ambil transaksi dalam rentang tanggal
-        $transactions = Transaction::with('category')
+        $transactions = Transaction::with(['category', 'project.client'])
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('date', 'desc')
             ->get();
@@ -31,6 +31,26 @@ class ReportController extends Controller
         // Siapkan data untuk chart
         $chartData = $this->prepareChartData($startDate, $endDate);
 
+        $projectReports = Transaction::select('projects.name as project_name', 'clients.name as client_name',
+                DB::raw("SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) as income"),
+                DB::raw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN transactions.amount ELSE 0 END) as expense"))
+            ->join('projects', 'transactions.project_id', '=', 'projects.id')
+            ->join('clients', 'projects.client_id', '=', 'clients.id')
+            ->join('categories', 'transactions.category_id', '=', 'categories.id')
+            ->whereBetween('transactions.date', [$startDate, $endDate])
+            ->groupBy('projects.id', 'projects.name', 'clients.name')
+            ->get();
+
+        $clientReports = Transaction::select('clients.name as client_name',
+                DB::raw("SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) as income"),
+                DB::raw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN transactions.amount ELSE 0 END) as expense"))
+            ->join('projects', 'transactions.project_id', '=', 'projects.id')
+            ->join('clients', 'projects.client_id', '=', 'clients.id')
+            ->join('categories', 'transactions.category_id', '=', 'categories.id')
+            ->whereBetween('transactions.date', [$startDate, $endDate])
+            ->groupBy('clients.id', 'clients.name')
+            ->get();
+
         return view('reports.index', [
             'title' => 'Laporan',
             'transactions' => $transactions,
@@ -40,6 +60,8 @@ class ReportController extends Controller
             'startDate' => $startDate,
             'endDate' => $endDate,
             'chartData' => $chartData,
+            'projectReports' => $projectReports,
+            'clientReports' => $clientReports,
         ]);
     }
 

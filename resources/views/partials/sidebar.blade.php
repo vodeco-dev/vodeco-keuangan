@@ -40,7 +40,7 @@
 
     <a href="{{ route('categories.index') }}"
       class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
-              {{ request()->routeIs('categories.index') 
+              {{ request()->routeIs('categories.index')
                  ? 'bg-purple-700 text-white font-semibold shadow-lg'
                  : 'hover:bg-gray-200 hover:text-gray-900' }}">
       {{-- Ikon Kategori (Tag) --}}
@@ -48,6 +48,30 @@
         <path d="M243.31,136,144,36.69A15.86,15.86,0,0,0,132.69,32H40a8,8,0,0,0-8,8v92.69A15.86,15.86,0,0,0,36.69,144L136,243.31a16,16,0,0,0,22.63,0l84.68-84.68a16,16,0,0,0,0-22.63Zm-96,96L48,132.69V48h84.69L232,147.31ZM96,84A12,12,0,1,1,84,72,12,12,0,0,1,96,84Z"></path>
       </svg>
       <span class="text-sm">Kategori</span>
+    </a>
+
+    <a href="{{ route('clients.index') }}"
+      class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
+              {{ request()->routeIs('clients.*')
+                 ? 'bg-purple-700 text-white font-semibold shadow-lg'
+                 : 'hover:bg-gray-200 hover:text-gray-900' }}">
+      {{-- Ikon Klien (Users) --}}
+      <svg fill="currentColor" height="24px" viewBox="0 0 256 256" width="24px" xmlns="http://www.w3.org/2000/svg">
+        <path d="M80,104a40,40,0,1,0-40-40A40,40,0,0,0,80,104Zm96,0a40,40,0,1,0-40-40A40,40,0,0,0,176,104Zm-96,16c-26.51,0-80,13.25-80,40v24a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V160C176,133.25,122.51,120,80,120Zm96,0c-4,0-8.28.17-12.66.46A71.94,71.94,0,0,1,208,184v24a8,8,0,0,0,8,8h40a8,8,0,0,0,8-8V160C264,133.25,210.51,120,176,120Z"/>
+      </svg>
+      <span class="text-sm">Klien</span>
+    </a>
+
+    <a href="{{ route('projects.index') }}"
+      class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
+              {{ request()->routeIs('projects.*')
+                 ? 'bg-purple-700 text-white font-semibold shadow-lg'
+                 : 'hover:bg-gray-200 hover:text-gray-900' }}">
+      {{-- Ikon Proyek (Folder) --}}
+      <svg fill="currentColor" height="24px" viewBox="0 0 256 256" width="24px" xmlns="http://www.w3.org/2000/svg">
+        <path d="M216,72H130.67L104,48H40A16,16,0,0,0,24,64V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V88A16,16,0,0,0,216,72Zm0,120H40V64H100.44l26.67,24H216Z"/>
+      </svg>
+      <span class="text-sm">Proyek</span>
     </a>
 
     <a href="{{ route('reports.index') }}"
