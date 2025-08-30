@@ -2,10 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Category;
-use App\Models\Transaction;
-use App\Models\User;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,9 +11,15 @@ class Invoice extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'client_id',
         'project_id',
+        'recurring_revenue_id', // Ditambahkan dari branch lain, bisa null
         'number',
         'issue_date',
         'due_date',
@@ -25,25 +27,38 @@ class Invoice extends Model
         'total',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'issue_date' => 'date',
         'due_date' => 'date',
         'total' => 'decimal:2',
     ];
 
+    /**
+     * The "booted" method of the model.
+     * Secara otomatis membuat transaksi pemasukan ketika status invoice diubah menjadi 'Paid'.
+     */
     protected static function booted()
     {
         static::updated(function (Invoice $invoice) {
+            // Cek jika status berubah menjadi 'Paid' dan sebelumnya bukan 'Paid'
             if ($invoice->isDirty('status') && $invoice->status === 'Paid') {
-                $category = Category::first();
-                $user = User::first();
+                // Cari kategori default untuk pemasukan invoice, misal 'Penjualan Jasa'
+                // Fallback ke kategori pertama jika tidak ditemukan
+                $category = Category::where('name', 'Penjualan Jasa')->orWhere('type', 'pemasukan')->first();
 
-                if ($category && $user) {
+                // Pastikan ada kategori sebelum membuat transaksi
+                if ($category) {
                     Transaction::create([
                         'category_id' => $category->id,
-                        'user_id' => $user->id,
+                        'user_id' => auth()->id(), // Gunakan user yang sedang login
+                        'project_id' => $invoice->project_id,
                         'amount' => $invoice->total,
-                        'description' => 'Invoice ' . $invoice->number,
+                        'description' => 'Pembayaran untuk Invoice #' . $invoice->number,
                         'date' => now(),
                     ]);
                 }
@@ -51,18 +66,35 @@ class Invoice extends Model
         });
     }
 
+    /**
+     * Mendapatkan klien yang memiliki invoice ini.
+     */
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
     }
 
+    /**
+     * Mendapatkan proyek yang terkait dengan invoice ini.
+     */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
     }
 
+    /**
+     * Mendapatkan item-item yang ada di dalam invoice.
+     */
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    /**
+     * Mendapatkan sumber pendapatan berulang (jika ada) dari invoice ini.
+     */
+    public function recurringRevenue(): BelongsTo
+    {
+        return $this->belongsTo(RecurringRevenue::class);
     }
 }

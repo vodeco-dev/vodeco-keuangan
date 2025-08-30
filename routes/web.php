@@ -10,6 +10,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\RecurringRevenueController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -31,15 +32,19 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::resource('transactions', TransactionController::class)->except(['edit', 'show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::resource('debts', DebtController::class);
-    Route::resource('clients', ClientController::class); // Dari branch 'main'
-    Route::resource('projects', ProjectController::class); // Dari branch 'main'
-    
-    // Invoicing Routes (dari branch 'codex')
+    Route::resource('clients', ClientController::class);
+    Route::resource('projects', ProjectController::class);
     Route::resource('invoices', InvoiceController::class)->only(['index','create','store']);
+    Route::resource('recurring_revenues', RecurringRevenueController::class)->except(['create', 'edit', 'show']);
+
+    // Route untuk Aksi Spesifik
+    // Invoicing
     Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
     Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'markPaid'])->name('invoices.pay');
-
-    // Route khusus untuk pembayaran Hutang/Piutang
+    // Recurring Revenues
+    Route::patch('recurring_revenues/{recurring_revenue}/pause', [RecurringRevenueController::class, 'pause'])->name('recurring_revenues.pause');
+    Route::patch('recurring_revenues/{recurring_revenue}/resume', [RecurringRevenueController::class, 'resume'])->name('recurring_revenues.resume');
+    // Debts
     Route::post('debts/{debt}/pay', [DebtController::class, 'storePayment'])->name('debts.pay');
 
     // Laporan
@@ -52,3 +57,4 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
 });
 
 require __DIR__ . '/auth.php';
+

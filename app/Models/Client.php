@@ -17,7 +17,7 @@ class Client extends Model
      */
     protected $fillable = [
         'name',
-        'email', // Menambahkan email untuk kebutuhan invoicing
+        'email', // Diperlukan untuk invoicing dan komunikasi
     ];
 
     /**
@@ -35,4 +35,13 @@ class Client extends Model
     {
         return $this->hasMany(Invoice::class);
     }
+
+    /**
+     * Mendapatkan semua pendapatan berulang (retainer) dari klien ini.
+     */
+    public function recurringRevenues(): HasMany
+    {
+        return $this->hasMany(RecurringRevenue::class);
+    }
 }
+
