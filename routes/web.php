@@ -3,6 +3,8 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebtController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
@@ -28,6 +30,8 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::resource('transactions', TransactionController::class)->except(['edit', 'show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::resource('debts', DebtController::class);
+    Route::resource('clients', ClientController::class);
+    Route::resource('projects', ProjectController::class);
 
     // Route khusus untuk pembayaran Hutang/Piutang
     Route::post('debts/{debt}/pay', [DebtController::class, 'storePayment'])->name('debts.pay');
