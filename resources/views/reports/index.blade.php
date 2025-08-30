@@ -73,27 +73,66 @@
     <div class="h-80"><canvas id="financial-chart"></canvas></div>
 </div>
 
-{{-- Pengeluaran per Jenis Layanan --}}
+{{-- Laporan Laba Rugi per Proyek --}}
 <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
-    <h3 class="text-xl font-semibold text-gray-900 mb-4">Pengeluaran per Jenis Layanan</h3>
+    <h3 class="text-xl font-semibold text-gray-900 mb-4">Laba Rugi per Proyek</h3>
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead class="border-b">
                 <tr>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Jenis Layanan</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Total Pengeluaran</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Klien</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Proyek</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Pemasukan</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Pengeluaran</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Laba/Rugi</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
-                @forelse($serviceCostSummary as $summary)
-                <tr>
-                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $summary->serviceCost->name }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-red-600">Rp{{ number_format($summary->total, 0, ',', '.') }}</td>
-                </tr>
+                @forelse($projectReports as $row)
+                    <tr>
+                        <td class="px-6 py-4 text-sm">{{ $row->client_name }}</td>
+                        <td class="px-6 py-4 text-sm">{{ $row->project_name }}</td>
+                        <td class="px-6 py-4 text-sm text-right">Rp{{ number_format($row->income, 0, ',', '.') }}</td>
+                        <td class="px-6 py-4 text-sm text-right">Rp{{ number_format($row->expense, 0, ',', '.') }}</td>
+                        @php $profit = $row->income - $row->expense; @endphp
+                        <td class="px-6 py-4 text-sm text-right {{ $profit >= 0 ? 'text-green-600' : 'text-red-600' }}">Rp{{ number_format($profit, 0, ',', '.') }}</td>
+                    </tr>
                 @empty
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{{-- Laporan Laba Rugi per Klien --}}
+<div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+    <h3 class="text-xl font-semibold text-gray-900 mb-4">Laba Rugi per Klien</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b">
                 <tr>
-                    <td colspan="2" class="px-6 py-4 text-center text-gray-500">Tidak ada data pengeluaran layanan.</td>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Klien</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Pemasukan</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Pengeluaran</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Laba/Rugi</th>
                 </tr>
+            </thead>
+            <tbody class="divide-y">
+                @forelse($clientReports as $row)
+                    @php $profit = $row->income - $row->expense; @endphp
+                    <tr>
+                        <td class="px-6 py-4 text-sm">{{ $row->client_name }}</td>
+                        <td class="px-6 py-4 text-sm text-right">Rp{{ number_format($row->income, 0, ',', '.') }}</td>
+                        <td class="px-6 py-4 text-sm text-right">Rp{{ number_format($row->expense, 0, ',', '.') }}</td>
+                        <td class="px-6 py-4 text-sm text-right {{ $profit >= 0 ? 'text-green-600' : 'text-red-600' }}">Rp{{ number_format($profit, 0, ',', '.') }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data.</td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
@@ -109,7 +148,7 @@
                 <tr>
                     <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Tanggal</th>
                     <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Kategori</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Layanan</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Proyek</th>
                     <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Deskripsi</th>
                     <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Jumlah</th>
                 </tr>
@@ -119,7 +158,7 @@
                 <tr>
                     <td class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMM YYYY') }}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->category->name }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->serviceCost?->name ?? '-' }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->project?->name ?? '-' }}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->description }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right {{ $transaction->category->type == 'pemasukan' ? 'text-green-600' : 'text-red-600' }}">
                         {{ $transaction->category->type == 'pemasukan' ? '+' : '-' }} Rp{{ number_format($transaction->amount, 0, ',', '.') }}

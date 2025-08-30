@@ -10,32 +10,51 @@ class Transaction extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'category_id',
         'user_id',
         'amount',
         'description',
         'date',
-        'service_cost_id',
+        'project_id', // Memilih project_id dari branch 'main'
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'date' => 'date',
     ];
 
+    /**
+     * Mendapatkan kategori dari transaksi.
+     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
+    /**
+     * Mendapatkan user yang membuat transaksi.
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function serviceCost(): BelongsTo
+    /**
+     * Mendapatkan proyek yang terkait dengan transaksi.
+     */
+    public function project(): BelongsTo
     {
-        return $this->belongsTo(ServiceCost::class);
+        return $this->belongsTo(Project::class);
     }
 
     // Method getSummary() dihapus dari sini dan dipindahkan ke TransactionService
