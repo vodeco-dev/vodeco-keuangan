@@ -109,6 +109,7 @@
                 <tr>
                     <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Tanggal</th>
                     <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Kategori</th>
+                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Layanan</th>
                     <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Deskripsi</th>
                     <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Jumlah</th>
                 </tr>
@@ -118,6 +119,7 @@
                 <tr>
                     <td class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMM YYYY') }}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->category->name }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->serviceCost?->name ?? '-' }}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->description }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right {{ $transaction->category->type == 'pemasukan' ? 'text-green-600' : 'text-red-600' }}">
                         {{ $transaction->category->type == 'pemasukan' ? '+' : '-' }} Rp{{ number_format($transaction->amount, 0, ',', '.') }}
@@ -125,7 +127,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="4" class="text-center py-8 text-gray-500">Tidak ada transaksi pada rentang tanggal ini.</td>
+                    <td colspan="5" class="text-center py-8 text-gray-500">Tidak ada transaksi pada rentang tanggal ini.</td>
                 </tr>
                 @endforelse
             </tbody>

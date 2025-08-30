@@ -18,7 +18,7 @@ class ReportController extends Controller
         $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
 
         // Ambil transaksi dalam rentang tanggal
-        $transactions = Transaction::with('category')
+        $transactions = Transaction::with(['category', 'serviceCost'])
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('date', 'desc')
             ->get();
