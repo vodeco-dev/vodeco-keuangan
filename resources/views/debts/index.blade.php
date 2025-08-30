@@ -6,7 +6,7 @@
 
     {{-- Header --}}
     <div class="flex justify-between items-center mb-8">
-        <h2 class="text-3xl font-bold text-gray-800">Manajemen Hutang & Piutang</h2>
+        <h2 class="text-3xl font-bold text-gray-800">Manajemen Pass Through & Down Payment</h2>
         <button @click="addModal = true" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             <span>Tambah Catatan Baru</span>
@@ -16,11 +16,11 @@
     {{-- Summary Cards --}}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <p class="text-sm text-gray-500">Total Piutang</p>
+            <p class="text-sm text-gray-500">Total Down Payment</p>
             <p class="text-2xl font-semibold text-blue-600">Rp{{ number_format($totalPiutang, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <p class="text-sm text-gray-500">Total Hutang</p>
+            <p class="text-sm text-gray-500">Total Pass Through</p>
             <p class="text-2xl font-semibold text-red-600">Rp{{ number_format($totalHutang, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
@@ -41,8 +41,8 @@
                 <div class="flex items-center gap-4">
                     <select name="type_filter" onchange="this.form.submit()" class="border-gray-300 rounded-lg text-sm">
                         <option value="">Tipe: Semua</option>
-                        <option value="piutang" {{ request('type_filter') == 'piutang' ? 'selected' : '' }}>Piutang</option>
-                        <option value="hutang" {{ request('type_filter') == 'hutang' ? 'selected' : '' }}>Hutang</option>
+                        <option value="piutang" {{ request('type_filter') == 'piutang' ? 'selected' : '' }}>Down Payment</option>
+                        <option value="hutang" {{ request('type_filter') == 'hutang' ? 'selected' : '' }}>Pass Through</option>
                     </select>
                     <select name="status_filter" onchange="this.form.submit()" class="border-gray-300 rounded-lg text-sm">
                         <option value="">Status: Semua</option>
@@ -83,9 +83,9 @@
                         <td class="px-4 py-3 text-sm text-gray-500">{{ $debt->related_party }}</td>
                         <td class="px-4 py-3 text-sm">
                             @if ($debt->type == 'piutang')
-                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Piutang</span>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Down Payment</span>
                             @else
-                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Hutang</span>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Pass Through</span>
                             @endif
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-500">Rp{{ number_format($debt->amount, 0, ',', '.') }}</td>
@@ -155,8 +155,8 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Tipe</label>
                         <select name="type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                            <option value="piutang">Piutang (Orang lain berhutang ke saya)</option>
-                            <option value="hutang">Hutang (Saya berhutang ke orang lain)</option>
+                            <option value="piutang">Down Payment (Orang lain berhutang ke saya)</option>
+                            <option value="hutang">Pass Through (Saya berhutang ke orang lain)</option>
                         </select>
                     </div>
                     <div>
