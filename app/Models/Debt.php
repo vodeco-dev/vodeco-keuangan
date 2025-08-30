@@ -10,6 +10,9 @@ class Debt extends Model
 {
     use HasFactory;
 
+    public const TYPE_PASS_THROUGH = 'pass_through';
+    public const TYPE_DOWN_PAYMENT = 'down_payment';
+
     protected $fillable = [
         'description',
         'related_party',

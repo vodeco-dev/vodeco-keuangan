@@ -41,8 +41,8 @@
                 <div class="flex items-center gap-4">
                     <select name="type_filter" onchange="this.form.submit()" class="border-gray-300 rounded-lg text-sm">
                         <option value="">Tipe: Semua</option>
-                        <option value="piutang" {{ request('type_filter') == 'piutang' ? 'selected' : '' }}>Piutang</option>
-                        <option value="hutang" {{ request('type_filter') == 'hutang' ? 'selected' : '' }}>Hutang</option>
+                        <option value="down_payment" {{ request('type_filter') == 'down_payment' ? 'selected' : '' }}>Down Payment</option>
+                        <option value="pass_through" {{ request('type_filter') == 'pass_through' ? 'selected' : '' }}>Pass Through</option>
                     </select>
                     <select name="status_filter" onchange="this.form.submit()" class="border-gray-300 rounded-lg text-sm">
                         <option value="">Status: Semua</option>
@@ -82,10 +82,10 @@
                         <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ $debt->description }}</td>
                         <td class="px-4 py-3 text-sm text-gray-500">{{ $debt->related_party }}</td>
                         <td class="px-4 py-3 text-sm">
-                            @if ($debt->type == 'piutang')
-                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Piutang</span>
+                            @if ($debt->type == 'down_payment')
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Down Payment</span>
                             @else
-                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Hutang</span>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Pass Through</span>
                             @endif
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-500">Rp{{ number_format($debt->amount, 0, ',', '.') }}</td>
@@ -93,7 +93,7 @@
                         <td class="px-4 py-3 text-sm text-gray-500">Rp{{ number_format($debt->remaining_amount, 0, ',', '.') }}</td>
                         <td class="px-4 py-3 text-sm text-gray-500">
                             <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                <div class="{{ $debt->type == 'piutang' ? 'bg-blue-600' : 'bg-red-600' }} h-2.5 rounded-full" style="width: {{ $debt->progress }}%"></div>
+                                <div class="{{ $debt->type == 'down_payment' ? 'bg-blue-600' : 'bg-red-600' }} h-2.5 rounded-full" style="width: {{ $debt->progress }}%"></div>
                             </div>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-500">{{ $debt->due_date ? \Carbon\Carbon::parse($debt->due_date)->isoFormat('D MMM YYYY') : '-' }}</td>
@@ -155,8 +155,8 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Tipe</label>
                         <select name="type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                            <option value="piutang">Piutang (Orang lain berhutang ke saya)</option>
-                            <option value="hutang">Hutang (Saya berhutang ke orang lain)</option>
+                            <option value="down_payment">Down Payment (Orang lain berhutang ke saya)</option>
+                            <option value="pass_through">Pass Through (Saya berhutang ke orang lain)</option>
                         </select>
                     </div>
                     <div>

@@ -45,8 +45,8 @@ class DebtController extends Controller
         $debts = $query->get();
 
         // Kalkulasi ringkasan yang aman untuk multi-user
-        $totalPiutang = Debt::where('user_id', $request->user()->id)->where('type', 'piutang')->sum('amount');
-        $totalHutang = Debt::where('user_id', $request->user()->id)->where('type', 'hutang')->sum('amount');
+        $totalPiutang = Debt::where('user_id', $request->user()->id)->where('type', Debt::TYPE_DOWN_PAYMENT)->sum('amount');
+        $totalHutang = Debt::where('user_id', $request->user()->id)->where('type', Debt::TYPE_PASS_THROUGH)->sum('amount');
         $totalBelumLunas = $debts->where('status', 'belum lunas')->sum('remaining_amount');
         $totalLunas = Debt::where('user_id', $request->user()->id)->where('status', 'lunas')->sum('amount');
 
@@ -68,7 +68,7 @@ class DebtController extends Controller
         $request->validate([
             'description' => 'required|string|max:255',
             'related_party' => 'required|string|max:255',
-            'type' => 'required|in:hutang,piutang',
+            'type' => 'required|in:' . Debt::TYPE_PASS_THROUGH . ',' . Debt::TYPE_DOWN_PAYMENT,
             'amount' => 'required|numeric|min:0',
             'due_date' => 'nullable|date',
         ]);
@@ -117,9 +117,9 @@ class DebtController extends Controller
                 if ($debt->paid_amount >= $debt->amount) {
                     $debt->update(['status' => 'lunas']);
 
-                    $categoryType = $debt->type == 'piutang' ? 'pemasukan' : 'pengeluaran';
+                    $categoryType = $debt->type == Debt::TYPE_DOWN_PAYMENT ? 'pemasukan' : 'pengeluaran';
                     $category = \App\Models\Category::firstOrCreate(
-                        ['name' => 'Pelunasan ' . ucfirst($debt->type), 'user_id' => $request->user()->id],
+                        ['name' => 'Pelunasan ' . ucwords(str_replace('_', ' ', $debt->type)), 'user_id' => $request->user()->id],
                         ['type' => $categoryType]
                     );
 

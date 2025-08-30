@@ -38,8 +38,8 @@ class DebtService
      */
     public function getSummary(Collection $debts): array
     {
-        $totalPiutang = Debt::where('type', 'piutang')->sum('amount');
-        $totalHutang = Debt::where('type', 'hutang')->sum('amount');
+        $totalPiutang = Debt::where('type', Debt::TYPE_DOWN_PAYMENT)->sum('amount');
+        $totalHutang = Debt::where('type', Debt::TYPE_PASS_THROUGH)->sum('amount');
         $totalBelumLunas = $debts->where('status', 'belum lunas')->sum('remaining_amount');
         $totalLunas = Debt::where('status', 'lunas')->sum('amount');
 

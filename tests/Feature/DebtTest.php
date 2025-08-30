@@ -20,7 +20,7 @@ class DebtTest extends TestCase
         $response = $this->actingAs($user)->post('/debts', [
             'description' => 'Pinjam Uang',
             'related_party' => 'Budi',
-            'type' => 'hutang',
+            'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
             'due_date' => now()->addMonth()->toDateString(),
         ]);
@@ -30,7 +30,7 @@ class DebtTest extends TestCase
         $this->assertDatabaseHas('debts', [
             'description' => 'Pinjam Uang',
             'related_party' => 'Budi',
-            'type' => 'hutang',
+            'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
             'status' => 'belum lunas',
         ]);
@@ -46,7 +46,7 @@ class DebtTest extends TestCase
             'user_id' => $user->id,
             'description' => 'Test Debt',
             'related_party' => 'Budi',
-            'type' => 'hutang',
+            'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
             'status' => 'belum lunas',
             'due_date' => now()->addWeek(),

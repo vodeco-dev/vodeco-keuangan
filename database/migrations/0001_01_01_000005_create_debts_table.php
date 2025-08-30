@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('description');
             $table->string('related_party');
-            $table->enum('type', ['hutang', 'piutang']);
+            $table->enum('type', ['pass_through', 'down_payment']);
             $table->decimal('amount', 15, 2);
             $table->date('due_date')->nullable();
             $table->string('status')->default('belum lunas');
