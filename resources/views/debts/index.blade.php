@@ -6,7 +6,7 @@
 
     {{-- Header --}}
     <div class="flex justify-between items-center mb-8">
-        <h2 class="text-3xl font-bold text-gray-800">Manajemen Hutang & Piutang</h2>
+        <h2 class="text-3xl font-bold text-gray-800">Manajemen Pass Through & Down Payment</h2>
         <button @click="addModal = true" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             <span>Tambah Catatan Baru</span>
@@ -16,12 +16,12 @@
     {{-- Summary Cards --}}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <p class="text-sm text-gray-500">Total Pass Through</p>
-            <p class="text-2xl font-semibold text-blue-600">Rp{{ number_format($totalPassThrough, 0, ',', '.') }}</p>
+            <p class="text-sm text-gray-500">Total Down Payment</p>
+            <p class="text-2xl font-semibold text-blue-600">Rp{{ number_format($totalPiutang, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <p class="text-sm text-gray-500">Total Down Payment</p>
-            <p class="text-2xl font-semibold text-red-600">Rp{{ number_format($totalDownPayment, 0, ',', '.') }}</p>
+            <p class="text-sm text-gray-500">Total Pass Through</p>
+            <p class="text-2xl font-semibold text-red-600">Rp{{ number_format($totalHutang, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
             <p class="text-sm text-gray-500">Belum Lunas</p>
