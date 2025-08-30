@@ -45,16 +45,22 @@ class DebtController extends Controller
         $debts = $query->get();
 
         // Kalkulasi ringkasan yang aman untuk multi-user
-        $totalPiutang = Debt::where('user_id', $request->user()->id)->where('type', 'piutang')->sum('amount');
-        $totalHutang = Debt::where('user_id', $request->user()->id)->where('type', 'hutang')->sum('amount');
+        $totalPassThrough = Debt::where('user_id', $request->user()->id)
+            ->where('type', 'pass_through')
+            ->sum('amount');
+        $totalDownPayment = Debt::where('user_id', $request->user()->id)
+            ->where('type', 'down_payment')
+            ->sum('amount');
         $totalBelumLunas = $debts->where('status', 'belum lunas')->sum('remaining_amount');
-        $totalLunas = Debt::where('user_id', $request->user()->id)->where('status', 'lunas')->sum('amount');
+        $totalLunas = Debt::where('user_id', $request->user()->id)
+            ->where('status', 'lunas')
+            ->sum('amount');
 
         return view('debts.index', [
             'title' => 'Hutang & Piutang',
             'debts' => $debts,
-            'totalPiutang' => $totalPiutang,
-            'totalHutang' => $totalHutang,
+            'totalPassThrough' => $totalPassThrough,
+            'totalDownPayment' => $totalDownPayment,
             'totalBelumLunas' => $totalBelumLunas,
             'totalLunas' => $totalLunas,
         ]);
@@ -68,7 +74,7 @@ class DebtController extends Controller
         $request->validate([
             'description' => 'required|string|max:255',
             'related_party' => 'required|string|max:255',
-            'type' => 'required|in:hutang,piutang',
+            'type' => 'required|in:pass_through,down_payment',
             'amount' => 'required|numeric|min:0',
             'due_date' => 'nullable|date',
         ]);
@@ -117,7 +123,7 @@ class DebtController extends Controller
                 if ($debt->paid_amount >= $debt->amount) {
                     $debt->update(['status' => 'lunas']);
 
-                    $categoryType = $debt->type == 'piutang' ? 'pemasukan' : 'pengeluaran';
+                    $categoryType = $debt->type == 'pass_through' ? 'pemasukan' : 'pengeluaran';
                     $category = \App\Models\Category::firstOrCreate(
                         ['name' => 'Pelunasan ' . ucfirst($debt->type), 'user_id' => $request->user()->id],
                         ['type' => $categoryType]
