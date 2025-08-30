@@ -31,7 +31,7 @@
 </div>
 
 {{-- Kartu Ringkasan --}}
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
     <div class="bg-white rounded-lg shadow-sm p-6 flex items-center gap-4">
         <div class="p-3 rounded-full bg-green-100 text-green-600">
             <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,6 +63,17 @@
         <div>
             <p class="text-sm text-gray-500">Selisih</p>
             <p class="text-2xl font-semibold {{ $selisih >= 0 ? 'text-green-600' : 'text-red-600' }}">Rp{{ number_format($selisih, 0, ',', '.') }}</p>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm p-6 flex items-center gap-4">
+        <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+            <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 17l6-6 4 4 8-8" />
+            </svg>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Agency Gross Income</p>
+            <p class="text-2xl font-semibold text-gray-900">Rp{{ number_format($agencyGrossIncome, 0, ',', '.') }}</p>
         </div>
     </div>
 </div>
