@@ -72,6 +72,7 @@ class TransactionController extends Controller
         $transactionData['category_id'] = $category->id;
 
         Transaction::create($transactionData);
+        $this->transactionService->clearSummaryCacheForUser($request->user());
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil ditambahkan.');
@@ -99,6 +100,7 @@ class TransactionController extends Controller
         // dan tidak termasuk dalam $request->all()
 
         $transaction->update($updateData);
+        $this->transactionService->clearSummaryCacheForUser($request->user());
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil diperbarui.');
@@ -111,6 +113,7 @@ class TransactionController extends Controller
     {
         // Otorisasi sudah ditangani oleh authorizeResource di constructor
         $transaction->delete();
+        $this->transactionService->clearSummaryCacheForUser($transaction->user);
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil dihapus.');
