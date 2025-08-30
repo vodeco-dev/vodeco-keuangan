@@ -22,6 +22,7 @@ class Transaction extends Model
         'description',
         'date',
         'project_id', // Memilih project_id dari branch 'main'
+        'service_cost_id',
     ];
 
     /**
@@ -55,6 +56,14 @@ class Transaction extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Mendapatkan jenis biaya layanan yang terkait dengan transaksi.
+     */
+    public function serviceCost(): BelongsTo
+    {
+        return $this->belongsTo(ServiceCost::class);
     }
 
     // Method getSummary() dihapus dari sini dan dipindahkan ke TransactionService

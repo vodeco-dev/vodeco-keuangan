@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Client;
 use App\Models\Project;
+use App\Models\ServiceCost;
 use App\Models\Transaction;
 use App\Services\TransactionService;
 use Illuminate\Http\RedirectResponse;
@@ -49,7 +50,8 @@ class TransactionController extends Controller
         $categories = Category::orderBy('name')->get();
         $clients = Client::orderBy('name')->get();
         $projects = Project::orderBy('name')->get();
-        return view('transactions.create', compact('categories', 'clients', 'projects'));
+        $serviceCosts = ServiceCost::orderBy('name')->get();
+        return view('transactions.create', compact('categories', 'clients', 'projects', 'serviceCosts'));
     }
 
     /**
@@ -62,6 +64,7 @@ class TransactionController extends Controller
             'category_id' => 'required|exists:categories,id',
             'client_id' => 'required|exists:clients,id',
             'project_id' => 'required|exists:projects,id',
+            'service_cost_id' => 'nullable|exists:service_costs,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
         ]);
@@ -96,6 +99,7 @@ class TransactionController extends Controller
             'category_id' => 'required|exists:categories,id',
             'client_id' => 'required|exists:clients,id',
             'project_id' => 'required|exists:projects,id',
+            'service_cost_id' => 'nullable|exists:service_costs,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
         ]);
