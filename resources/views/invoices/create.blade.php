@@ -11,23 +11,6 @@
                 <form action="{{ route('invoices.store') }}" method="POST">
                     @csrf
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Client') }}</label>
-                        <select name="client_id" class="w-full border rounded-lg px-3 py-2">
-                            @foreach($clients as $client)
-                                <option value="{{ $client->id }}">{{ $client->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Project') }}</label>
-                        <select name="project_id" class="w-full border rounded-lg px-3 py-2">
-                            <option value="">-</option>
-                            @foreach($projects as $project)
-                                <option value="{{ $project->id }}">{{ $project->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Number') }}</label>
                         <input type="text" name="number" class="w-full border rounded-lg px-3 py-2" required>
                     </div>

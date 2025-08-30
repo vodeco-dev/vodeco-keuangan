@@ -13,7 +13,6 @@ class RecurringRevenue extends Model
     use HasFactory;
 
     protected $fillable = [
-        'client_id',
         'category_id',
         'user_id',
         'amount',
@@ -27,11 +26,6 @@ class RecurringRevenue extends Model
         'next_run' => 'datetime',
         'paused' => 'boolean',
     ];
-
-    public function client(): BelongsTo
-    {
-        return $this->belongsTo(Client::class);
-    }
 
     public function category(): BelongsTo
     {

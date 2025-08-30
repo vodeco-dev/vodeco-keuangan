@@ -21,7 +21,6 @@ class Transaction extends Model
         'amount',
         'description',
         'date',
-        'project_id', // Memilih project_id dari branch 'main'
         'service_cost_id',
     ];
 
@@ -48,14 +47,6 @@ class Transaction extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Mendapatkan proyek yang terkait dengan transaksi.
-     */
-    public function project(): BelongsTo
-    {
-        return $this->belongsTo(Project::class);
     }
 
     /**

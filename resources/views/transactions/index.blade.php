@@ -41,18 +41,6 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <select name="client_id" class="border rounded-lg text-sm px-4 py-2">
-                                <option value="">Semua Klien</option>
-                                @foreach ($clients as $client)
-                                    <option value="{{ $client->id }}" {{ request('client_id') == $client->id ? 'selected' : '' }}>{{ $client->name }}</option>
-                                @endforeach
-                            </select>
-                            <select name="project_id" class="border rounded-lg text-sm px-4 py-2">
-                                <option value="">Semua Proyek</option>
-                                @foreach ($projects as $project)
-                                    <option value="{{ $project->id }}" {{ request('project_id') == $project->id ? 'selected' : '' }}>{{ $project->name }}</option>
-                                @endforeach
-                            </select>
                             <select name="type" class="border rounded-lg text-sm px-4 py-2">
                                 <option value="">Semua Tipe</option>
                                 <option value="pemasukan" {{ request('type') == 'pemasukan' ? 'selected' : '' }}>Pemasukan</option>
@@ -75,8 +63,6 @@
                             <tr>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Kategori</th>
-                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Klien</th>
-                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Proyek</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Deskripsi</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Jumlah</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Aksi</th>
@@ -89,8 +75,6 @@
                                     
                                     {{-- INI BAGIAN YANG DIPERBAIKI --}}
                                     <td class="px-6 py-4 whitespace-nowrap">{{ $transaction->category?->name ?? 'Tanpa Kategori' }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">{{ $transaction->project?->client?->name }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">{{ $transaction->project?->name }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap">{{ $transaction->description }}</td>
                                     
                                     {{-- INI JUGA BAGIAN YANG DIPERBAIKI --}}

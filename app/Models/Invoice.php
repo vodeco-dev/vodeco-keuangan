@@ -17,8 +17,6 @@ class Invoice extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'client_id',
-        'project_id',
         'recurring_revenue_id', // Ditambahkan dari branch lain, bisa null
         'number',
         'issue_date',
@@ -56,7 +54,6 @@ class Invoice extends Model
                     Transaction::create([
                         'category_id' => $category->id,
                         'user_id' => auth()->id(), // Gunakan user yang sedang login
-                        'project_id' => $invoice->project_id,
                         'amount' => $invoice->total,
                         'description' => 'Pembayaran untuk Invoice #' . $invoice->number,
                         'date' => now(),
@@ -64,22 +61,6 @@ class Invoice extends Model
                 }
             }
         });
-    }
-
-    /**
-     * Mendapatkan klien yang memiliki invoice ini.
-     */
-    public function client(): BelongsTo
-    {
-        return $this->belongsTo(Client::class);
-    }
-
-    /**
-     * Mendapatkan proyek yang terkait dengan invoice ini.
-     */
-    public function project(): BelongsTo
-    {
-        return $this->belongsTo(Project::class);
     }
 
     /**

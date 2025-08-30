@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Client;
 use App\Models\RecurringRevenue;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
@@ -13,16 +12,14 @@ class RecurringRevenueController extends Controller
 {
     public function index(): View
     {
-        $revenues = RecurringRevenue::with('client')->get();
-        $clients = Client::all();
+        $revenues = RecurringRevenue::all();
         $categories = Category::all();
-        return view('recurring_revenues.index', compact('revenues', 'clients', 'categories'));
+        return view('recurring_revenues.index', compact('revenues', 'categories'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'client_id' => 'required|exists:clients,id',
             'category_id' => 'nullable|exists:categories,id',
             'user_id' => 'required|exists:users,id',
             'amount' => 'required|numeric',
@@ -37,7 +34,6 @@ class RecurringRevenueController extends Controller
     public function update(Request $request, RecurringRevenue $recurring_revenue): RedirectResponse
     {
         $data = $request->validate([
-            'client_id' => 'required|exists:clients,id',
             'category_id' => 'nullable|exists:categories,id',
             'user_id' => 'required|exists:users,id',
             'amount' => 'required|numeric',

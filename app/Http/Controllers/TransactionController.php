@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\Client;
-use App\Models\Project;
 use App\Models\ServiceCost;
 use App\Models\Transaction;
 use App\Services\TransactionService;
@@ -29,14 +27,12 @@ class TransactionController extends Controller
     {
         $transactions = $this->transactionService->getTransactionsForUser($request->user(), $request);
         $categories = Category::orderBy('name')->get();
-        $clients = Client::orderBy('name')->get();
-        $projects = Project::orderBy('name')->get();
         $summary = $this->transactionService->getSummaryForUser($request->user());
 
         return view(
             'transactions.index',
             array_merge(
-                compact('transactions', 'categories', 'clients', 'projects'),
+                compact('transactions', 'categories'),
                 $summary
             )
         );
@@ -48,10 +44,8 @@ class TransactionController extends Controller
     public function create(Request $request): View
     {
         $categories = Category::orderBy('name')->get();
-        $clients = Client::orderBy('name')->get();
-        $projects = Project::orderBy('name')->get();
         $serviceCosts = ServiceCost::orderBy('name')->get();
-        return view('transactions.create', compact('categories', 'clients', 'projects', 'serviceCosts'));
+        return view('transactions.create', compact('categories', 'serviceCosts'));
     }
 
     /**
@@ -62,8 +56,6 @@ class TransactionController extends Controller
         $request->validate([
             'date' => 'required|date',
             'category_id' => 'required|exists:categories,id',
-            'client_id' => 'required|exists:clients,id',
-            'project_id' => 'required|exists:projects,id',
             'service_cost_id' => 'nullable|exists:service_costs,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
@@ -71,16 +63,9 @@ class TransactionController extends Controller
 
         $category = Category::findOrFail($request->category_id);
 
-        $project = Project::where('id', $request->project_id)
-            ->where('client_id', $request->client_id)
-            ->firstOrFail();
-
-        $transactionData = $request->all();
+        $transactionData = $request->only(['date', 'category_id', 'service_cost_id', 'amount', 'description']);
         $transactionData['user_id'] = $request->user()->id;
         $transactionData['category_id'] = $category->id;
-        $transactionData['project_id'] = $project->id;
-
-        unset($transactionData['client_id']);
 
         Transaction::create($transactionData);
         $this->transactionService->clearSummaryCacheForUser($request->user());
@@ -97,8 +82,6 @@ class TransactionController extends Controller
         $request->validate([
             'date' => 'required|date',
             'category_id' => 'required|exists:categories,id',
-            'client_id' => 'required|exists:clients,id',
-            'project_id' => 'required|exists:projects,id',
             'service_cost_id' => 'nullable|exists:service_costs,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
@@ -106,14 +89,8 @@ class TransactionController extends Controller
 
         $category = Category::findOrFail($request->category_id);
 
-        $project = Project::where('id', $request->project_id)
-            ->where('client_id', $request->client_id)
-            ->firstOrFail();
-
-        $updateData = $request->all();
+        $updateData = $request->only(['date', 'category_id', 'service_cost_id', 'amount', 'description']);
         $updateData['category_id'] = $category->id;
-        $updateData['project_id'] = $project->id;
-        unset($updateData['client_id']);
 
         $transaction->update($updateData);
         $this->transactionService->clearSummaryCacheForUser($request->user());
