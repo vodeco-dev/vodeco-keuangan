@@ -8,7 +8,9 @@
     <div class="flex justify-between items-center mb-8">
         <h2 class="text-3xl font-bold text-gray-800">Manajemen Pass Through & Down Payment</h2>
         <button @click="addModal = true" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
             <span>Tambah Catatan Baru</span>
         </button>
     </div>
@@ -17,11 +19,11 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-lg shadow-sm p-6">
             <p class="text-sm text-gray-500">Total Down Payment</p>
-            <p class="text-2xl font-semibold text-blue-600">Rp{{ number_format($totalPiutang, 0, ',', '.') }}</p>
+            <p class="text-2xl font-semibold text-blue-600">Rp{{ number_format($totalDownPayment, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
             <p class="text-sm text-gray-500">Total Pass Through</p>
-            <p class="text-2xl font-semibold text-red-600">Rp{{ number_format($totalHutang, 0, ',', '.') }}</p>
+            <p class="text-2xl font-semibold text-red-600">Rp{{ number_format($totalPassThrough, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
             <p class="text-sm text-gray-500">Belum Lunas</p>
@@ -53,7 +55,9 @@
                 <div class="relative">
                     <input name="search" class="pl-10 pr-4 py-2 border rounded-lg text-sm" placeholder="Cari..." type="text" value="{{ request('search') }}">
                     <button type="submit" class="absolute inset-y-0 left-0 pl-3 flex items-center">
-                        <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
+                        <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -108,20 +112,27 @@
                             <div class="flex items-center justify-center gap-2">
                                 @if ($debt->status == 'belum lunas')
                                 <button @click="paymentModal = true; selectedDebt = {{ $debt }}" class="text-blue-600 hover:text-blue-900" title="Tambah Pembayaran">
-                                    <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                                    <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
                                 </button>
                                 @endif
 
                                 {{-- Tombol Detail Riwayat --}}
                                 <button @click="detailModal = true; selectedDebt = {{ $debt }}" class="text-gray-500 hover:text-gray-800" title="Lihat Riwayat Pembayaran">
-                                    <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                    <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
                                 </button>
 
                                 <form action="{{ route('debts.destroy', $debt) }}" method="POST" onsubmit="return confirm('Anda yakin ingin menghapus catatan ini?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-800" title="Hapus">
-                                        <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                        <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
                                     </button>
                                 </form>
                             </div>
@@ -192,7 +203,7 @@
                         <label class="block text-sm font-medium text-gray-700">Tanggal Pembayaran</label>
                         <input type="date" name="payment_date" value="{{ date('Y-m-d') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                     </div>
-                     <div>
+                    <div>
                         <label class="block text-sm font-medium text-gray-700">Catatan (Opsional)</label>
                         <textarea name="notes" rows="2" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"></textarea>
                     </div>
@@ -204,12 +215,12 @@
             </form>
         </div>
     </div>
-    
+
     <div x-show="detailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
         <div @click.away="detailModal = false" class="bg-white rounded-lg p-8 w-full max-w-2xl">
             <h3 class="text-2xl font-bold mb-2">Riwayat Pembayaran</h3>
             <p class="text-gray-600 mb-6" x-text="selectedDebt.description"></p>
-            
+
             {{-- Info Ringkas --}}
             <div class="grid grid-cols-3 gap-4 mb-6 text-center">
                 <div>
@@ -238,7 +249,7 @@
                     </thead>
                     <tbody class="divide-y bg-white">
                         <template x-if="selectedDebt.payments && selectedDebt.payments.length > 0">
-                             <template x-for="payment in selectedDebt.payments" :key="payment.id">
+                            <template x-for="payment in selectedDebt.payments" :key="payment.id">
                                 <tr>
                                     <td class="px-4 py-3 text-sm text-gray-500" x-text="new Date(payment.payment_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })"></td>
                                     <td class="px-4 py-3 text-sm font-medium text-gray-900" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(payment.amount)"></td>

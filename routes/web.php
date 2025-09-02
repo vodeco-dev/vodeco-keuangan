@@ -9,6 +9,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\RecurringRevenueController;
+use App\Http\Controllers\UserController; // <-- TAMBAHKAN INI
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -52,5 +53,13 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
 });
 
-require __DIR__ . '/auth.php';
+// Route Khusus untuk Admin - Manajemen User
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+    Route::post('/users', [UserController::class, 'store'])->name('users.store');
+    // Anda bisa menambahkan route untuk edit, update, dan delete di sini nanti
+});
 
+
+require __DIR__ . '/auth.php';
