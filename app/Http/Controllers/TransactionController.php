@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreTransactionRequest;
+use App\Http\Requests\UpdateTransactionRequest;
 use App\Models\Category;
 use App\Models\ServiceCost;
 use App\Models\Transaction;
@@ -51,21 +53,12 @@ class TransactionController extends Controller
     /**
      * Menyimpan transaksi baru.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreTransactionRequest $request): RedirectResponse
     {
-        $request->validate([
-            'date' => 'required|date',
-            'category_id' => 'required|exists:categories,id',
-            'service_cost_id' => 'nullable|exists:service_costs,id',
-            'amount' => 'required|numeric|min:0',
-            'description' => 'nullable|string|max:255',
-        ]);
+        $validated = $request->validated();
 
-        $category = Category::findOrFail($request->category_id);
-
-        $transactionData = $request->only(['date', 'category_id', 'service_cost_id', 'amount', 'description']);
+        $transactionData = $validated;
         $transactionData['user_id'] = $request->user()->id;
-        $transactionData['category_id'] = $category->id;
 
         Transaction::create($transactionData);
         $this->transactionService->clearSummaryCacheForUser($request->user());
@@ -77,22 +70,11 @@ class TransactionController extends Controller
     /**
      * Memperbarui data transaksi.
      */
-    public function update(Request $request, Transaction $transaction): RedirectResponse
+    public function update(UpdateTransactionRequest $request, Transaction $transaction): RedirectResponse
     {
-        $request->validate([
-            'date' => 'required|date',
-            'category_id' => 'required|exists:categories,id',
-            'service_cost_id' => 'nullable|exists:service_costs,id',
-            'amount' => 'required|numeric|min:0',
-            'description' => 'nullable|string|max:255',
-        ]);
+        $validated = $request->validated();
 
-        $category = Category::findOrFail($request->category_id);
-
-        $updateData = $request->only(['date', 'category_id', 'service_cost_id', 'amount', 'description']);
-        $updateData['category_id'] = $category->id;
-
-        $transaction->update($updateData);
+        $transaction->update($validated);
         $this->transactionService->clearSummaryCacheForUser($request->user());
 
         return redirect()->route('transactions.index')

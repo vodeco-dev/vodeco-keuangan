@@ -23,6 +23,9 @@ class Invoice extends Model
         'due_date',
         'status',
         'total',
+        'client_name',
+        'client_email',
+        'client_address',
     ];
 
     /**

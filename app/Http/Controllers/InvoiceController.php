@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use Illuminate\Http\RedirectResponse;
@@ -21,18 +22,14 @@ class InvoiceController extends Controller
         return view('invoices.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreInvoiceRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'number' => ['required', 'string', 'unique:invoices,number'],
-            'issue_date' => ['nullable', 'date'],
-            'due_date' => ['nullable', 'date'],
-            'items.*.description' => ['required', 'string'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.price' => ['required', 'numeric'],
-        ]);
+        $data = $request->validated();
 
         $invoice = Invoice::create([
+            'client_name' => $data['client_name'],
+            'client_email' => $data['client_email'],
+            'client_address' => $data['client_address'],
             'number' => $data['number'],
             'issue_date' => $data['issue_date'] ?? now(),
             'due_date' => $data['due_date'] ?? null,

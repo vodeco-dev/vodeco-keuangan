@@ -85,7 +85,7 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-center">
                                         <div class="flex justify-center items-center gap-2">
                                             <a href="#" class="text-blue-600 hover:text-blue-900">Edit</a>
-                                            <form action="#" method="POST" onsubmit="return confirm('Yakin hapus?');">
+                                            <form action="{{ route('transactions.destroy', $transaction) }}" method="POST" onsubmit="return confirm('Yakin hapus?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>

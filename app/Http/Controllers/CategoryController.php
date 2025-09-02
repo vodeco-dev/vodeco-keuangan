@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCategoryRequest;
+use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -27,14 +29,9 @@ class CategoryController extends Controller
     /**
      * Menyimpan kategori baru ke database.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name',
-            'type' => 'required|in:pemasukan,pengeluaran',
-        ]);
-
-        Category::create($request->all());
+        Category::create($request->validated());
 
         return redirect()->route('categories.index')->with('success', 'Kategori baru berhasil ditambahkan.');
     }
@@ -42,14 +39,9 @@ class CategoryController extends Controller
     /**
      * Memperbarui kategori yang sudah ada.
      */
-    public function update(Request $request, Category $category): RedirectResponse
+    public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
-            'type' => 'required|in:pemasukan,pengeluaran',
-        ]);
-
-        $category->update($request->all());
+        $category->update($request->validated());
 
         return redirect()->route('categories.index')->with('success', 'Kategori berhasil diperbarui.');
     }

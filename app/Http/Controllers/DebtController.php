@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreDebtRequest;
+use App\Http\Requests\StoreDebtPaymentRequest;
 use App\Models\Debt;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -69,25 +71,14 @@ class DebtController extends Controller
     /**
      * Menyimpan catatan hutang/piutang baru.
      */
-    public function store(Request $request)
+    public function store(StoreDebtRequest $request)
     {
-        $request->validate([
-            'description' => 'required|string|max:255',
-            'related_party' => 'required|string|max:255',
-            'type' => 'required|in:' . Debt::TYPE_PASS_THROUGH . ',' . Debt::TYPE_DOWN_PAYMENT,
-            'amount' => 'required|numeric|min:0',
-            'due_date' => 'nullable|date',
-        ]);
+        $validated = $request->validated();
 
-        Debt::create([
-            'description' => $request->description,
-            'related_party' => $request->related_party,
-            'type' => $request->type,
-            'amount' => $request->amount,
-            'due_date' => $request->due_date,
+        Debt::create(array_merge($validated, [
             'status' => 'belum lunas',
             'user_id' => $request->user()->id, // Keamanan: Pastikan data baru memiliki pemilik
-        ]);
+        ]));
 
         return redirect()->route('debts.index')->with('success', 'Catatan berhasil ditambahkan.');
     }
@@ -96,24 +87,20 @@ class DebtController extends Controller
      * Menyimpan pembayaran/cicilan baru.
      * Menggabungkan authorize, DB::transaction, dan try-catch dari kedua branch.
      */
-    public function storePayment(Request $request, Debt $debt)
+    public function storePayment(StoreDebtPaymentRequest $request, Debt $debt)
     {
         // Keamanan: Pastikan user boleh mengupdate data ini
         $this->authorize('update', $debt);
 
-        $request->validate([
-            'payment_amount' => 'required|numeric|min:0',
-            'payment_date' => 'nullable|date',
-            'notes' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         try {
             // Keandalan: Pastikan semua operasi database berhasil atau tidak sama sekali
-            DB::transaction(function () use ($request, $debt) {
+            DB::transaction(function () use ($validated, $request, $debt) {
                 $debt->payments()->create([
-                    'amount' => $request->payment_amount,
-                    'payment_date' => $request->payment_date ?? now(),
-                    'notes' => $request->notes,
+                    'amount' => $validated['payment_amount'],
+                    'payment_date' => $validated['payment_date'] ?? now(),
+                    'notes' => $validated['notes'] ?? null,
                 ]);
 
                 // Reload relasi untuk mendapatkan paid_amount yang ter-update

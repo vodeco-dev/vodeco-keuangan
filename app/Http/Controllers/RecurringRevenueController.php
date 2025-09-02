@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreRecurringRevenueRequest;
+use App\Http\Requests\UpdateRecurringRevenueRequest;
 use App\Models\RecurringRevenue;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
@@ -17,32 +19,15 @@ class RecurringRevenueController extends Controller
         return view('recurring_revenues.index', compact('revenues', 'categories'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreRecurringRevenueRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'category_id' => 'nullable|exists:categories,id',
-            'user_id' => 'required|exists:users,id',
-            'amount' => 'required|numeric',
-            'frequency' => 'required|string',
-            'next_run' => 'required|date',
-            'description' => 'nullable|string',
-        ]);
-        RecurringRevenue::create($data);
+        RecurringRevenue::create($request->validated());
         return redirect()->route('recurring_revenues.index')->with('success', 'Pendapatan berulang ditambahkan.');
     }
 
-    public function update(Request $request, RecurringRevenue $recurring_revenue): RedirectResponse
+    public function update(UpdateRecurringRevenueRequest $request, RecurringRevenue $recurring_revenue): RedirectResponse
     {
-        $data = $request->validate([
-            'category_id' => 'nullable|exists:categories,id',
-            'user_id' => 'required|exists:users,id',
-            'amount' => 'required|numeric',
-            'frequency' => 'required|string',
-            'next_run' => 'required|date',
-            'paused' => 'boolean',
-            'description' => 'nullable|string',
-        ]);
-        $recurring_revenue->update($data);
+        $recurring_revenue->update($request->validated());
         return redirect()->route('recurring_revenues.index')->with('success', 'Pendapatan berulang diperbarui.');
     }
 
