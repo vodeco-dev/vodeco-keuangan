@@ -2,22 +2,8 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-
-class NavigationServiceProvider extends ServiceProvider
-{
-    /**
-     * Register services.
-     */
-    public function register(): void
-    {
-        //
-    }
-
-    /**
-     * Bootstrap services.
-     */
-    use Illuminate\Support\Facades\View;
 
 class NavigationServiceProvider extends ServiceProvider
 {
@@ -74,3 +60,4 @@ class NavigationServiceProvider extends ServiceProvider
         ]);
     }
 }
+
