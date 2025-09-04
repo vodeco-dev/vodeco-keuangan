@@ -11,6 +11,10 @@ use Illuminate\View\View;
 
 class InvoiceController extends Controller
 {
+    public function __construct()
+    {
+        $this->authorizeResource(Invoice::class, 'invoice');
+    }
     public function index(): View
     {
         $invoices = Invoice::latest()->paginate();
@@ -51,6 +55,7 @@ class InvoiceController extends Controller
 
     public function send(Invoice $invoice): RedirectResponse
     {
+        $this->authorize('update', $invoice);
         $invoice->update(['status' => 'Sent']);
         // Logic pengiriman email dapat ditambahkan di sini
         return redirect()->route('invoices.index');
@@ -58,6 +63,7 @@ class InvoiceController extends Controller
 
     public function markPaid(Invoice $invoice): RedirectResponse
     {
+        $this->authorize('update', $invoice);
         $invoice->update(['status' => 'Paid']);
         return redirect()->route('invoices.index');
     }

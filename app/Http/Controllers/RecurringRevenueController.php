@@ -12,6 +12,10 @@ use Illuminate\View\View;
 
 class RecurringRevenueController extends Controller
 {
+    public function __construct()
+    {
+        $this->authorizeResource(RecurringRevenue::class, 'recurring_revenue');
+    }
     public function index(): View
     {
         $revenues = RecurringRevenue::all();
@@ -39,12 +43,14 @@ class RecurringRevenueController extends Controller
 
     public function pause(RecurringRevenue $recurring_revenue): RedirectResponse
     {
+        $this->authorize('update', $recurring_revenue);
         $recurring_revenue->update(['paused' => true]);
         return redirect()->route('recurring_revenues.index');
     }
 
     public function resume(RecurringRevenue $recurring_revenue): RedirectResponse
     {
+        $this->authorize('update', $recurring_revenue);
         $recurring_revenue->update(['paused' => false]);
         return redirect()->route('recurring_revenues.index');
     }
