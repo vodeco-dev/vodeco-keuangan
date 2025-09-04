@@ -3,14 +3,14 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebtController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RecurringRevenueController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ServiceCostController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TransactionController;
-use App\Http\Controllers\RecurringRevenueController;
-use App\Http\Controllers\UserController; // <-- TAMBAHKAN INI
-use App\Http\Controllers\ServiceCostController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -33,7 +33,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::resource('service_costs', ServiceCostController::class)->except(['show']);
     Route::resource('debts', DebtController::class);
-    Route::resource('invoices', InvoiceController::class)->only(['index','create','store']);
+    Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store']);
     Route::resource('recurring_revenues', RecurringRevenueController::class)->except(['create', 'edit', 'show']);
 
     // Route untuk Aksi Spesifik
@@ -63,5 +63,4 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     // Anda bisa menambahkan route untuk edit, update, dan delete di sini nanti
 });
 
-
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
