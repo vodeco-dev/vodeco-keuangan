@@ -197,3 +197,7 @@ File-file *test* terletak di dalam direktori `tests/Feature` dan `tests/Unit`.
   * Gunakan nama variabel, fungsi, dan kelas yang jelas dan deskriptif dalam bahasa Inggris.
   * Pastikan untuk menulis *test* untuk setiap fitur atau perbaikan *bug* yang Anda tambahkan.
   * Jaga agar *Controller* tetap ramping dengan memindahkan logika bisnis ke dalam *Service Class* jika memungkinkan.
+
+### Lisensi
+
+Proyek ini dilisensikan di bawah [MIT License](LICENSE).
