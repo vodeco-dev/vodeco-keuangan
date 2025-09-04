@@ -2,9 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
 use App\Models\Invoice;
-use App\Models\RecurringRevenue;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,20 +15,9 @@ class InvoicePolicyTest extends TestCase
     {
         $user = User::factory()->create();
         $other = User::factory()->create();
-        $category = Category::factory()->create();
-
-        $revenue = RecurringRevenue::create([
-            'category_id' => $category->id,
-            'user_id' => $user->id,
-            'amount' => 1000,
-            'frequency' => 'monthly',
-            'next_run' => now()->addMonth(),
-            'paused' => false,
-            'description' => 'Test',
-        ]);
 
         $invoice = Invoice::create([
-            'recurring_revenue_id' => $revenue->id,
+            'user_id' => $user->id,
             'number' => 'INV-1',
             'issue_date' => now(),
             'due_date' => now()->addDay(),
@@ -43,5 +30,12 @@ class InvoicePolicyTest extends TestCase
 
         $this->assertTrue($user->can('view', $invoice));
         $this->assertFalse($other->can('view', $invoice));
+    }
+
+    public function test_user_can_view_invoice_list(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertTrue($user->can('viewAny', Invoice::class));
     }
 }

@@ -14,7 +14,7 @@ class InvoicePolicy
 
     public function view(User $user, Invoice $invoice): bool
     {
-        return $invoice->recurringRevenue && $invoice->recurringRevenue->user_id === $user->id;
+        return $invoice->user_id === $user->id;
     }
 
     public function create(User $user): bool
@@ -24,11 +24,11 @@ class InvoicePolicy
 
     public function update(User $user, Invoice $invoice): bool
     {
-        return $invoice->recurringRevenue && $invoice->recurringRevenue->user_id === $user->id;
+        return $invoice->user_id === $user->id;
     }
 
     public function delete(User $user, Invoice $invoice): bool
     {
-        return $invoice->recurringRevenue && $invoice->recurringRevenue->user_id === $user->id;
+        return $invoice->user_id === $user->id;
     }
 }

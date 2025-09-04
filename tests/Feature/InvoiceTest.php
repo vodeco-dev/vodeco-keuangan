@@ -43,6 +43,7 @@ class InvoiceTest extends TestCase
             'number' => 'INV-001',
             'client_name' => 'Client',
             'total' => 1000,
+            'user_id' => $user->id,
         ]);
         $this->assertDatabaseHas('invoice_items', [
             'description' => 'Service',
@@ -55,6 +56,7 @@ class InvoiceTest extends TestCase
     {
         $user = User::factory()->create();
         $invoice = Invoice::create([
+            'user_id' => $user->id,
             'number' => 'INV-100',
             'issue_date' => now()->toDateString(),
             'due_date' => now()->addWeek()->toDateString(),

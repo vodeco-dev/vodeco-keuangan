@@ -18,6 +18,7 @@ class Invoice extends Model
      */
     protected $fillable = [
         'recurring_revenue_id', // Ditambahkan dari branch lain, bisa null
+        'user_id',
         'number',
         'issue_date',
         'due_date',
@@ -80,5 +81,13 @@ class Invoice extends Model
     public function recurringRevenue(): BelongsTo
     {
         return $this->belongsTo(RecurringRevenue::class);
+    }
+
+    /**
+     * Mendapatkan pengguna yang memiliki invoice ini.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

@@ -17,7 +17,7 @@ class InvoiceController extends Controller
     }
     public function index(): View
     {
-        $invoices = Invoice::latest()->paginate();
+        $invoices = Invoice::where('user_id', auth()->id())->latest()->paginate();
         return view('invoices.index', compact('invoices'));
     }
 
@@ -31,6 +31,7 @@ class InvoiceController extends Controller
         $data = $request->validated();
 
         $invoice = Invoice::create([
+            'user_id' => $request->user()->id,
             'client_name' => $data['client_name'],
             'client_email' => $data['client_email'],
             'client_address' => $data['client_address'],
