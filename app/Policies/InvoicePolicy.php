@@ -34,11 +34,15 @@ class InvoicePolicy
 
     public function send(User $user, Invoice $invoice): bool
     {
-        return $user->is_admin || ($invoice->recurringRevenue && $invoice->recurringRevenue->user_id === $user->id);
+        return $invoice->recurringRevenue
+            ? $user->is_admin || $invoice->recurringRevenue->user_id === $user->id
+            : true;
     }
 
     public function markPaid(User $user, Invoice $invoice): bool
     {
-        return $user->is_admin || ($invoice->recurringRevenue && $invoice->recurringRevenue->user_id === $user->id);
+        return $invoice->recurringRevenue
+            ? $user->is_admin || $invoice->recurringRevenue->user_id === $user->id
+            : true;
     }
 }
