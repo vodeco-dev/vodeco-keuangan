@@ -5,9 +5,10 @@ namespace App\Console\Commands;
 use App\Models\RecurringRevenue;
 use App\Models\Invoice;
 use App\Models\Transaction;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class ProcessRecurringRevenues extends Command
 {
@@ -29,9 +30,14 @@ class ProcessRecurringRevenues extends Command
 
                 Invoice::create([
                     'recurring_revenue_id' => $rev->id,
-                    'transaction_id' => $transaction->id,
-                    'amount' => $rev->amount,
-                    'issued_at' => Carbon::now(),
+                    'number' => (string) Str::uuid(),
+                    'issue_date' => Carbon::now()->toDateString(),
+                    'due_date' => Carbon::now()->toDateString(),
+                    'status' => 'Sent',
+                    'total' => $rev->amount,
+                    'client_name' => $rev->user->name ?? 'Client',
+                    'client_email' => $rev->user->email ?? 'client@example.com',
+                    'client_address' => '-',
                 ]);
 
                 $rev->update(['next_run' => $rev->next_run->add($rev->interval())]);
