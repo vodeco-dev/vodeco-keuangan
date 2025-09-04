@@ -25,9 +25,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        URL::forceScheme('https');
-        
+        // Hanya paksa HTTPS jika environment adalah 'production' dan tidak berjalan di konsol
+        if ($this->app->environment('production') && !$this->app->runningInConsole()) {
+            URL::forceScheme('https');
+        }
+
         Gate::policy(Transaction::class, TransactionPolicy::class);
         Gate::policy(Debt::class, DebtPolicy::class);
     }
 }
+

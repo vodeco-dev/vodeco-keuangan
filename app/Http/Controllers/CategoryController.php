@@ -12,6 +12,14 @@ use Illuminate\Http\RedirectResponse;
 class CategoryController extends Controller
 {
     /**
+     * Terapkan authorization policy
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(Category::class, 'category');
+    }
+
+    /**
      * Menampilkan halaman daftar kategori, dipisahkan berdasarkan tipe.
      */
     public function index(): View
