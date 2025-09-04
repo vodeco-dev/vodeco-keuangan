@@ -55,6 +55,8 @@ class InvoiceController extends Controller
 
     public function send(Invoice $invoice): RedirectResponse
     {
+        $this->authorize('send', $invoice);
+
         $invoice->update(['status' => 'Sent']);
         // Logic pengiriman email dapat ditambahkan di sini
         return redirect()->route('invoices.index');
@@ -62,6 +64,8 @@ class InvoiceController extends Controller
 
     public function markPaid(Invoice $invoice): RedirectResponse
     {
+        $this->authorize('markPaid', $invoice);
+
         $invoice->update(['status' => 'Paid']);
         return redirect()->route('invoices.index');
     }
