@@ -6,17 +6,21 @@ use App\Http\Requests\StoreDebtRequest;
 use App\Http\Requests\StoreDebtPaymentRequest;
 use App\Models\Debt;
 use App\Models\Transaction;
+use App\Services\DebtService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB; // Diambil dari branch 'main'
 
 class DebtController extends Controller
 {
+    protected DebtService $debtService;
+
     /**
      * Terapkan authorization policy ke semua method resource controller.
      * Diambil dari branch 'codex/...'
      */
-    public function __construct()
+    public function __construct(DebtService $debtService)
     {
+        $this->debtService = $debtService;
         $this->authorizeResource(Debt::class, 'debt');
     }
 
@@ -46,26 +50,12 @@ class DebtController extends Controller
 
         $debts = $query->get();
 
-        // Kalkulasi ringkasan yang aman untuk multi-user
-        $totalDownPayment = Debt::where('user_id', $request->user()->id)
-            ->where('type', Debt::TYPE_DOWN_PAYMENT)
-            ->sum('amount');
-        $totalPassThrough = Debt::where('user_id', $request->user()->id)
-            ->where('type', Debt::TYPE_PASS_THROUGH)
-            ->sum('amount');
-        $totalBelumLunas = $debts->where('status', 'belum lunas')->sum('remaining_amount');
-        $totalLunas = Debt::where('user_id', $request->user()->id)
-            ->where('status', 'lunas')
-            ->sum('amount');
+        $summary = $this->debtService->getSummary($request->user());
 
-        return view('debts.index', [
+        return view('debts.index', array_merge([
             'title' => 'Hutang & Piutang',
             'debts' => $debts,
-            'totalPassThrough' => $totalPassThrough,
-            'totalDownPayment' => $totalDownPayment,
-            'totalBelumLunas' => $totalBelumLunas,
-            'totalLunas' => $totalLunas,
-        ]);
+        ], $summary));
     }
 
     /**
