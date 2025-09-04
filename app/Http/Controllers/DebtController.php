@@ -30,25 +30,7 @@ class DebtController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Debt::with('payments')
-            ->where('user_id', $request->user()->id) // Keamanan: Filter data milik user
-            ->latest();
-
-        // Logika filter
-        if ($request->filled('type_filter')) {
-            $query->where('type', $request->type_filter);
-        }
-        if ($request->filled('status_filter')) {
-            $query->where('status', $request->status_filter);
-        }
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('description', 'like', '%' . $request->search . '%')
-                  ->orWhere('related_party', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        $debts = $query->get();
+        $debts = $this->debtService->getDebts($request, $request->user());
 
         $summary = $this->debtService->getSummary($request->user());
 
