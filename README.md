@@ -142,6 +142,8 @@ Berikut adalah panduan bagi *developer* yang ingin berkontribusi pada proyek ini
 
 **1. Instalasi Lingkungan Lokal**
 
+Setelah melakukan clone repositori, jalankan `npm install` untuk mengunduh dependensi JavaScript.
+
 ```bash
 # 1. Clone repositori dari GitHub
 git clone [URL_REPOSITORI_ANDA]
