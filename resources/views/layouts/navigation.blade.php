@@ -24,7 +24,7 @@
                     <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.index')">
                         {{ __('Laporan') }}
                     </x-nav-link>
-                    @if (Auth::user()->role == 'admin')
+                    @if (Auth::user()->role === \App\Enums\Role::ADMIN)
                     <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                         <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.index')">
                             {{ __('Users') }}

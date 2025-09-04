@@ -34,7 +34,7 @@
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap">{{ $user->name }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap">{{ $user->email }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">{{ ucfirst($user->role) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">{{ ucfirst($user->role->value) }}</td>
                                     </tr>
                                 @empty
                                     <tr>

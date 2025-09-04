@@ -20,7 +20,7 @@
     {{-- Menu Navigasi Utama --}}
     <nav class="flex flex-col gap-2">
         @foreach ($navigation as $item)
-            @if(!isset($item['can']) || (isset($item['can']) && auth()->user()->role == $item['can']))
+            @if(!isset($item['can']) || (isset($item['can']) && auth()->user()->role->value === $item['can']))
                 <a href="{{ route($item['route']) }}"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
                         {{ request()->routeIs($item['route']) 

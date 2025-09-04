@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rule;
+use App\Enums\Role;
 
 class UserController extends Controller
 {
@@ -39,7 +41,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => ['required', 'string', 'in:admin,accountant,staff'],
+            'role' => ['required', Rule::enum(Role::class)],
         ]);
 
         User::create([
