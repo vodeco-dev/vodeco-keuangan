@@ -10,6 +10,12 @@ use App\Models\Debt;
 use App\Policies\DebtPolicy;
 use App\Models\Category; // Tambahkan ini
 use App\Policies\CategoryPolicy; // Tambahkan ini
+use App\Models\Invoice;
+use App\Policies\InvoicePolicy;
+use App\Models\RecurringRevenue;
+use App\Policies\RecurringRevenuePolicy;
+use App\Policies\UserPolicy;
+use App\Models\User;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +28,9 @@ class AppServiceProvider extends ServiceProvider
         Transaction::class => TransactionPolicy::class,
         Debt::class => DebtPolicy::class,
         Category::class => CategoryPolicy::class, // Tambahkan baris ini
+        Invoice::class => InvoicePolicy::class,
+        RecurringRevenue::class => RecurringRevenuePolicy::class,
+        User::class => UserPolicy::class,
     ];
 
     /**
@@ -40,5 +49,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Transaction::class, TransactionPolicy::class);
         Gate::policy(Debt::class, DebtPolicy::class);
         Gate::policy(Category::class, CategoryPolicy::class); // Tambahkan baris ini
+        Gate::policy(Invoice::class, InvoicePolicy::class);
+        Gate::policy(RecurringRevenue::class, RecurringRevenuePolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
     }
 }

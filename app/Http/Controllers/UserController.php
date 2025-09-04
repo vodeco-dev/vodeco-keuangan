@@ -9,6 +9,10 @@ use Illuminate\Validation\Rules;
 
 class UserController extends Controller
 {
+    public function __construct()
+    {
+        $this->authorizeResource(User::class, 'user');
+    }
     /**
      * Menampilkan daftar semua user.
      */
