@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Debt;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -11,9 +12,11 @@ class DebtService
     /**
      * Retrieve debts with optional filters.
      */
-    public function getDebts(Request $request): Collection
+    public function getDebts(Request $request, User $user): Collection
     {
-        $query = Debt::with('payments')->latest();
+        $query = Debt::with('payments')
+            ->where('user_id', $user->id)
+            ->latest();
 
         if ($request->filled('type_filter')) {
             $query->where('type', $request->type_filter);
@@ -36,12 +39,24 @@ class DebtService
     /**
      * Calculate summary amounts for debts.
      */
-    public function getSummary(Collection $debts): array
+    public function getSummary(User $user): array
     {
-        $totalPiutang = Debt::where('type', Debt::TYPE_DOWN_PAYMENT)->sum('amount');
-        $totalHutang = Debt::where('type', Debt::TYPE_PASS_THROUGH)->sum('amount');
-        $totalBelumLunas = $debts->where('status', 'belum lunas')->sum('remaining_amount');
-        $totalLunas = Debt::where('status', 'lunas')->sum('amount');
+        $totalDownPayment = Debt::where('user_id', $user->id)
+            ->where('type', Debt::TYPE_DOWN_PAYMENT)
+            ->sum('amount');
+
+        $totalPassThrough = Debt::where('user_id', $user->id)
+            ->where('type', Debt::TYPE_PASS_THROUGH)
+            ->sum('amount');
+
+        $totalBelumLunas = Debt::where('user_id', $user->id)
+            ->where('status', 'belum lunas')
+            ->get()
+            ->sum('remaining_amount');
+
+        $totalLunas = Debt::where('user_id', $user->id)
+            ->where('status', 'lunas')
+            ->sum('amount');
 
         return [
             'totalPassThrough' => $totalPassThrough,
