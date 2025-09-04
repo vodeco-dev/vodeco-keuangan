@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CategoryType;
 use Illuminate\Http\Request;
 use App\Models\Transaction;
 use Carbon\Carbon;
@@ -29,8 +30,8 @@ class ReportController extends Controller
             ->get();
 
         // Hitung total pemasukan dan pengeluaran
-        $totalPemasukan = $transactions->where('category.type', 'pemasukan')->sum('amount');
-        $totalPengeluaran = $transactions->where('category.type', 'pengeluaran')->sum('amount');
+        $totalPemasukan = $transactions->where('category.type', CategoryType::Pemasukan->value)->sum('amount');
+        $totalPengeluaran = $transactions->where('category.type', CategoryType::Pengeluaran->value)->sum('amount');
         $selisih = $totalPemasukan - $totalPengeluaran;
 
         // Hitung AGI
@@ -56,7 +57,7 @@ class ReportController extends Controller
     private function prepareChartData($startDate, $endDate)
     {
         $pemasukanData = Transaction::whereHas('category', function ($query) {
-            $query->where('type', 'pemasukan');
+            $query->where('type', CategoryType::Pemasukan->value);
         })
             ->whereBetween('date', [$startDate, $endDate])
             ->select(DB::raw("DATE(date) as date"), DB::raw('SUM(amount) as total'))
@@ -64,7 +65,7 @@ class ReportController extends Controller
             ->pluck('total', 'date');
 
         $pengeluaranData = Transaction::whereHas('category', function ($query) {
-            $query->where('type', 'pengeluaran');
+            $query->where('type', CategoryType::Pengeluaran->value);
         })
             ->whereBetween('date', [$startDate, $endDate])
             ->select(DB::raw("DATE(date) as date"), DB::raw('SUM(amount) as total'))

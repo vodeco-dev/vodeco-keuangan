@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CategoryType;
 use App\Models\Transaction;
 use App\Services\TransactionService; // Tambahkan ini
 use Illuminate\Http\Request;
@@ -30,8 +31,8 @@ class DashboardController extends Controller
 
         $monthly_trends_query = Transaction::query()
             ->selectRaw($dateSelect)
-            ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN amount ELSE 0 END) as pemasukan")
-            ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN amount ELSE 0 END) as pengeluaran")
+            ->selectRaw("SUM(CASE WHEN categories.type = '" . CategoryType::Pemasukan->value . "' THEN amount ELSE 0 END) as pemasukan")
+            ->selectRaw("SUM(CASE WHEN categories.type = '" . CategoryType::Pengeluaran->value . "' THEN amount ELSE 0 END) as pengeluaran")
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.user_id', $request->user()->id); // Keamanan: Pastikan tren juga milik user
 

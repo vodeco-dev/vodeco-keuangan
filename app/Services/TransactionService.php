@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CategoryType;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -58,9 +59,9 @@ class TransactionService
                 ->join('categories', 'transactions.category_id', '=', 'categories.id')
                 ->where('transactions.user_id', $user->id) // KEAMANAN: Filter data milik user
                 ->selectRaw('
-                    SUM(CASE WHEN categories.type = "pemasukan" THEN transactions.amount ELSE 0 END) AS totalPemasukan,
-                    SUM(CASE WHEN categories.type = "pengeluaran" THEN transactions.amount ELSE 0 END) AS totalPengeluaran
-                ')
+                    SUM(CASE WHEN categories.type = ? THEN transactions.amount ELSE 0 END) AS totalPemasukan,
+                    SUM(CASE WHEN categories.type = ? THEN transactions.amount ELSE 0 END) AS totalPengeluaran
+                ', [CategoryType::Pemasukan->value, CategoryType::Pengeluaran->value])
                 ->first();
 
             $pemasukan = $summary->totalPemasukan ?? 0;
@@ -87,7 +88,10 @@ class TransactionService
                 ->join('categories', 'transactions.category_id', '=', 'categories.id')
                 ->leftJoin('service_costs', 'transactions.service_cost_id', '=', 'service_costs.id')
                 ->where('transactions.user_id', $user->id)
-                ->selectRaw("\n                    SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) AS total_pemasukan,\n                    SUM(CASE WHEN categories.type = 'pemasukan' AND service_costs.name IN ('Pass-Through','Down Payment') THEN transactions.amount ELSE 0 END) AS total_potongan\n                ")
+                ->selectRaw(
+                    "\n                    SUM(CASE WHEN categories.type = ? THEN transactions.amount ELSE 0 END) AS total_pemasukan,\n                    SUM(CASE WHEN categories.type = ? AND service_costs.name IN ('Pass-Through','Down Payment') THEN transactions.amount ELSE 0 END) AS total_potongan\n                ",
+                    [CategoryType::Pemasukan->value, CategoryType::Pemasukan->value]
+                )
                 ->first();
 
             $totalPemasukan = $summary->total_pemasukan ?? 0;

@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\CategoryType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class UpdateCategoryRequest extends FormRequest
 {
@@ -23,7 +25,7 @@ class UpdateCategoryRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255|unique:categories,name,' . $this->category->id,
-            'type' => 'required|in:pemasukan,pengeluaran,income,expense',
+            'type' => ['required', new Enum(CategoryType::class)],
         ];
     }
 
@@ -40,7 +42,7 @@ class UpdateCategoryRequest extends FormRequest
             'name.max' => 'Nama kategori tidak boleh lebih dari 255 karakter.',
             'name.unique' => 'Nama kategori sudah ada.',
             'type.required' => 'Tipe kategori wajib diisi.',
-            'type.in' => 'Tipe kategori tidak valid.',
+            'type.enum' => 'Tipe kategori tidak valid.',
         ];
     }
 }

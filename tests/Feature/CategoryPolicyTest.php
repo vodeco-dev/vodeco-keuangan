@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CategoryType;
 use App\Models\User;
 use App\Models\Category;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,7 +39,7 @@ class CategoryPolicyTest extends TestCase
 
         $response = $this->actingAs($this->user)->post(route('categories.store'), [
             'name' => 'Kategori Baru',
-            'type' => 'income',
+            'type' => CategoryType::Pemasukan->value,
         ]);
 
         $response->assertRedirect(route('categories.index'));
@@ -52,7 +53,7 @@ class CategoryPolicyTest extends TestCase
         
         $response = $this->actingAs($this->user)->put(route('categories.update', $this->category), [
             'name' => 'Kategori Diperbarui',
-            'type' => $this->category->type,
+            'type' => $this->category->type->value,
         ]);
 
         $response->assertRedirect(route('categories.index'));

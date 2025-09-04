@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CategoryType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -50,7 +51,7 @@ class Invoice extends Model
             if ($invoice->isDirty('status') && $invoice->status === 'Paid') {
                 // Cari kategori default untuk pemasukan invoice, misal 'Penjualan Jasa'
                 // Fallback ke kategori pertama jika tidak ditemukan
-                $category = Category::where('name', 'Penjualan Jasa')->orWhere('type', 'pemasukan')->first();
+                $category = Category::where('name', 'Penjualan Jasa')->orWhere('type', CategoryType::Pemasukan->value)->first();
 
                 // Pastikan ada kategori sebelum membuat transaksi
                 if ($category) {

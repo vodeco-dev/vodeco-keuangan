@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CategoryType;
 use App\Http\Requests\StoreDebtRequest;
 use App\Http\Requests\StoreDebtPaymentRequest;
 use App\Models\Debt;
@@ -100,7 +101,7 @@ class DebtController extends Controller
                 if ($debt->paid_amount >= $debt->amount) {
                     $debt->update(['status' => 'lunas']);
 
-                    $categoryType = $debt->type == Debt::TYPE_DOWN_PAYMENT ? 'pemasukan' : 'pengeluaran';
+                    $categoryType = $debt->type == Debt::TYPE_DOWN_PAYMENT ? CategoryType::Pemasukan : CategoryType::Pengeluaran;
                     $category = \App\Models\Category::firstOrCreate(
                         ['name' => 'Pelunasan ' . ucwords(str_replace('_', ' ', $debt->type)), 'user_id' => $request->user()->id],
                         ['type' => $categoryType]

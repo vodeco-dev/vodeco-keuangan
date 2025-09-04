@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CategoryType;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
@@ -25,11 +26,11 @@ class CategoryController extends Controller
     public function index(): View
     {
         // Mengambil semua kategori dan mengelompokkannya berdasarkan 'type'
-        $categories = Category::orderBy('name')->get()->groupBy('type');
+        $categories = Category::orderBy('name')->get()->groupBy(fn ($category) => $category->type->value);
 
         // Memisahkan koleksi menjadi pemasukan dan pengeluaran
-        $pemasukan = $categories->get('pemasukan', collect());
-        $pengeluaran = $categories->get('pengeluaran', collect());
+        $pemasukan = $categories->get(CategoryType::Pemasukan->value, collect());
+        $pengeluaran = $categories->get(CategoryType::Pengeluaran->value, collect());
 
         return view('categories.index', compact('pemasukan', 'pengeluaran'));
     }
