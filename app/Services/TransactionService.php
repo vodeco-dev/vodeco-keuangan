@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Transaction;
+use App\Models\ServiceCost;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -85,9 +86,12 @@ class TransactionService
         return Cache::remember($cacheKey, 300, function () use ($user) {
             $summary = Transaction::query()
                 ->join('categories', 'transactions.category_id', '=', 'categories.id')
-                ->leftJoin('service_costs', 'transactions.service_cost_id', '=', 'service_costs.id')
                 ->where('transactions.user_id', $user->id)
-                ->selectRaw("\n                    SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) AS total_pemasukan,\n                    SUM(CASE WHEN categories.type = 'pemasukan' AND service_costs.name IN ('Pass-Through','Down Payment') THEN transactions.amount ELSE 0 END) AS total_potongan\n                ")
+                ->selectRaw(
+                    "SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) AS total_pemasukan," .
+                    " SUM(CASE WHEN categories.type = 'pemasukan' AND transactions.service_cost_id IN (?, ?) THEN transactions.amount ELSE 0 END) AS total_potongan",
+                    [ServiceCost::PASS_THROUGH_ID, ServiceCost::DOWN_PAYMENT_ID]
+                )
                 ->first();
 
             $totalPemasukan = $summary->total_pemasukan ?? 0;
