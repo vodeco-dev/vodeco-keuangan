@@ -8,8 +8,8 @@ use App\Models\Transaction;
 use App\Policies\TransactionPolicy;
 use App\Models\Debt;
 use App\Policies\DebtPolicy;
-use App\Models\Category; // Tambahkan ini
-use App\Policies\CategoryPolicy; // Tambahkan ini
+use App\Models\Category;
+use App\Policies\CategoryPolicy;
 use App\Models\Invoice;
 use App\Policies\InvoicePolicy;
 use App\Models\RecurringRevenue;
@@ -17,7 +17,7 @@ use App\Policies\RecurringRevenuePolicy;
 use App\Policies\UserPolicy;
 use App\Models\User;
 
-class AppServiceProvider extends ServiceProvider
+class AuthServiceProvider extends ServiceProvider
 {
     /**
      * The policy mappings for the application.
