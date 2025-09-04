@@ -102,7 +102,7 @@ class DebtController extends Controller
 
                     $categoryType = $debt->type == Debt::TYPE_DOWN_PAYMENT ? 'pemasukan' : 'pengeluaran';
                     $category = \App\Models\Category::firstOrCreate(
-                        ['name' => 'Pelunasan ' . ucwords(str_replace('_', ' ', $debt->type)), 'user_id' => $request->user()->id],
+                        ['name' => 'Pelunasan ' . ucwords(str_replace('_', ' ', $debt->type))],
                         ['type' => $categoryType]
                     );
 
