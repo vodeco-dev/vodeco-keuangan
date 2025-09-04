@@ -86,8 +86,9 @@ class TransactionController extends Controller
      */
     public function destroy(Transaction $transaction): RedirectResponse
     {
+        $user = $transaction->user;
         $transaction->delete();
-        $this->transactionService->clearSummaryCacheForUser($transaction->user);
+        $this->transactionService->clearSummaryCacheForUser($user);
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil dihapus.');
