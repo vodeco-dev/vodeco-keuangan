@@ -10,6 +10,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\RecurringRevenueController;
 use App\Http\Controllers\UserController; // <-- TAMBAHKAN INI
+use App\Http\Controllers\ServiceCostController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,6 +31,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     // Resource Controllers (CRUD)
     Route::resource('transactions', TransactionController::class)->except(['edit', 'show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
+    Route::resource('service_costs', ServiceCostController::class)->except(['show']);
     Route::resource('debts', DebtController::class);
     Route::resource('invoices', InvoiceController::class)->only(['index','create','store']);
     Route::resource('recurring_revenues', RecurringRevenueController::class)->except(['create', 'edit', 'show']);
