@@ -11,7 +11,7 @@
     </div>
 
     {{-- Tombol untuk Buka/Tutup Sidebar --}}
-    <button @click="open = !open" class="absolute top-1/2 -right-3 transform -translate-y-1/2 bg-white p-1 rounded-full shadow-md">
+    <button @click="open = !open" class="absolute top-5 left-4 bg-white p-1 rounded-full shadow-md">
         <svg class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>

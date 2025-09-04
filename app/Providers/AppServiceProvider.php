@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use App\Models\Transaction;
 use App\Policies\TransactionPolicy;
 use App\Models\Debt;
@@ -24,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        URL::forceScheme('https');
+        
         Gate::policy(Transaction::class, TransactionPolicy::class);
         Gate::policy(Debt::class, DebtPolicy::class);
     }
