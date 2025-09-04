@@ -30,8 +30,12 @@ class ReportController extends Controller
             ->get();
 
         // Hitung total pemasukan dan pengeluaran
-        $totalPemasukan = $transactions->where('category.type', CategoryType::Pemasukan->value)->sum('amount');
-        $totalPengeluaran = $transactions->where('category.type', CategoryType::Pengeluaran->value)->sum('amount');
+        $totalPemasukan = $transactions
+            ->where('category.type', CategoryType::Pemasukan)
+            ->sum('amount');
+        $totalPengeluaran = $transactions
+            ->where('category.type', CategoryType::Pengeluaran)
+            ->sum('amount');
         $selisih = $totalPemasukan - $totalPengeluaran;
 
         // Hitung AGI
