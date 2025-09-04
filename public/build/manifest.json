@@ -1,0 +1,11 @@
+{
+  "resources/js/app.js": {
+    "file": "app.js",
+    "src": "resources/js/app.js",
+    "css": ["app.css"]
+  },
+  "resources/css/app.css": {
+    "file": "app.css",
+    "src": "resources/css/app.css"
+  }
+}
