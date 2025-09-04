@@ -7,20 +7,23 @@ use App\Http\Requests\StoreDebtPaymentRequest;
 use App\Models\Debt;
 use App\Models\Transaction;
 use App\Services\DebtService;
+use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB; // Diambil dari branch 'main'
 
 class DebtController extends Controller
 {
     protected DebtService $debtService;
+    protected TransactionService $transactionService;
 
     /**
      * Terapkan authorization policy ke semua method resource controller.
      * Diambil dari branch 'codex/...'
      */
-    public function __construct(DebtService $debtService)
+    public function __construct(DebtService $debtService, TransactionService $transactionService)
     {
         $this->debtService = $debtService;
+        $this->transactionService = $transactionService;
         $this->authorizeResource(Debt::class, 'debt');
     }
 
@@ -113,6 +116,8 @@ class DebtController extends Controller
                         'description' => 'Pelunasan: ' . $debt->description,
                         'user_id' => $request->user()->id, // Keamanan: Pastikan transaksi memiliki pemilik
                     ]);
+
+                    $this->transactionService->clearSummaryCacheForUser($request->user());
                 }
             });
 
