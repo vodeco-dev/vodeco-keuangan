@@ -32,7 +32,7 @@ class DebtTest extends TestCase
             'related_party' => 'Budi',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
     }
 
@@ -48,7 +48,7 @@ class DebtTest extends TestCase
             'related_party' => 'Budi',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
             'due_date' => now()->addWeek(),
         ]);
 
@@ -60,7 +60,34 @@ class DebtTest extends TestCase
         $response->assertRedirect(route('debts.index'));
         $this->assertDatabaseHas('debts', [
             'id' => $debt->id,
-            'status' => 'lunas',
+            'status' => Debt::STATUS_LUNAS,
         ]);
+    }
+
+    public function test_debts_index_is_paginated()
+    {
+        $user = User::factory()->create();
+
+        for ($i = 1; $i <= 20; $i++) {
+            Debt::create([
+                'user_id' => $user->id,
+                'description' => 'Debt ' . $i,
+                'related_party' => 'Budi',
+                'type' => Debt::TYPE_PASS_THROUGH,
+                'amount' => 1000,
+                'status' => 'belum lunas',
+            ]);
+        }
+
+        $response = $this->actingAs($user)->get('/debts');
+
+        $response->assertViewHas('debts', function ($debts) {
+            return $debts->perPage() == 15 && $debts->total() == 20;
+        });
+
+        $responsePage2 = $this->actingAs($user)->get('/debts?page=2');
+        $responsePage2->assertViewHas('debts', function ($debts) {
+            return $debts->currentPage() == 2 && $debts->count() == 5;
+        });
     }
 }

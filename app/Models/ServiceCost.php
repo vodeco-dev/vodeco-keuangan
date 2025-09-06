@@ -11,17 +11,18 @@ class ServiceCost extends Model
     use HasFactory;
 
     /**
-     * Identifier for pass-through income.
+     * Slug for pass-through income.
      */
-    public const PASS_THROUGH_ID = 1;
+    public const PASS_THROUGH_SLUG = 'pass-through';
 
     /**
-     * Identifier for down payment income.
+     * Slug for down payment income.
      */
-    public const DOWN_PAYMENT_ID = 2;
+    public const DOWN_PAYMENT_SLUG = 'down-payment';
 
     protected $fillable = [
         'name',
+        'slug',
     ];
 
     public function transactions(): HasMany

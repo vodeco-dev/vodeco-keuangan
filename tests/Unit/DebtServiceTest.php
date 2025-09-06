@@ -25,7 +25,7 @@ class DebtServiceTest extends TestCase
             'related_party' => 'Alice',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
 
         // Different status
@@ -35,7 +35,7 @@ class DebtServiceTest extends TestCase
             'related_party' => 'Alice',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
-            'status' => 'lunas',
+            'status' => Debt::STATUS_LUNAS,
         ]);
 
         // Different type
@@ -45,7 +45,7 @@ class DebtServiceTest extends TestCase
             'related_party' => 'Alice',
             'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 1000,
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
 
         // Different search
@@ -55,7 +55,7 @@ class DebtServiceTest extends TestCase
             'related_party' => 'Alice',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
 
         // Different user
@@ -65,12 +65,12 @@ class DebtServiceTest extends TestCase
             'related_party' => 'Alice',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
 
         $request = new Request([
             'type_filter' => Debt::TYPE_PASS_THROUGH,
-            'status_filter' => 'belum lunas',
+            'status_filter' => Debt::STATUS_BELUM_LUNAS,
             'search' => 'Laptop',
         ]);
 
@@ -91,7 +91,7 @@ class DebtServiceTest extends TestCase
             'related_party' => 'Alice',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 200,
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
         Payment::create([
             'debt_id' => $ptBelumLunas->id,
@@ -105,7 +105,7 @@ class DebtServiceTest extends TestCase
             'related_party' => 'Bob',
             'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 300,
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
 
         $ptLunas = Debt::create([
@@ -114,7 +114,7 @@ class DebtServiceTest extends TestCase
             'related_party' => 'Carol',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 100,
-            'status' => 'lunas',
+            'status' => Debt::STATUS_LUNAS,
         ]);
         Payment::create([
             'debt_id' => $ptLunas->id,

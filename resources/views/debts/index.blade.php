@@ -48,8 +48,8 @@
                     </select>
                     <select name="status_filter" onchange="this.form.submit()" class="border-gray-300 rounded-lg text-sm">
                         <option value="">Status: Semua</option>
-                        <option value="belum lunas" {{ request('status_filter') == 'belum lunas' ? 'selected' : '' }}>Belum Lunas</option>
-                        <option value="lunas" {{ request('status_filter') == 'lunas' ? 'selected' : '' }}>Lunas</option>
+                        <option value="{{ \App\Models\Debt::STATUS_BELUM_LUNAS }}" {{ request('status_filter') == \App\Models\Debt::STATUS_BELUM_LUNAS ? 'selected' : '' }}>Belum Lunas</option>
+                        <option value="{{ \App\Models\Debt::STATUS_LUNAS }}" {{ request('status_filter') == \App\Models\Debt::STATUS_LUNAS ? 'selected' : '' }}>Lunas</option>
                     </select>
                 </div>
                 <div class="relative">
@@ -102,7 +102,7 @@
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-500">{{ $debt->due_date ? \Carbon\Carbon::parse($debt->due_date)->isoFormat('D MMM YYYY') : '-' }}</td>
                         <td class="px-4 py-3 text-sm">
-                            @if ($debt->status == 'lunas')
+                            @if ($debt->status == \App\Models\Debt::STATUS_LUNAS)
                             <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Lunas</span>
                             @else
                             <span class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">Belum Lunas</span>
@@ -110,7 +110,7 @@
                         </td>
                         <td class="px-4 py-3 text-sm text-center">
                             <div class="flex items-center justify-center gap-2">
-                                @if ($debt->status == 'belum lunas')
+                                @if ($debt->status == \App\Models\Debt::STATUS_BELUM_LUNAS)
                                 <button @click="paymentModal = true; selectedDebt = {{ $debt }}" class="text-blue-600 hover:text-blue-900" title="Tambah Pembayaran">
                                     <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -145,6 +145,9 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+        <div class="mt-4">
+            {{ $debts->links() }}
         </div>
     </div>
 

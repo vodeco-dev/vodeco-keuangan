@@ -7,9 +7,6 @@ use App\Models\ServiceCost;
 
 class ServiceCostSeeder extends Seeder
 {
-    /**
-     * Seed the service_costs table with default types.
-     */
     public function run(): void
     {
         $serviceCosts = [

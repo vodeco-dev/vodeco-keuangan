@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
@@ -23,7 +24,7 @@ class CategoryPolicy
      */
     public function view(User $user, Category $category): bool
     {
-        return true;
+        return $user->role === Role::ADMIN || $category->user_id === $user->id;
     }
 
     /**
@@ -31,7 +32,7 @@ class CategoryPolicy
      */
     public function create(User $user): bool
     {
-        return true;
+        return in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT]);
     }
 
     /**
@@ -39,7 +40,7 @@ class CategoryPolicy
      */
     public function update(User $user, Category $category): bool
     {
-        return true;
+        return $user->role === Role::ADMIN || $category->user_id === $user->id;
     }
 
     /**
@@ -47,6 +48,6 @@ class CategoryPolicy
      */
     public function delete(User $user, Category $category): bool
     {
-        return true;
+        return $user->role === Role::ADMIN || $category->user_id === $user->id;
     }
 }

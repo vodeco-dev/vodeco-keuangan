@@ -9,7 +9,9 @@ use App\Models\Transaction;
 use App\Services\DebtService;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB; // Diambil dari branch 'main'
+use Illuminate\View\View;
 
 class DebtController extends Controller
 {
@@ -31,9 +33,10 @@ class DebtController extends Controller
      * Menampilkan daftar hutang & piutang milik pengguna yang sedang login.
      * Menggabungkan logika query dari 'codex/...'
      */
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $debts = $this->debtService->getDebts($request, $request->user());
+        $debts->appends($request->query());
 
         $summary = $this->debtService->getSummary($request->user());
 
@@ -46,12 +49,12 @@ class DebtController extends Controller
     /**
      * Menyimpan catatan hutang/piutang baru.
      */
-    public function store(StoreDebtRequest $request)
+    public function store(StoreDebtRequest $request): RedirectResponse
     {
         $validated = $request->validated();
 
         Debt::create(array_merge($validated, [
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
             'user_id' => $request->user()->id, // Keamanan: Pastikan data baru memiliki pemilik
         ]));
 
@@ -62,7 +65,7 @@ class DebtController extends Controller
      * Menyimpan pembayaran/cicilan baru.
      * Menggabungkan authorize, DB::transaction, dan try-catch dari kedua branch.
      */
-    public function storePayment(StoreDebtPaymentRequest $request, Debt $debt)
+    public function storePayment(StoreDebtPaymentRequest $request, Debt $debt): RedirectResponse
     {
         // Keamanan: Pastikan user boleh mengupdate data ini
         $this->authorize('update', $debt);
@@ -83,7 +86,7 @@ class DebtController extends Controller
 
                 // Cek jika sudah lunas
                 if ($debt->paid_amount >= $debt->amount) {
-                    $debt->update(['status' => 'lunas']);
+                    $debt->update(['status' => Debt::STATUS_LUNAS]);
 
                     $categoryType = $debt->type == Debt::TYPE_DOWN_PAYMENT ? 'pemasukan' : 'pengeluaran';
                     $category = \App\Models\Category::firstOrCreate(
@@ -113,7 +116,7 @@ class DebtController extends Controller
     /**
      * Menghapus catatan hutang/piutang.
      */
-    public function destroy(Debt $debt)
+    public function destroy(Debt $debt): RedirectResponse
     {
         // Keamanan: Otorisasi sudah ditangani oleh __construct()
         $debt->delete();
