@@ -169,13 +169,18 @@ php artisan key:generate
 # DB_USERNAME=root
 # DB_PASSWORD=
 
-# 7. Jalankan migrasi dan seeder database
-php artisan migrate --seed
+# 7. Jalankan migrasi database
+php artisan migrate
 
-# 8. Compile assets frontend
+# 8. Jalankan seeder untuk mengisi data awal (termasuk jenis biaya layanan)
+php artisan db:seed
+# atau jalankan seeder khusus untuk jenis biaya layanan saja
+# php artisan db:seed --class=ServiceCostSeeder
+
+# 9. Compile assets frontend
 npm run dev
 
-# 9. Jalankan server development lokal
+# 10. Jalankan server development lokal
 php artisan serve
 ```
 

@@ -2,21 +2,19 @@
 
 namespace Database\Seeders;
 
-use App\Models\ServiceCost;
 use Illuminate\Database\Seeder;
+use App\Models\ServiceCost;
 
 class ServiceCostSeeder extends Seeder
 {
     public function run(): void
     {
-        ServiceCost::updateOrCreate(
-            ['slug' => ServiceCost::PASS_THROUGH_SLUG],
-            ['name' => 'Pass-Through']
-        );
+        $serviceCosts = [
+            ['id' => ServiceCost::PASS_THROUGH_ID, 'name' => 'Pass-Through'],
+            ['id' => ServiceCost::DOWN_PAYMENT_ID, 'name' => 'Down Payment'],
+            ['id' => 3, 'name' => 'Agency Fee'],
+        ];
 
-        ServiceCost::updateOrCreate(
-            ['slug' => ServiceCost::DOWN_PAYMENT_SLUG],
-            ['name' => 'Down Payment']
-        );
+        ServiceCost::upsert($serviceCosts, ['id'], ['name']);
     }
 }
