@@ -20,9 +20,9 @@ class AgencyGrossIncomeTest extends TestCase
         $incomeCategory = Category::factory()->create(['type' => 'pemasukan']);
         $expenseCategory = Category::factory()->create(['type' => 'pengeluaran']);
 
-        $passThrough = ServiceCost::create(['name' => 'Pass-Through']);
-        $downPayment = ServiceCost::create(['name' => 'Down Payment']);
-        $agencyFee = ServiceCost::create(['name' => 'Agency Fee']);
+        $passThrough = ServiceCost::create(['name' => 'Pass-Through', 'slug' => ServiceCost::PASS_THROUGH_SLUG]);
+        $downPayment = ServiceCost::create(['name' => 'Down Payment', 'slug' => ServiceCost::DOWN_PAYMENT_SLUG]);
+        $agencyFee = ServiceCost::create(['name' => 'Agency Fee', 'slug' => 'agency-fee']);
 
         // Normal income
         Transaction::create([
