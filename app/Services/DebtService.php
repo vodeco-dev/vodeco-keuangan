@@ -5,14 +5,14 @@ namespace App\Services;
 use App\Models\Debt;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class DebtService
 {
     /**
-     * Retrieve debts with optional filters.
+     * Retrieve debts with optional filters and paginate the results.
      */
-    public function getDebts(Request $request, User $user): Collection
+    public function getDebts(Request $request, User $user): LengthAwarePaginator
     {
         $query = Debt::with('payments')
             ->where('user_id', $user->id)
@@ -33,7 +33,7 @@ class DebtService
             });
         }
 
-        return $query->get();
+        return $query->paginate();
     }
 
     /**

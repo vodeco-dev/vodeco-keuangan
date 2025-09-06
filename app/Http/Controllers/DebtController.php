@@ -34,6 +34,7 @@ class DebtController extends Controller
     public function index(Request $request)
     {
         $debts = $this->debtService->getDebts($request, $request->user());
+        $debts->appends($request->query());
 
         $summary = $this->debtService->getSummary($request->user());
 
