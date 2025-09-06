@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\Debt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 use function PHPSTORM_META\type;
@@ -61,6 +63,38 @@ class DebtTest extends TestCase
         $this->assertDatabaseHas('debts', [
             'id' => $debt->id,
             'status' => 'lunas',
+        ]);
+    }
+
+    public function test_payment_failure_is_logged_and_returns_error()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $debt = Debt::create([
+            'user_id' => $user->id,
+            'description' => 'Test Debt',
+            'related_party' => 'Budi',
+            'type' => Debt::TYPE_PASS_THROUGH,
+            'amount' => 1000,
+            'status' => 'belum lunas',
+            'due_date' => now()->addWeek(),
+        ]);
+
+        $originalDb = DB::getFacadeRoot();
+        DB::shouldReceive('transaction')->once()->andThrow(new \Exception('db error'));
+        Log::shouldReceive('error')->once()->with('db error');
+
+        $response = $this->post(route('debts.pay', $debt), [
+            'payment_amount' => 1000,
+        ]);
+
+        DB::swap($originalDb);
+
+        $response->assertSessionHasErrors();
+        $this->assertDatabaseHas('debts', [
+            'id' => $debt->id,
+            'status' => 'belum lunas',
         ]);
     }
 }

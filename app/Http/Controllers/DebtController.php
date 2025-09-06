@@ -10,6 +10,7 @@ use App\Services\DebtService;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB; // Diambil dari branch 'main'
+use Illuminate\Support\Facades\Log;
 
 class DebtController extends Controller
 {
@@ -104,8 +105,8 @@ class DebtController extends Controller
             });
 
             return redirect()->route('debts.index')->with('success', 'Pembayaran berhasil dicatat.');
-        } catch (\Exception $e) {
-            // Jika terjadi error, tampilkan pesan kesalahan
+        } catch (\Throwable $e) {
+            Log::error($e->getMessage());
             return back()->withErrors('Terjadi kesalahan saat menyimpan pembayaran.');
         }
     }
