@@ -2,71 +2,53 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Enums\Role;
 use App\Models\Category;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithoutMiddleware; // Bisa dihapus jika tidak digunakan
-use App\Http\Middleware\VerifyCsrfToken; // Tambahkan ini jika menggunakan withoutMiddleware yang spesifik
 use Tests\TestCase;
 
 class CategoryPolicyTest extends TestCase
 {
     use RefreshDatabase;
 
-    private User $user;
-    private Category $category;
-
-    protected function setUp(): void
+    public function test_user_can_manage_own_category(): void
     {
-        parent::setUp();
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $category = Category::factory()->make();
+        $category->user_id = $user->id;
 
-        // Buat pengguna dan kategori untuk pengujian
-        $this->user = User::factory()->create();
-        $this->category = Category::factory()->create();
+        $this->assertTrue($user->can('view', $category));
+        $this->assertTrue($user->can('update', $category));
+        $this->assertTrue($user->can('delete', $category));
+
+        $this->assertFalse($other->can('view', $category));
+        $this->assertFalse($other->can('update', $category));
+        $this->assertFalse($other->can('delete', $category));
     }
 
-    public function test_authenticated_user_can_view_any_categories(): void
+    public function test_admin_can_manage_any_category(): void
     {
-        $response = $this->actingAs($this->user)->get(route('categories.index'));
-        $response->assertStatus(200);
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
+        $user = User::factory()->create();
+        $category = Category::factory()->make();
+        $category->user_id = $user->id;
+
+        $this->assertTrue($admin->can('view', $category));
+        $this->assertTrue($admin->can('update', $category));
+        $this->assertTrue($admin->can('delete', $category));
     }
 
-    public function test_authenticated_user_can_create_category(): void
+    public function test_only_admin_or_accountant_can_create_categories(): void
     {
-        // Nonaktifkan CSRF protection untuk test ini
-        $this->withoutMiddleware([VerifyCsrfToken::class]);
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
+        $accountant = User::factory()->create(['role' => Role::ACCOUNTANT]);
+        $staff = User::factory()->create(['role' => Role::STAFF]);
 
-        $response = $this->actingAs($this->user)->post(route('categories.store'), [
-            'name' => 'Kategori Baru',
-            'type' => 'income',
-        ]);
-
-        $response->assertRedirect(route('categories.index'));
-        $this->assertDatabaseHas('categories', ['name' => 'Kategori Baru']);
-    }
-
-    public function test_authenticated_user_can_update_category(): void
-    {
-        // Nonaktifkan CSRF protection untuk test ini
-        $this->withoutMiddleware([VerifyCsrfToken::class]);
-        
-        $response = $this->actingAs($this->user)->put(route('categories.update', $this->category), [
-            'name' => 'Kategori Diperbarui',
-            'type' => $this->category->type,
-        ]);
-
-        $response->assertRedirect(route('categories.index'));
-        $this->assertDatabaseHas('categories', ['name' => 'Kategori Diperbarui']);
-    }
-
-    public function test_authenticated_user_can_delete_category(): void
-    {
-        // Nonaktifkan CSRF protection untuk test ini
-        $this->withoutMiddleware([VerifyCsrfToken::class]);
-        
-        $response = $this->actingAs($this->user)->delete(route('categories.destroy', $this->category));
-
-        $response->assertRedirect(route('categories.index'));
-        $this->assertModelMissing($this->category);
+        $this->assertTrue($admin->can('create', Category::class));
+        $this->assertTrue($accountant->can('create', Category::class));
+        $this->assertFalse($staff->can('create', Category::class));
     }
 }
+
