@@ -15,8 +15,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             ServiceCostSeeder::class,
+            CategorySeeder::class,
             // Anda bisa menambahkan seeder lain di sini nanti, contoh:
-            // CategorySeeder::class,
             // TransactionSeeder::class,
         ]);
     }
