@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ServiceCost;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ServiceCostController extends Controller
@@ -28,6 +29,8 @@ class ServiceCostController extends Controller
             'name' => 'required|string|unique:service_costs,name',
         ]);
 
+        $validated['slug'] = Str::slug($validated['name']);
+
         ServiceCost::create($validated);
 
         return redirect()->route('service_costs.index')
@@ -50,6 +53,8 @@ class ServiceCostController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|unique:service_costs,name,' . $serviceCost->id,
         ]);
+
+        $validated['slug'] = Str::slug($validated['name']);
 
         $serviceCost->update($validated);
 
