@@ -32,7 +32,7 @@ class DebtTest extends TestCase
             'related_party' => 'Budi',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
     }
 
@@ -48,7 +48,7 @@ class DebtTest extends TestCase
             'related_party' => 'Budi',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
             'due_date' => now()->addWeek(),
         ]);
 
@@ -60,7 +60,7 @@ class DebtTest extends TestCase
         $response->assertRedirect(route('debts.index'));
         $this->assertDatabaseHas('debts', [
             'id' => $debt->id,
-            'status' => 'lunas',
+            'status' => Debt::STATUS_LUNAS,
         ]);
     }
 }

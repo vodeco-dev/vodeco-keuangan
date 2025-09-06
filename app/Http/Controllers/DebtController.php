@@ -51,7 +51,7 @@ class DebtController extends Controller
         $validated = $request->validated();
 
         Debt::create(array_merge($validated, [
-            'status' => 'belum lunas',
+            'status' => Debt::STATUS_BELUM_LUNAS,
             'user_id' => $request->user()->id, // Keamanan: Pastikan data baru memiliki pemilik
         ]));
 
@@ -83,7 +83,7 @@ class DebtController extends Controller
 
                 // Cek jika sudah lunas
                 if ($debt->paid_amount >= $debt->amount) {
-                    $debt->update(['status' => 'lunas']);
+                    $debt->update(['status' => Debt::STATUS_LUNAS]);
 
                     $categoryType = $debt->type == Debt::TYPE_DOWN_PAYMENT ? 'pemasukan' : 'pengeluaran';
                     $category = \App\Models\Category::firstOrCreate(
