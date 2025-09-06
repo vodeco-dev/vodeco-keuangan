@@ -28,7 +28,7 @@ class CategoryTest extends TestCase
 
     public function test_store_requires_name_and_type()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => \App\Enums\Role::ADMIN]);
 
         $response = $this->actingAs($user)->post('/categories', []);
         $response->assertSessionHasErrors(['name', 'type']);
@@ -36,7 +36,7 @@ class CategoryTest extends TestCase
 
     public function test_store_creates_category()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => \App\Enums\Role::ADMIN]);
 
         $response = $this->actingAs($user)->post('/categories', [
             'name' => 'Food',
@@ -52,7 +52,7 @@ class CategoryTest extends TestCase
 
     public function test_update_category()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => \App\Enums\Role::ADMIN]);
         $category = Category::factory()->create();
 
         $response = $this->actingAs($user)->put("/categories/{$category->id}", [
@@ -70,7 +70,7 @@ class CategoryTest extends TestCase
 
     public function test_delete_category()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => \App\Enums\Role::ADMIN]);
         $category = Category::factory()->create();
 
         $response = $this->actingAs($user)->delete("/categories/{$category->id}");
