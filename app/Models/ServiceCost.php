@@ -11,12 +11,22 @@ class ServiceCost extends Model
     use HasFactory;
 
     /**
-     * Slug for pass-through income.
+     * ID untuk pendapatan pass-through.
+     */
+    public const PASS_THROUGH_ID = 1;
+
+    /**
+     * ID untuk pendapatan uang muka (down payment).
+     */
+    public const DOWN_PAYMENT_ID = 2;
+
+    /**
+     * Slug untuk pendapatan pass-through.
      */
     public const PASS_THROUGH_SLUG = 'pass-through';
 
     /**
-     * Slug for down payment income.
+     * Slug untuk pendapatan uang muka (down payment).
      */
     public const DOWN_PAYMENT_SLUG = 'down-payment';
 
