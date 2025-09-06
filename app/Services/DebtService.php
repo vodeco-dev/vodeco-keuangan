@@ -50,12 +50,12 @@ class DebtService
             ->sum('amount');
 
         $totalBelumLunas = Debt::where('user_id', $user->id)
-            ->where('status', 'belum lunas')
+            ->where('status', Debt::STATUS_BELUM_LUNAS)
             ->get()
             ->sum('remaining_amount');
 
         $totalLunas = Debt::where('user_id', $user->id)
-            ->where('status', 'lunas')
+            ->where('status', Debt::STATUS_LUNAS)
             ->sum('amount');
 
         return [
