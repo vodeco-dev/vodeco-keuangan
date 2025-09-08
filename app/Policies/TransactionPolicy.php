@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\Transaction;
 use App\Models\User;
 
@@ -29,6 +30,6 @@ class TransactionPolicy
 
     public function delete(User $user, Transaction $transaction): bool
     {
-        return $transaction->user_id === $user->id;
+        return $user->role === Role::ADMIN;
     }
 }

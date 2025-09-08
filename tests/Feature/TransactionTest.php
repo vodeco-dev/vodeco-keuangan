@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Role;
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Models\TransactionDeletionRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -74,14 +76,50 @@ class TransactionTest extends TestCase
         ]);
     }
 
-    public function test_delete_transaction(): void
+    public function test_non_admin_deletion_creates_request(): void
     {
         $user = User::factory()->create();
         $transaction = Transaction::factory()->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user)->delete('/transactions/' . $transaction->id);
         $response->assertRedirect('/transactions');
+        $this->assertDatabaseHas('transaction_deletion_requests', [
+            'transaction_id' => $transaction->id,
+            'requested_by' => $user->id,
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('transactions', ['id' => $transaction->id]);
+    }
+
+    public function test_admin_can_delete_transaction(): void
+    {
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
+        $transaction = Transaction::factory()->create(['user_id' => $admin->id]);
+
+        $response = $this->actingAs($admin)->delete('/transactions/' . $transaction->id);
+        $response->assertRedirect('/transactions');
         $this->assertDatabaseMissing('transactions', ['id' => $transaction->id]);
+    }
+
+    public function test_admin_can_approve_deletion_request(): void
+    {
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
+        $user = User::factory()->create();
+        $transaction = Transaction::factory()->create(['user_id' => $user->id]);
+        $request = TransactionDeletionRequest::create([
+            'transaction_id' => $transaction->id,
+            'requested_by' => $user->id,
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($admin)->post('/admin/deletion-requests/' . $request->id . '/approve');
+        $response->assertRedirect('/admin/deletion-requests');
+        $this->assertDatabaseMissing('transactions', ['id' => $transaction->id]);
+        $this->assertDatabaseHas('transaction_deletion_requests', [
+            'id' => $request->id,
+            'status' => 'approved',
+            'approved_by' => $admin->id,
+        ]);
     }
 }
 

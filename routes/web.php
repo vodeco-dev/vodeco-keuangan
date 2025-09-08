@@ -11,6 +11,7 @@ use App\Http\Controllers\ServiceCostController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\Admin\DeletionApprovalController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -62,6 +63,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
     // Anda bisa menambahkan route untuk edit dan delete di sini nanti
+});
+
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('deletion-requests', [DeletionApprovalController::class, 'index'])->name('deletion-requests.index');
+    Route::post('deletion-requests/{deletionRequest}/approve', [DeletionApprovalController::class, 'approve'])->name('deletion-requests.approve');
+    Route::post('deletion-requests/{deletionRequest}/reject', [DeletionApprovalController::class, 'reject'])->name('deletion-requests.reject');
 });
 
 require __DIR__.'/auth.php';
