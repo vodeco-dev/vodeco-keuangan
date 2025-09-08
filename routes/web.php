@@ -11,6 +11,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\DeletionApprovalController;
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\UserDeletionRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -52,15 +53,14 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('/settings/display', [SettingController::class, 'updateDisplay'])->name('settings.display.update');
     Route::get('/settings/notifications', [SettingController::class, 'notifications'])->name('settings.notifications');
     Route::post('/settings/notifications', [SettingController::class, 'updateNotifications'])->name('settings.notifications.update');
+
+    // Riwayat Permintaan Penghapusan Pengguna
+    Route::get('/deletion-requests', [UserDeletionRequestController::class, 'index'])->name('user-deletion-requests.index');
 });
 
 // Route Khusus untuk Admin - Manajemen User
 Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
-    Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
-    // Anda bisa menambahkan route untuk edit dan delete di sini nanti
+    Route::resource('users', UserController::class)->except(['show']);
 });
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {

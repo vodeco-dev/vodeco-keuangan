@@ -55,18 +55,47 @@ class UserController extends Controller
     }
 
     /**
-     * Memperbarui role user.
+     * Menampilkan form untuk mengedit user.
+     */
+    public function edit(User $user)
+    {
+        return view('users.edit', compact('user'));
+    }
+
+    /**
+     * Memperbarui data user.
      */
     public function update(Request $request, User $user)
     {
         $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
             'role' => ['required', Rule::enum(Role::class)],
+            'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user->update([
-            'role' => $request->role,
-        ]);
+        $userData = $request->only('name', 'email', 'role');
+        if ($request->filled('password')) {
+            $userData['password'] = Hash::make($request->password);
+        }
 
-        return redirect()->route('users.index')->with('success', 'Role user berhasil diperbarui.');
+        $user->update($userData);
+
+        return redirect()->route('users.index')->with('success', 'User berhasil diperbarui.');
+    }
+
+    /**
+     * Menghapus user dari database.
+     */
+    public function destroy(User $user)
+    {
+        // Mencegah user menghapus diri sendiri
+        if ($user->id === auth()->id()) {
+            return redirect()->route('users.index')->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+        }
+
+        $user->delete();
+
+        return redirect()->route('users.index')->with('success', 'User berhasil dihapus.');
     }
 }

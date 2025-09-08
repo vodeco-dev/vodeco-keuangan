@@ -52,6 +52,11 @@ class NavigationServiceProvider extends ServiceProvider
                 'icon' => view('components.icons.reports')->render(),
             ],
             [
+                'name' => 'Riwayat Permintaan',
+                'route' => 'user-deletion-requests.index',
+                'icon' => view('components.icons.activity_logs')->render(),
+            ],
+            [
                 'name' => 'Activity Logs',
                 'route' => 'admin.activity-logs.index',
                 'icon' => view('components.icons.activity_logs')->render(),

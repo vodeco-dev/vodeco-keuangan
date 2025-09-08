@@ -17,13 +17,31 @@ class TransactionApproved extends Notification
 
     public function via($notifiable): array
     {
-        return ['mail'];
+        return ['mail', 'database'];
     }
 
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Transaksi Disetujui')
-            ->line('Permintaan penghapusan untuk transaksi "' . $this->transaction->description . '" telah disetujui.');
+            ->subject('Permintaan Penghapusan Transaksi Disetujui')
+            ->line('Kabar baik! Permintaan Anda untuk menghapus transaksi berikut telah disetujui dan transaksi telah dihapus dari sistem.')
+            ->line('Deskripsi: ' . $this->transaction->description)
+            ->line('Jumlah: Rp' . number_format($this->transaction->amount, 2, ',', '.'))
+            ->line('Tanggal: ' . $this->transaction->date->format('d F Y'))
+            ->action('Lihat Transaksi Anda', route('transactions.index'));
+    }
+
+    /**
+     * Get the array representation of the notification.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(object $notifiable): array
+    {
+        return [
+            'transaction_id' => $this->transaction->id,
+            'transaction_description' => $this->transaction->description,
+            'message' => 'Permintaan penghapusan transaksi Anda telah disetujui.',
+        ];
     }
 }
