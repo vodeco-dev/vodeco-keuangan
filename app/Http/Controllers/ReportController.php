@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\ReportRequest;
 use App\Models\Transaction;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
@@ -16,11 +16,12 @@ class ReportController extends Controller
     {
     }
 
-    public function index(Request $request)
+    public function index(ReportRequest $request)
     {
-        // Tentukan rentang tanggal. Defaultnya adalah bulan ini.
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
+        $validated = $request->validated();
+        // Tentukan rentang tanggal.
+        $startDate = $validated['start_date'];
+        $endDate = $validated['end_date'];
 
         // Ambil transaksi dalam rentang tanggal
         $transactions = Transaction::with('category')
@@ -94,11 +95,12 @@ class ReportController extends Controller
     }
 
     // Fungsi untuk handle ekspor
-    public function export(Request $request)
+    public function export(ReportRequest $request)
     {
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
-        $format = $request->input('format', 'xlsx'); // xlsx atau csv
+        $validated = $request->validated();
+        $startDate = $validated['start_date'];
+        $endDate = $validated['end_date'];
+        $format = $validated['format'] ?? 'xlsx'; // xlsx atau csv
 
         $fileName = 'Laporan_Keuangan_' . $startDate . '_sampai_' . $endDate . '.' . $format;
 
