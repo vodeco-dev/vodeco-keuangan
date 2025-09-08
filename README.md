@@ -48,7 +48,6 @@ Fitur ini adalah inti dari aplikasi, tempat Anda mencatat semua pemasukan dan pe
     2.  Isi formulir dengan detail berikut:
           * **Tanggal**: Tanggal transaksi terjadi.
           * **Kategori**: Pilih kategori yang sesuai (misal: "Gaji", "Biaya Operasional"). Kategori ini menentukan apakah transaksi tersebut adalah **Pemasukan** atau **Pengeluaran**.
-          * **Jenis Biaya Layanan** (Opsional): Khusus untuk pemasukan, pilih jenisnya. Jika ini adalah pendapatan bersih agensi, biarkan kosong atau pilih "Agency Fee". Jika ini adalah uang titipan klien (misal: biaya iklan), pilih "Pass-Through".
           * **Jumlah (Rp)**: Nominal transaksi.
           * **Deskripsi**: Catatan singkat mengenai transaksi.
     3.  Klik "**Simpan**".
@@ -62,7 +61,6 @@ Fitur ini menyajikan visualisasi dan ringkasan data keuangan Anda dalam periode 
       * **Total Pemasukan**: Jumlah semua pemasukan pada periode yang dipilih.
       * **Total Pengeluaran**: Jumlah semua pengeluaran pada periode yang dipilih.
       * **Selisih**: Perbedaan antara pemasukan dan pengeluaran.
-      * **Agency Gross Income**: Pendapatan bersih agensi (Total Pemasukan dikurangi pemasukan *Pass-Through*).
       * **Grafik Pemasukan vs Pengeluaran**.
 
 **C. Manajemen Utang**
@@ -131,7 +129,7 @@ Aplikasi ini dibangun menggunakan **Laravel Framework** dengan pola arsitektur *
       * `TransactionController.php`: Mengelola logika untuk CRUD transaksi.
       * `ReportController.php`: Menyiapkan data untuk halaman laporan.
   * **Service Layer**: Logika bisnis yang kompleks dipisahkan ke dalam kelas *Service* untuk menjaga *Controller* tetap ramping. Terletak di `app/Services/`.
-      * `TransactionService.php`: Berisi logika untuk menghitung *Agency Gross Income*.
+      * `TransactionService.php`: Menyediakan logika bisnis terkait transaksi.
       * `DebtService.php`: Mengelola logika terkait pembayaran utang.
   * **Routing**: Definisi URL dan pemetaannya ke *Controller* diatur dalam `routes/web.php`.
   * **Frontend**: Menggunakan **Tailwind CSS** untuk *styling* dan **Vite** untuk kompilasi *assets* (CSS & JS).
@@ -172,10 +170,8 @@ php artisan key:generate
 # 7. Jalankan migrasi database
 php artisan migrate
 
-# 8. Jalankan seeder untuk mengisi data awal (termasuk jenis biaya layanan)
+# 8. Jalankan seeder untuk mengisi data awal
 php artisan db:seed
-# atau jalankan seeder khusus untuk jenis biaya layanan saja
-# php artisan db:seed --class=ServiceCostSeeder
 
 # 9. Compile assets frontend
 npm run dev

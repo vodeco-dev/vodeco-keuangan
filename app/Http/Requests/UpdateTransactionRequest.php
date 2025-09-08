@@ -24,7 +24,6 @@ class UpdateTransactionRequest extends FormRequest
         return [
             'date' => 'required|date',
             'category_id' => 'required|exists:categories,id',
-            'service_cost_id' => 'nullable|exists:service_costs,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:255',
         ];
@@ -42,7 +41,6 @@ class UpdateTransactionRequest extends FormRequest
             'date.date' => 'Format tanggal tidak valid.',
             'category_id.required' => 'Kategori wajib diisi.',
             'category_id.exists' => 'Kategori tidak valid.',
-            'service_cost_id.exists' => 'Biaya layanan tidak valid.',
             'amount.required' => 'Jumlah wajib diisi.',
             'amount.numeric' => 'Jumlah harus berupa angka.',
             'amount.min' => 'Jumlah tidak boleh kurang dari 0.',

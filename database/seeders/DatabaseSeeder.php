@@ -14,7 +14,6 @@ class DatabaseSeeder extends Seeder
         // Memanggil seeder untuk membuat user awal (Admin, Staff, dll.)
         $this->call([
             UserSeeder::class,
-            ServiceCostSeeder::class,
             CategorySeeder::class,
             // Anda bisa menambahkan seeder lain di sini nanti, contoh:
             // TransactionSeeder::class,

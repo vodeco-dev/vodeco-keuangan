@@ -14,7 +14,7 @@ class InvoicePolicy
 
     public function view(User $user, Invoice $invoice): bool
     {
-        return $invoice->recurringRevenue && $invoice->recurringRevenue->user_id === $user->id;
+        return true;
     }
 
     public function create(User $user): bool
@@ -24,25 +24,21 @@ class InvoicePolicy
 
     public function update(User $user, Invoice $invoice): bool
     {
-        return $invoice->recurringRevenue && $invoice->recurringRevenue->user_id === $user->id;
+        return true;
     }
 
     public function delete(User $user, Invoice $invoice): bool
     {
-        return $invoice->recurringRevenue && $invoice->recurringRevenue->user_id === $user->id;
+        return true;
     }
 
     public function send(User $user, Invoice $invoice): bool
     {
-        return $invoice->recurringRevenue
-            ? $user->is_admin || $invoice->recurringRevenue->user_id === $user->id
-            : true;
+        return true;
     }
 
     public function markPaid(User $user, Invoice $invoice): bool
     {
-        return $invoice->recurringRevenue
-            ? $user->is_admin || $invoice->recurringRevenue->user_id === $user->id
-            : true;
+        return true;
     }
 }
