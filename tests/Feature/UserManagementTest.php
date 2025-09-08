@@ -17,6 +17,8 @@ class UserManagementTest extends TestCase
         $user = User::factory()->create(['role' => Role::STAFF]);
 
         $response = $this->actingAs($admin)->patch(route('users.update', $user), [
+            'name' => $user->name,
+            'email' => $user->email,
             'role' => 'accountant',
         ]);
 
