@@ -8,33 +8,7 @@
                     </a>
                 </div>
 
-                <div class="hidden w-full space-x-8 sm:-my-px sm:ms-10 sm:flex overflow-x-auto">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('transactions.index')" :active="request()->routeIs('transactions.index')">
-                        {{ __('Transaksi') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.index')">
-                        {{ __('Kategori') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('debts.index')" :active="request()->routeIs('debts.index')">
-                        {{ __('Hutang') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.index')">
-                        {{ __('Laporan') }}
-                    </x-nav-link>
-                    @if (Auth::user()->role === \App\Enums\Role::ADMIN)
-                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                        <x-nav-link :href="route('admin.activity-logs.index')" :active="request()->routeIs('admin.activity-logs.index')">
-                            {{ __('Activity Logs') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.index')">
-                            {{ __('Users') }}
-                        </x-nav-link>
-                    </div>
-                    @endif
-                </div>
+                {{-- Top navigation links removed; navigation handled via sidebar --}}
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
