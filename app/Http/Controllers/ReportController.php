@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\TransactionsExport;
 use App\Http\Requests\ReportRequest;
 use App\Models\Transaction;
-use Carbon\Carbon;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\TransactionsExport;
-use Illuminate\Support\Facades\DB;
+use App\Models\User;
 use App\Services\TransactionService;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
-    public function __construct(private TransactionService $transactionService)
-    {
-    }
+    public function __construct(private TransactionService $transactionService) {}
 
     public function index(ReportRequest $request)
     {
@@ -25,6 +24,7 @@ class ReportController extends Controller
 
         // Ambil transaksi dalam rentang tanggal
         $transactions = Transaction::with('category')
+            ->where('user_id', $request->user()->id)
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('date', 'desc')
             ->get();
@@ -38,37 +38,39 @@ class ReportController extends Controller
         $agencyGrossIncome = $this->transactionService->getAgencyGrossIncome($request->user());
 
         // Siapkan data untuk chart
-        $chartData = $this->prepareChartData($startDate, $endDate);
+        $chartData = $this->prepareChartData($request->user(), $startDate, $endDate);
 
         return view('reports.index', [
-            'title'            => 'Laporan',
-            'transactions'     => $transactions,
-            'totalPemasukan'   => $totalPemasukan,
+            'title' => 'Laporan',
+            'transactions' => $transactions,
+            'totalPemasukan' => $totalPemasukan,
             'totalPengeluaran' => $totalPengeluaran,
-            'selisih'          => $selisih,
-            'agencyGrossIncome'=> $agencyGrossIncome,
-            'startDate'        => $startDate,
-            'endDate'          => $endDate,
-            'chartData'        => $chartData,
+            'selisih' => $selisih,
+            'agencyGrossIncome' => $agencyGrossIncome,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'chartData' => $chartData,
         ]);
     }
 
     // Fungsi untuk menyiapkan data chart
-    private function prepareChartData($startDate, $endDate)
+    private function prepareChartData(User $user, $startDate, $endDate)
     {
-        $pemasukanData = Transaction::whereHas('category', function ($query) {
-            $query->where('type', 'pemasukan');
-        })
+        $pemasukanData = Transaction::where('user_id', $user->id)
+            ->whereHas('category', function ($query) {
+                $query->where('type', 'pemasukan');
+            })
             ->whereBetween('date', [$startDate, $endDate])
-            ->select(DB::raw("DATE(date) as date"), DB::raw('SUM(amount) as total'))
+            ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
             ->groupBy('date')
             ->pluck('total', 'date');
 
-        $pengeluaranData = Transaction::whereHas('category', function ($query) {
-            $query->where('type', 'pengeluaran');
-        })
+        $pengeluaranData = Transaction::where('user_id', $user->id)
+            ->whereHas('category', function ($query) {
+                $query->where('type', 'pengeluaran');
+            })
             ->whereBetween('date', [$startDate, $endDate])
-            ->select(DB::raw("DATE(date) as date"), DB::raw('SUM(amount) as total'))
+            ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
             ->groupBy('date')
             ->pluck('total', 'date');
 
@@ -102,8 +104,8 @@ class ReportController extends Controller
         $endDate = $validated['end_date'];
         $format = $validated['format'] ?? 'xlsx'; // xlsx atau csv
 
-        $fileName = 'Laporan_Keuangan_' . $startDate . '_sampai_' . $endDate . '.' . $format;
+        $fileName = 'Laporan_Keuangan_'.$startDate.'_sampai_'.$endDate.'.'.$format;
 
-        return Excel::download(new TransactionsExport($startDate, $endDate), $fileName);
+        return Excel::download(new TransactionsExport($request->user()->id, $startDate, $endDate), $fileName);
     }
 }
