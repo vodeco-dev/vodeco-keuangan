@@ -57,6 +57,8 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
     Route::get('/settings/display', [SettingController::class, 'display'])->name('settings.display');
     Route::post('/settings/display', [SettingController::class, 'updateDisplay'])->name('settings.display.update');
+    Route::get('/settings/notifications', [SettingController::class, 'notifications'])->name('settings.notifications');
+    Route::post('/settings/notifications', [SettingController::class, 'updateNotifications'])->name('settings.notifications.update');
 });
 
 // Route Khusus untuk Admin - Manajemen User

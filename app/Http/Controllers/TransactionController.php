@@ -9,6 +9,8 @@ use App\Enums\Role;
 use App\Models\ServiceCost;
 use App\Models\Transaction;
 use App\Models\TransactionDeletionRequest;
+use App\Models\Setting;
+use App\Notifications\TransactionDeleted;
 use App\Services\TransactionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -109,6 +111,10 @@ class TransactionController extends Controller
         $transaction->delete();
         $this->transactionService->clearSummaryCacheForUser($user);
         $this->transactionService->clearAgencyGrossIncomeCacheForUser($user);
+
+        if (Setting::get('notify_transaction_deleted')) {
+            $user->notify(new TransactionDeleted($transaction));
+        }
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil dihapus.');
