@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ReportRequest extends FormRequest
@@ -26,6 +27,17 @@ class ReportRequest extends FormRequest
             'end_date' => ['required', 'date'],
             'format' => ['in:xlsx,csv'],
         ];
+    }
+
+    /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'start_date' => $this->input('start_date', Carbon::now()->startOfMonth()->toDateString()),
+            'end_date' => $this->input('end_date', Carbon::now()->toDateString()),
+        ]);
     }
 
     /**
