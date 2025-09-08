@@ -31,8 +31,7 @@ class InvoiceController extends Controller
     public function store(StoreInvoiceRequest $request): RedirectResponse
     {
         $data = $request->validated();
-
-        DB::transaction(function () use ($data) {
+        $invoice = DB::transaction(function () use ($data) {
             $invoice = Invoice::create([
                 'client_name' => $data['client_name'],
                 'client_email' => $data['client_email'],
@@ -52,28 +51,32 @@ class InvoiceController extends Controller
                     'price' => $item['price'],
                 ]);
             }
+
+            return $invoice;
         });
+
+        ActivityLogger::log($request->user(), 'create_invoice', 'Invoice ID ' . $invoice->id . ' dibuat');
 
         return redirect()->route('invoices.index');
     }
 
-    public function send(Invoice $invoice): RedirectResponse
+    public function send(Request $request, Invoice $invoice): RedirectResponse
     {
         $this->authorize('send', $invoice);
 
         $invoice->update(['status' => 'Sent']);
         // Logic pengiriman email dapat ditambahkan di sini
-        ActivityLogger::log(request()->user(), 'submit_invoice', 'Invoice ID ' . $invoice->id . ' dikirim');
+        ActivityLogger::log($request->user(), 'submit_invoice', 'Invoice ID ' . $invoice->id . ' dikirim');
 
         return redirect()->route('invoices.index');
     }
 
-    public function markPaid(Invoice $invoice): RedirectResponse
+    public function markPaid(Request $request, Invoice $invoice): RedirectResponse
     {
         $this->authorize('markPaid', $invoice);
 
         $invoice->update(['status' => 'Paid']);
-        ActivityLogger::log(request()->user(), 'mark_invoice_paid', 'Invoice ID ' . $invoice->id . ' ditandai lunas');
+        ActivityLogger::log($request->user(), 'mark_invoice_paid', 'Invoice ID ' . $invoice->id . ' ditandai lunas');
 
         return redirect()->route('invoices.index');
     }
