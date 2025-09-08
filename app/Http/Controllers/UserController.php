@@ -53,4 +53,20 @@ class UserController extends Controller
 
         return redirect()->route('users.index')->with('success', 'User berhasil dibuat.');
     }
+
+    /**
+     * Memperbarui role user.
+     */
+    public function update(Request $request, User $user)
+    {
+        $request->validate([
+            'role' => ['required', Rule::enum(Role::class)],
+        ]);
+
+        $user->update([
+            'role' => $request->role,
+        ]);
+
+        return redirect()->route('users.index')->with('success', 'Role user berhasil diperbarui.');
+    }
 }

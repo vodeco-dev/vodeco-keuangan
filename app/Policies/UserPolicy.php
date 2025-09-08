@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\User;
 
 class UserPolicy
@@ -13,7 +14,7 @@ class UserPolicy
 
     public function view(User $user, User $model): bool
     {
-        return $user->id === $model->id;
+        return $user->id === $model->id || $user->role === Role::ADMIN;
     }
 
     public function create(User $user): bool
@@ -23,11 +24,11 @@ class UserPolicy
 
     public function update(User $user, User $model): bool
     {
-        return $user->id === $model->id;
+        return $user->id === $model->id || $user->role === Role::ADMIN;
     }
 
     public function delete(User $user, User $model): bool
     {
-        return $user->id === $model->id;
+        return $user->id === $model->id || $user->role === Role::ADMIN;
     }
 }

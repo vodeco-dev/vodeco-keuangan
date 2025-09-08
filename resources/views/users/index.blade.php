@@ -34,7 +34,18 @@
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap">{{ $user->name }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap">{{ $user->email }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">{{ ucfirst($user->role->value) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <form method="POST" action="{{ route('users.update', $user) }}" class="flex items-center">
+                                                @csrf
+                                                @method('PATCH')
+                                                <select name="role" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                                    <option value="admin" {{ $user->role->value === 'admin' ? 'selected' : '' }}>Admin</option>
+                                                    <option value="accountant" {{ $user->role->value === 'accountant' ? 'selected' : '' }}>Accountant</option>
+                                                    <option value="staff" {{ $user->role->value === 'staff' ? 'selected' : '' }}>Staff</option>
+                                                </select>
+                                                <x-primary-button class="ml-2">{{ __('Update') }}</x-primary-button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
