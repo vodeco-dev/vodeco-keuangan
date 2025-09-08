@@ -12,6 +12,7 @@ return new class extends Migration
             $table->index('user_id');
             $table->index('category_id');
             $table->index('date');
+            $table->index('description');
         });
 
         Schema::table('debts', function (Blueprint $table) {
@@ -27,6 +28,7 @@ return new class extends Migration
             $table->dropIndex(['user_id']);
             $table->dropIndex(['category_id']);
             $table->dropIndex(['date']);
+            $table->dropIndex(['description']);
         });
 
         Schema::table('debts', function (Blueprint $table) {
