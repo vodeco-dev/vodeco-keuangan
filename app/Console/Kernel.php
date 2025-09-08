@@ -12,9 +12,6 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Menjalankan proses untuk membuat transaksi dari pendapatan berulang
-        $schedule->command('recurring:process')->everyMinute();
-
         // Menjalankan proses untuk mengirim pengingat invoice yang jatuh tempo
         $schedule->command('invoices:reminder')->daily();
     }

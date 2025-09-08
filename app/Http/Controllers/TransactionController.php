@@ -6,7 +6,6 @@ use App\Http\Requests\StoreTransactionRequest;
 use App\Http\Requests\UpdateTransactionRequest;
 use App\Models\Category;
 use App\Enums\Role;
-use App\Models\ServiceCost;
 use App\Models\Transaction;
 use App\Models\TransactionDeletionRequest;
 use App\Models\Setting;
@@ -52,8 +51,7 @@ class TransactionController extends Controller
     public function create(Request $request): View
     {
         $categories = Category::orderBy('name')->get();
-        $serviceCosts = ServiceCost::orderBy('name')->get();
-        return view('transactions.create', compact('categories', 'serviceCosts'));
+        return view('transactions.create', compact('categories'));
     }
 
     /**
@@ -68,7 +66,6 @@ class TransactionController extends Controller
 
         Transaction::create($transactionData);
         $this->transactionService->clearSummaryCacheForUser($request->user());
-        $this->transactionService->clearAgencyGrossIncomeCacheForUser($request->user());
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil ditambahkan.');
@@ -83,7 +80,6 @@ class TransactionController extends Controller
 
         $transaction->update($validated);
         $this->transactionService->clearSummaryCacheForUser($request->user());
-        $this->transactionService->clearAgencyGrossIncomeCacheForUser($request->user());
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil diperbarui.');
@@ -110,7 +106,6 @@ class TransactionController extends Controller
         $user = $transaction->user;
         $transaction->delete();
         $this->transactionService->clearSummaryCacheForUser($user);
-        $this->transactionService->clearAgencyGrossIncomeCacheForUser($user);
 
         if (Setting::get('notify_transaction_deleted')) {
             $user->notify(new TransactionDeleted($transaction));

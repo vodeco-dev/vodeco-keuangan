@@ -21,7 +21,6 @@ class Transaction extends Model
         'amount',
         'description',
         'date',
-        'service_cost_id',
     ];
 
     /**
@@ -47,14 +46,6 @@ class Transaction extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Mendapatkan jenis biaya layanan yang terkait dengan transaksi.
-     */
-    public function serviceCost(): BelongsTo
-    {
-        return $this->belongsTo(ServiceCost::class);
     }
 
     // Method getSummary() dihapus dari sini dan dipindahkan ke TransactionService

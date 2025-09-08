@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Invoice extends Model
@@ -17,7 +16,6 @@ class Invoice extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'recurring_revenue_id', // Ditambahkan dari branch lain, bisa null
         'number',
         'issue_date',
         'due_date',
@@ -74,11 +72,4 @@ class Invoice extends Model
         return $this->hasMany(InvoiceItem::class);
     }
 
-    /**
-     * Mendapatkan sumber pendapatan berulang (jika ada) dari invoice ini.
-     */
-    public function recurringRevenue(): BelongsTo
-    {
-        return $this->belongsTo(RecurringRevenue::class);
-    }
 }

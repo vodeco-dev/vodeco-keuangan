@@ -31,9 +31,6 @@ class ReportController extends Controller
         $totalPengeluaran = $transactions->where('category.type', 'pengeluaran')->sum('amount');
         $selisih = $totalPemasukan - $totalPengeluaran;
 
-        // Hitung AGI
-        $agencyGrossIncome = $this->transactionService->getAgencyGrossIncome($request->user());
-
         // Siapkan data untuk chart
         $chartData = $this->transactionService->prepareChartData($request->user(), $startDate, $endDate);
 
@@ -43,7 +40,6 @@ class ReportController extends Controller
             'totalPemasukan' => $totalPemasukan,
             'totalPengeluaran' => $totalPengeluaran,
             'selisih' => $selisih,
-            'agencyGrossIncome' => $agencyGrossIncome,
             'startDate' => $startDate,
             'endDate' => $endDate,
             'chartData' => $chartData,

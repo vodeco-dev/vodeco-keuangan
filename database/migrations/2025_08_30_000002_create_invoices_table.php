@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('recurring_revenue_id')->nullable()->constrained()->nullOnDelete();
             $table->string('number')->unique();
             $table->date('issue_date')->nullable();
             $table->date('due_date')->nullable();
