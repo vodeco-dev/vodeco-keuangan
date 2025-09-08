@@ -27,6 +27,15 @@ class SettingController extends Controller
         ]);
     }
 
+    public function notifications(): View
+    {
+        return view('settings.notifications', [
+            'title' => 'Pengingat',
+            'notify_transaction_approved' => (bool) Setting::get('notify_transaction_approved', false),
+            'notify_transaction_deleted' => (bool) Setting::get('notify_transaction_deleted', false),
+        ]);
+    }
+
     /**
      * Memperbarui pengaturan aplikasi.
      */
@@ -52,5 +61,19 @@ class SettingController extends Controller
 
         return redirect()->route('settings.display')
             ->with('success', 'Preferensi tampilan diperbarui.');
+    }
+
+    public function updateNotifications(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'notify_transaction_approved' => 'nullable|boolean',
+            'notify_transaction_deleted' => 'nullable|boolean',
+        ]);
+
+        Setting::updateOrCreate(['key' => 'notify_transaction_approved'], ['value' => $request->boolean('notify_transaction_approved')]);
+        Setting::updateOrCreate(['key' => 'notify_transaction_deleted'], ['value' => $request->boolean('notify_transaction_deleted')]);
+
+        return redirect()->route('settings.notifications')
+            ->with('success', 'Pengingat diperbarui.');
     }
 }

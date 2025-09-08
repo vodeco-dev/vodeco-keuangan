@@ -33,7 +33,7 @@
                     </li>
                     <li class="flex items-center justify-between">
                         <span class="text-gray-600">Pengingat</span>
-                        <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Atur</button>
+                        <a href="{{ route('settings.notifications') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Atur</a>
                     </li>
                     <li class="flex items-center justify-between">
                         <span class="text-gray-600">Saldo Awal</span>
