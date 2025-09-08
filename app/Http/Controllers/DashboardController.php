@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Services\TransactionService; // Tambahkan ini
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -19,59 +19,54 @@ class DashboardController extends Controller
         // Gunakan service untuk mendapatkan ringkasan yang aman dan efisien
         $summary = $this->transactionService->getSummaryForUser($request->user());
 
-        // Query untuk tren bulanan (sudah aman)
+        // Filter dan ringkasan keadaan keuangan per bulan
         $selectedMonth = $request->input('month');
-
         if ($selectedMonth) {
             // Format input dari <input type="month"> adalah YYYY-MM
             [$year, $month] = explode('-', $selectedMonth);
+            $month = (int) $month;
         } else {
             $year  = now()->year;
-            $month = null;
+            $month = now()->month;
+            $selectedMonth = now()->format('Y-m');
         }
 
-        $driver     = DB::getDriverName();
-        $dateSelect = $driver === 'sqlite'
-            ? "CAST(strftime('%Y', date) AS INTEGER) AS year, CAST(strftime('%m', date) AS INTEGER) AS month"
-            : "YEAR(date) AS year, MONTH(date) AS month";
-
-        $monthly_trends_query = Transaction::query()
-            ->selectRaw($dateSelect)
-            ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN amount ELSE 0 END) as pemasukan")
-            ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN amount ELSE 0 END) as pengeluaran")
+        // Total pemasukan & pengeluaran bulan terpilih
+        $currentTotals = Transaction::query()
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.user_id', $request->user()->id)
-            ->whereYear('date', $year); // Keamanan: batasi berdasarkan tahun yang dipilih
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN amount ELSE 0 END) as pemasukan")
+            ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN amount ELSE 0 END) as pengeluaran")
+            ->first();
 
-        if ($month) {
-            $monthly_trends_query->whereMonth('date', $month);
+        $currentNet = ($currentTotals->pemasukan ?? 0) - ($currentTotals->pengeluaran ?? 0);
+
+        // Hitung data bulan sebelumnya untuk perbandingan
+        $previous = Carbon::create($year, $month)->subMonth();
+        $previousTotals = Transaction::query()
+            ->join('categories', 'transactions.category_id', '=', 'categories.id')
+            ->where('transactions.user_id', $request->user()->id)
+            ->whereYear('date', $previous->year)
+            ->whereMonth('date', $previous->month)
+            ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN amount ELSE 0 END) as pemasukan")
+            ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN amount ELSE 0 END) as pengeluaran")
+            ->first();
+
+        $previousNet = ($previousTotals->pemasukan ?? 0) - ($previousTotals->pengeluaran ?? 0);
+
+        $percentChange = null;
+        if ($previousNet != 0) {
+            $percentChange = (($currentNet - $previousNet) / abs($previousNet)) * 100;
         }
 
-        $monthly_trends = $monthly_trends_query
-            ->groupBy('year', 'month')
-            ->orderBy('month', 'asc')
-            ->get();
-
-        // Pastikan data tren berisi semua bulan agar grafik tampil jelas
-        if (!$month) {
-            $monthly_trends = collect(range(1, 12))->map(function ($m) use ($monthly_trends, $year) {
-                $trend = $monthly_trends->firstWhere('month', $m);
-
-                return (object) [
-                    'year'        => (int) $year,
-                    'month'       => $m,
-                    'pemasukan'   => $trend->pemasukan ?? 0,
-                    'pengeluaran' => $trend->pengeluaran ?? 0,
-                ];
-            });
-        }
-
-        $max_value = 0;
-        if ($monthly_trends->isNotEmpty()) {
-            $max_pemasukan = $monthly_trends->max('pemasukan');
-            $max_pengeluaran = $monthly_trends->max('pengeluaran');
-            $max_value = max($max_pemasukan, $max_pengeluaran);
-        }
+        $financialOverview = [
+            'pemasukan'      => $currentTotals->pemasukan ?? 0,
+            'pengeluaran'    => $currentTotals->pengeluaran ?? 0,
+            'net'            => $currentNet,
+            'percent_change' => $percentChange,
+        ];
 
         $recent_transactions = Transaction::with('category')
             ->where('user_id', $request->user()->id) // Keamanan: Pastikan transaksi terbaru milik user
@@ -85,8 +80,8 @@ class DashboardController extends Controller
             'saldo'               => $summary['saldo'],
             'pemasukan'           => $summary['totalPemasukan'],
             'pengeluaran'         => $summary['totalPengeluaran'],
-            'monthly_trends'      => $monthly_trends,
-            'max_trend_value'     => $max_value,
+            'financial_overview'  => $financialOverview,
+            'selected_month'      => $selectedMonth,
             'recent_transactions' => $recent_transactions,
         ]);
     }
