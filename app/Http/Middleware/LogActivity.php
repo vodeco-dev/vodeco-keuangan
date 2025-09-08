@@ -19,13 +19,24 @@ class LogActivity
 
         if (auth()->check()) {
             $methods = ['POST', 'PUT', 'PATCH', 'DELETE'];
-            if (in_array($request->getMethod(), $methods)) {
+            $method = $request->getMethod();
+
+            if (in_array($method, $methods)) {
+                $actions = [
+                    'POST' => 'Menambahkan',
+                    'PUT' => 'Memperbarui',
+                    'PATCH' => 'Memperbarui',
+                    'DELETE' => 'Menghapus',
+                ];
+
+                $action = $actions[$method] ?? $method;
+
                 ActivityLog::create([
-                    'user_id'    => auth()->id(),
-                    'description'=> $request->getMethod().' '.$request->path(),
+                    'user_id' => auth()->id(),
+                    'description' => $action.' '.$request->path(),
                     'ip_address' => $request->ip(),
-                    'url'        => $request->fullUrl(),
-                    'method'     => $request->getMethod(),
+                    'url' => $request->fullUrl(),
+                    'method' => $method,
                 ]);
             }
         }
@@ -33,4 +44,3 @@ class LogActivity
         return $response;
     }
 }
-
