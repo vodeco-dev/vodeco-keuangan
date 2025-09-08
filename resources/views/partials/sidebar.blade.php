@@ -1,4 +1,4 @@
-<aside x-data="{ open: true }" class="flex h-screen flex-col bg-white text-gray-700 p-4 transition-all duration-300" :class="open ? 'w-64' : 'w-20'">
+<aside x-data="{ open: true }" class="flex h-screen flex-col bg-white text-gray-700 p-4 overflow-y-auto transition-all duration-300" :class="open ? 'w-64' : 'w-20'">
 
     {{-- Bagian Logo dan Nama Aplikasi --}}
     <div class="flex items-center mb-8 text-center">
