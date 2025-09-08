@@ -61,6 +61,12 @@
                         <span class="text-gray-600">Hapus Semua Data</span>
                         <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Hapus</button>
                     </li>
+                    @can('admin')
+                    <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Log Aktivitas</span>
+                        <a href="{{ route('admin.activity-logs.index') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Lihat</a>
+                    </li>
+                    @endcan
                 </ul>
             </div>
 
