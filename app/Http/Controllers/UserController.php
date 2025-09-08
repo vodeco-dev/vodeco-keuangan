@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rule;
 use App\Enums\Role;
+use App\Services\ActivityLogger;
 
 class UserController extends Controller
 {
@@ -44,12 +45,14 @@ class UserController extends Controller
             'role' => ['required', Rule::enum(Role::class)],
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
         ]);
+
+        ActivityLogger::log($request->user(), 'create_user', 'Membuat user ' . $user->email);
 
         return redirect()->route('users.index')->with('success', 'User berhasil dibuat.');
     }
@@ -66,6 +69,8 @@ class UserController extends Controller
         $user->update([
             'role' => $request->role,
         ]);
+
+        ActivityLogger::log($request->user(), 'update_user_role', 'Memperbarui role user ' . $user->email);
 
         return redirect()->route('users.index')->with('success', 'Role user berhasil diperbarui.');
     }

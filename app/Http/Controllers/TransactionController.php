@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\ServiceCost;
 use App\Models\Transaction;
 use App\Services\TransactionService;
+use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -60,8 +61,10 @@ class TransactionController extends Controller
         $transactionData = $validated;
         $transactionData['user_id'] = $request->user()->id;
 
-        Transaction::create($transactionData);
+        $transaction = Transaction::create($transactionData);
         $this->transactionService->clearSummaryCacheForUser($request->user());
+
+        ActivityLogger::log($request->user(), 'create_transaction', 'Transaksi ID ' . $transaction->id . ' ditambahkan');
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil ditambahkan.');
@@ -77,6 +80,8 @@ class TransactionController extends Controller
         $transaction->update($validated);
         $this->transactionService->clearSummaryCacheForUser($request->user());
 
+        ActivityLogger::log($request->user(), 'update_transaction', 'Transaksi ID ' . $transaction->id . ' diperbarui');
+
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil diperbarui.');
     }
@@ -87,8 +92,11 @@ class TransactionController extends Controller
     public function destroy(Transaction $transaction): RedirectResponse
     {
         $user = $transaction->user;
+        $transactionId = $transaction->id;
         $transaction->delete();
         $this->transactionService->clearSummaryCacheForUser($user);
+
+        ActivityLogger::log($user, 'delete_transaction', 'Transaksi ID ' . $transactionId . ' dihapus');
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil dihapus.');

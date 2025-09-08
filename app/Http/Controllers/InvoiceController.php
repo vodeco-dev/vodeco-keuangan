@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use App\Services\ActivityLogger;
 
 class InvoiceController extends Controller
 {
@@ -62,6 +63,8 @@ class InvoiceController extends Controller
 
         $invoice->update(['status' => 'Sent']);
         // Logic pengiriman email dapat ditambahkan di sini
+        ActivityLogger::log(request()->user(), 'submit_invoice', 'Invoice ID ' . $invoice->id . ' dikirim');
+
         return redirect()->route('invoices.index');
     }
 
@@ -70,6 +73,8 @@ class InvoiceController extends Controller
         $this->authorize('markPaid', $invoice);
 
         $invoice->update(['status' => 'Paid']);
+        ActivityLogger::log(request()->user(), 'mark_invoice_paid', 'Invoice ID ' . $invoice->id . ' ditandai lunas');
+
         return redirect()->route('invoices.index');
     }
 }
