@@ -9,21 +9,26 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class TransactionsExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected $startDate;
-    protected $endDate;
+    protected int $userId;
 
-    public function __construct(string $startDate, string $endDate)
+    protected string $startDate;
+
+    protected string $endDate;
+
+    public function __construct(int $userId, string $startDate, string $endDate)
     {
+        $this->userId = $userId;
         $this->startDate = $startDate;
         $this->endDate = $endDate;
     }
 
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
     public function collection()
     {
         return Transaction::with('category')
+            ->where('user_id', $this->userId)
             ->whereBetween('date', [$this->startDate, $this->endDate])
             ->orderBy('date', 'asc')
             ->get();
