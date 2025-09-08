@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class SettingController extends Controller
 {
@@ -15,6 +16,14 @@ class SettingController extends Controller
     {
         return view('settings.index', [
             'title' => 'Pengaturan',
+        ]);
+    }
+
+    public function display(): View
+    {
+        return view('settings.display', [
+            'title' => 'Preferensi Tampilan',
+            'theme' => Setting::get('theme', 'light'),
         ]);
     }
 
@@ -31,5 +40,17 @@ class SettingController extends Controller
         // Redirect kembali dengan pesan sukses
         return redirect()->route('settings.index')
             ->with('success', 'Pengaturan berhasil diperbarui.');
+    }
+
+    public function updateDisplay(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'theme' => 'required|in:light,dark',
+        ]);
+
+        Setting::updateOrCreate(['key' => 'theme'], ['value' => $validated['theme']]);
+
+        return redirect()->route('settings.display')
+            ->with('success', 'Preferensi tampilan diperbarui.');
     }
 }

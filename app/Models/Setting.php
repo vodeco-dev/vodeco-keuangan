@@ -11,5 +11,10 @@ class Setting extends Model
     protected $primaryKey = 'key';
     public $incrementing = false;
     protected $keyType = 'string';
+
+    public static function get(string $key, $default = null)
+    {
+        return static::where('key', $key)->value('value') ?? $default;
+    }
 }
 
