@@ -63,6 +63,12 @@ class NavigationServiceProvider extends ServiceProvider
                 'icon' => view('components.icons.reports')->render(),
             ],
             [
+                'name' => 'Activity Logs',
+                'route' => 'admin.activity-logs.index',
+                'icon' => view('components.icons.activity_logs')->render(),
+                'can' => 'admin',
+            ],
+            [
                 'name' => 'Users',
                 'route' => 'users.index',
                 'icon' => view('components.icons.users')->render(),
