@@ -27,29 +27,29 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @forelse ($users as $user)
                                     <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap">{{ $user->name }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">{{ $user->email }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <form method="POST" action="{{ route('users.update', $user) }}" class="flex items-center">
-                                                @csrf
-                                                @method('PATCH')
-                                                <select name="role" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                                                    <option value="admin" {{ $user->role->value === 'admin' ? 'selected' : '' }}>Admin</option>
-                                                    <option value="accountant" {{ $user->role->value === 'accountant' ? 'selected' : '' }}>Accountant</option>
-                                                    <option value="staff" {{ $user->role->value === 'staff' ? 'selected' : '' }}>Staff</option>
-                                                </select>
-                                                <x-primary-button class="ml-2">{{ __('Update') }}</x-primary-button>
-                                            </form>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $user->name }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $user->email }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $user->role->name }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <a href="{{ route('users.edit', $user) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                            @if(auth()->id() !== $user->id)
+                                                <form class="inline-block ml-4" action="{{ route('users.destroy', $user) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus user ini?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
+                                                </form>
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="3" class="px-6 py-4 text-center text-gray-500">
+                                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">
                                             Belum ada data user.
                                         </td>
                                     </tr>

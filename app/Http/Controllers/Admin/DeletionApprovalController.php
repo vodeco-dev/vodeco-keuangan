@@ -7,7 +7,9 @@ use App\Models\TransactionDeletionRequest;
 use App\Models\Setting;
 use App\Notifications\TransactionApproved;
 use App\Notifications\TransactionDeleted;
+use App\Notifications\TransactionRejected;
 use App\Services\TransactionService;
+use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -39,24 +41,28 @@ class DeletionApprovalController extends Controller
         ]);
 
         if (Setting::get('notify_transaction_approved')) {
-            $deletionRequest->requester->notify(new TransactionApproved($transaction));
-        }
-
-        if (Setting::get('notify_transaction_deleted')) {
-            $deletionRequest->requester->notify(new TransactionDeleted($transaction));
+            $deletionRequest->requester->notify(new TransactionApproved($deletionRequest->transaction));
         }
 
         return redirect()->route('admin.deletion-requests.index')
             ->with('success', 'Permintaan penghapusan disetujui.');
     }
 
-    public function reject(TransactionDeletionRequest $deletionRequest): RedirectResponse
+    public function reject(Request $request, TransactionDeletionRequest $deletionRequest): RedirectResponse
     {
+        $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
         $deletionRequest->update([
             'status' => 'rejected',
             'approved_by' => auth()->id(),
             'approved_at' => now(),
+            'reason' => $request->input('reason'),
         ]);
+
+        // Kirim notifikasi ke requester
+        $deletionRequest->requester->notify(new TransactionRejected($deletionRequest));
 
         return redirect()->route('admin.deletion-requests.index')
             ->with('success', 'Permintaan penghapusan ditolak.');
