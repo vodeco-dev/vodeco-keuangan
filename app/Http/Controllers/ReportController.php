@@ -5,10 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\TransactionsExport;
 use App\Http\Requests\ReportRequest;
 use App\Models\Transaction;
-use App\Models\User;
 use App\Services\TransactionService;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
@@ -38,7 +35,7 @@ class ReportController extends Controller
         $agencyGrossIncome = $this->transactionService->getAgencyGrossIncome($request->user());
 
         // Siapkan data untuk chart
-        $chartData = $this->prepareChartData($request->user(), $startDate, $endDate);
+        $chartData = $this->transactionService->prepareChartData($request->user(), $startDate, $endDate);
 
         return view('reports.index', [
             'title' => 'Laporan',
@@ -53,48 +50,6 @@ class ReportController extends Controller
         ]);
     }
 
-    // Fungsi untuk menyiapkan data chart
-    private function prepareChartData(User $user, $startDate, $endDate)
-    {
-        $pemasukanData = Transaction::where('user_id', $user->id)
-            ->whereHas('category', function ($query) {
-                $query->where('type', 'pemasukan');
-            })
-            ->whereBetween('date', [$startDate, $endDate])
-            ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
-            ->groupBy('date')
-            ->pluck('total', 'date');
-
-        $pengeluaranData = Transaction::where('user_id', $user->id)
-            ->whereHas('category', function ($query) {
-                $query->where('type', 'pengeluaran');
-            })
-            ->whereBetween('date', [$startDate, $endDate])
-            ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
-            ->groupBy('date')
-            ->pluck('total', 'date');
-
-        $dates = collect();
-        $currentDate = Carbon::parse($startDate);
-        $lastDate = Carbon::parse($endDate);
-
-        while ($currentDate <= $lastDate) {
-            $dates->push($currentDate->toDateString());
-            $currentDate->addDay();
-        }
-
-        return [
-            'labels' => $dates->map(function ($date) {
-                return Carbon::parse($date)->format('d M');
-            }),
-            'pemasukan' => $dates->map(function ($date) use ($pemasukanData) {
-                return $pemasukanData[$date] ?? 0;
-            }),
-            'pengeluaran' => $dates->map(function ($date) use ($pengeluaranData) {
-                return $pengeluaranData[$date] ?? 0;
-            }),
-        ];
-    }
 
     // Fungsi untuk handle ekspor
     public function export(ReportRequest $request)

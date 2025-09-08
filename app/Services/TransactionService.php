@@ -7,6 +7,8 @@ use App\Models\ServiceCost;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class TransactionService
 {
@@ -108,6 +110,45 @@ class TransactionService
 
             return $totalPemasukan - $totalPotongan;
         });
+    }
+
+    /**
+     * Siapkan data untuk chart pemasukan dan pengeluaran.
+     */
+    public function prepareChartData(User $user, $startDate, $endDate): array
+    {
+        $pemasukanData = Transaction::where('user_id', $user->id)
+            ->whereHas('category', function ($query) {
+                $query->where('type', 'pemasukan');
+            })
+            ->whereBetween('date', [$startDate, $endDate])
+            ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
+            ->groupBy('date')
+            ->pluck('total', 'date');
+
+        $pengeluaranData = Transaction::where('user_id', $user->id)
+            ->whereHas('category', function ($query) {
+                $query->where('type', 'pengeluaran');
+            })
+            ->whereBetween('date', [$startDate, $endDate])
+            ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
+            ->groupBy('date')
+            ->pluck('total', 'date');
+
+        $dates = collect();
+        $currentDate = Carbon::parse($startDate);
+        $lastDate = Carbon::parse($endDate);
+
+        while ($currentDate <= $lastDate) {
+            $dates->push($currentDate->toDateString());
+            $currentDate->addDay();
+        }
+
+        return [
+            'labels' => $dates->map(fn ($date) => Carbon::parse($date)->format('d M')),
+            'pemasukan' => $dates->map(fn ($date) => $pemasukanData[$date] ?? 0),
+            'pengeluaran' => $dates->map(fn ($date) => $pengeluaranData[$date] ?? 0),
+        ];
     }
 }
 
