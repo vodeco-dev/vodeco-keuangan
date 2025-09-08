@@ -29,7 +29,7 @@
                 <ul class="space-y-3">
                     <li class="flex items-center justify-between">
                         <span class="text-gray-600">Preferensi Tampilan</span>
-                        <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Kelola</button>
+                        <a href="{{ route('settings.display') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Kelola</a>
                     </li>
                     <li class="flex items-center justify-between">
                         <span class="text-gray-600">Pengingat</span>
