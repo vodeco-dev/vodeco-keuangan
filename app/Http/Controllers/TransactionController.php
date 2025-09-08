@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTransactionRequest;
 use App\Http\Requests\UpdateTransactionRequest;
 use App\Models\Category;
+use App\Enums\Role;
 use App\Models\ServiceCost;
 use App\Models\Transaction;
+use App\Models\TransactionDeletionRequest;
 use App\Services\TransactionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +21,9 @@ class TransactionController extends Controller
      */
     public function __construct(private TransactionService $transactionService)
     {
-        $this->authorizeResource(Transaction::class, 'transaction');
+        $this->authorizeResource(Transaction::class, 'transaction', [
+            'except' => ['destroy'],
+        ]);
     }
 
     /**
@@ -84,8 +88,21 @@ class TransactionController extends Controller
     /**
      * Menghapus transaksi.
      */
-    public function destroy(Transaction $transaction): RedirectResponse
+    public function destroy(Request $request, Transaction $transaction): RedirectResponse
     {
+        if ($request->user()->role !== Role::ADMIN) {
+            TransactionDeletionRequest::create([
+                'transaction_id' => $transaction->id,
+                'requested_by' => $request->user()->id,
+                'status' => 'pending',
+            ]);
+
+            return redirect()->route('transactions.index')
+                ->with('success', 'Permintaan penghapusan transaksi menunggu persetujuan admin.');
+        }
+
+        $this->authorize('delete', $transaction);
+
         $user = $transaction->user;
         $transaction->delete();
         $this->transactionService->clearSummaryCacheForUser($user);
