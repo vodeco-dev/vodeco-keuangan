@@ -113,6 +113,10 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                         @forelse ($recent_transactions as $transaction)
                             <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{-- Tanggal Transaksi --}}
+                                    {{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMMM YYYY') }}
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         {{-- Icon dan Nama Kategori --}}
@@ -121,19 +125,15 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     {{-- Deskripsi Transaksi --}}
-                                    <div class="text-sm text-gray-500">{{ $transaction->description }}</div>
+                                    <div class="text-sm text-gray-500">{{ $transaction->description ?: '-' }}</div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
                                     {{-- Jumlah dengan warna berbeda --}}
                                     @if ($transaction->category->type == 'pemasukan')
                                         <span class="text-green-600 font-semibold">+ Rp {{ number_format($transaction->amount, 0, ',', '.') }}</span>
                                     @else
                                         <span class="text-red-600 font-semibold">- Rp {{ number_format($transaction->amount, 0, ',', '.') }}</span>
                                     @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{-- Tanggal Transaksi --}}
-                                    {{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMMM YYYY') }}
                                 </td>
                             </tr>
                         @empty
