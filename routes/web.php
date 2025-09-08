@@ -12,6 +12,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\DeletionApprovalController;
+use App\Http\Controllers\Admin\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -69,6 +70,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('deletion-requests', [DeletionApprovalController::class, 'index'])->name('deletion-requests.index');
     Route::post('deletion-requests/{deletionRequest}/approve', [DeletionApprovalController::class, 'approve'])->name('deletion-requests.approve');
     Route::post('deletion-requests/{deletionRequest}/reject', [DeletionApprovalController::class, 'reject'])->name('deletion-requests.reject');
+    Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 });
 
 require __DIR__.'/auth.php';
