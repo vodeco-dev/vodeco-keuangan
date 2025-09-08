@@ -66,6 +66,7 @@ class TransactionController extends Controller
 
         Transaction::create($transactionData);
         $this->transactionService->clearSummaryCacheForUser($request->user());
+        $this->transactionService->clearAgencyGrossIncomeCacheForUser($request->user());
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil ditambahkan.');
@@ -80,6 +81,7 @@ class TransactionController extends Controller
 
         $transaction->update($validated);
         $this->transactionService->clearSummaryCacheForUser($request->user());
+        $this->transactionService->clearAgencyGrossIncomeCacheForUser($request->user());
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil diperbarui.');
@@ -106,6 +108,7 @@ class TransactionController extends Controller
         $user = $transaction->user;
         $transaction->delete();
         $this->transactionService->clearSummaryCacheForUser($user);
+        $this->transactionService->clearAgencyGrossIncomeCacheForUser($user);
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil dihapus.');

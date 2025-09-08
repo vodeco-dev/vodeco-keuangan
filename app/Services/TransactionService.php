@@ -46,6 +46,14 @@ class TransactionService
     }
 
     /**
+     * Hapus cache Agency Gross Income untuk pengguna tertentu.
+     */
+    public function clearAgencyGrossIncomeCacheForUser(User $user): void
+    {
+        Cache::forget('agency_gross_income_for_user_' . $user->id);
+    }
+
+    /**
      * Ambil ringkasan keuangan untuk pengguna tertentu menggunakan satu query yang efisien dan caching.
      * INI ADALAH VERSI GABUNGAN YANG SUDAH DISEMPURNAKAN.
      */
