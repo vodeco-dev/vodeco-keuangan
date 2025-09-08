@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,8 +12,8 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased">
-        <div class="flex h-screen bg-gray-100 overflow-hidden">
+    <body class="font-sans antialiased h-full">
+        <div class="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
             
             <div class="flex-shrink-0 hidden md:block">
                 @include('partials.sidebar')
@@ -23,7 +23,7 @@
                 @include('layouts.navigation')
 
                 @if (isset($header))
-                    <header class="bg-white shadow">
+                    <header class="bg-white shadow dark:bg-gray-800">
                         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                             {{ $header }}
                         </div>
