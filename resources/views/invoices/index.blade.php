@@ -29,6 +29,7 @@
                                     <td class="px-6 py-4 text-right">Rp {{ number_format($invoice->total, 0, ',', '.') }}</td>
                                     <td class="px-6 py-4 text-center">
                                         <div class="flex justify-center items-center gap-2">
+                                            <a href="{{ route('invoices.pdf', $invoice) }}" class="text-gray-600 hover:text-gray-900" target="_blank">PDF</a>
                                             @if($invoice->status === 'Draft')
                                                 <form method="POST" action="{{ route('invoices.send', $invoice) }}">
                                                     @csrf
