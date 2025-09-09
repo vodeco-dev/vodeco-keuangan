@@ -37,6 +37,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
 
     // Route untuk Aksi Spesifik
     // Invoicing
+    Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
     Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
     Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'markPaid'])->name('invoices.pay');
     // Debts

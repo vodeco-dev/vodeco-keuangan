@@ -7,6 +7,8 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Models\Setting;
+use Spatie\LaravelPdf\Facades\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -71,5 +73,23 @@ class InvoiceController extends Controller
 
         $invoice->update(['status' => 'Paid']);
         return redirect()->route('invoices.index');
+    }
+
+    public function pdf(Invoice $invoice)
+    {
+        $this->authorize('view', $invoice);
+
+        // Ambil pengaturan bisnis dari database
+        $settings = Setting::pluck('value', 'key')->all();
+
+        // Buat PDF menggunakan Spatie/laravel-pdf
+        $pdf = Pdf::view('invoices.pdf', [
+            'invoice' => $invoice,
+            'settings' => $settings,
+        ])
+            ->format('a4')
+            ->name($invoice->number . '.pdf');
+
+        return $pdf;
     }
 }
