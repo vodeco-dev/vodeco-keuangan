@@ -61,17 +61,6 @@ Dibangun dengan teknologi modern, Vodeco Keuangan menawarkan pengalaman pengguna
 
 ---
 
-## 📸 Tangkapan Layar
-
-<div align="center">
-  <img src="public/image1.png" alt="Dashboard" width="48%" style="margin: 1%;"/>
-  <img src="public/image2.png" alt="Transactions" width="48%" style="margin: 1%;"/>
-  <img src="public/image3.png" alt="Invoices" width="48%" style="margin: 1%;"/>
-  <img src="public/image4.png" alt="Debts" width="48%" style="margin: 1%;"/>
-</div>
-
----
-
 ## 🛠️ Tumpukan Teknologi
 
 Aplikasi ini dibangun menggunakan komponen dan teknologi terdepan di industri:
