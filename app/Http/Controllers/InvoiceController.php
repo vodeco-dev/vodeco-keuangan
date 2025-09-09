@@ -64,7 +64,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('send', $invoice);
 
-        $invoice->update(['status' => 'Sent']);
+        $invoice->update(['status' => 'Proses']);
         // Logic pengiriman email dapat ditambahkan di sini
         return redirect()->route('invoices.index');
     }
@@ -86,9 +86,9 @@ class InvoiceController extends Controller
             $invoice->payment_date = $paymentDate;
 
             if ($invoice->down_payment >= $invoice->total) {
-                $invoice->status = 'Paid';
+                $invoice->status = 'Terbayar';
             } else {
-                $invoice->status = 'Partially Paid';
+                $invoice->status = 'Terbayar Sebagian';
             }
 
             $invoice->save();
