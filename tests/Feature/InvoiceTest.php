@@ -84,4 +84,32 @@ class InvoiceTest extends TestCase
             'status' => 'Paid',
         ]);
     }
+
+    public function test_can_view_invoice_publicly_with_valid_token()
+    {
+        $invoice = Invoice::create([
+            'number' => 'PUB-001',
+            'issue_date' => now()->toDateString(),
+            'status' => 'Sent',
+            'total' => 12345,
+            'client_name' => 'Public Client',
+            'client_email' => 'public@example.com',
+            'client_address' => 'Public Address',
+        ]);
+
+        $this->assertNotNull($invoice->public_token);
+
+        $response = $this->get(route('invoices.public.show', ['token' => $invoice->public_token]));
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Disposition', 'inline; filename="PUB-001.pdf"');
+    }
+
+    public function test_cannot_view_invoice_publicly_with_invalid_token()
+    {
+        $invalidToken = 'this-is-not-a-valid-uuid';
+        $response = $this->get(route('invoices.public.show', ['token' => $invalidToken]));
+
+        $response->assertStatus(404);
+    }
 }

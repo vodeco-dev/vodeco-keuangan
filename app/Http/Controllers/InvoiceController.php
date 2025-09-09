@@ -92,4 +92,22 @@ class InvoiceController extends Controller
 
         return $pdf;
     }
+
+    public function showPublic(string $token)
+    {
+        $invoice = Invoice::where('public_token', $token)->firstOrFail();
+
+        // Ambil pengaturan bisnis dari database
+        $settings = Setting::pluck('value', 'key')->all();
+
+        // Buat PDF menggunakan Spatie/laravel-pdf
+        $pdf = Pdf::view('invoices.pdf', [
+            'invoice' => $invoice,
+            'settings' => $settings,
+        ])
+            ->format('a4')
+            ->name($invoice->number . '.pdf');
+
+        return $pdf;
+    }
 }
