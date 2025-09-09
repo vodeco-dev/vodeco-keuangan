@@ -26,6 +26,8 @@ class Invoice extends Model
         'client_name',
         'client_email',
         'client_address',
+        'down_payment',
+        'payment_date',
     ];
 
     /**
@@ -37,6 +39,7 @@ class Invoice extends Model
         'issue_date' => 'date',
         'due_date' => 'date',
         'total' => 'decimal:2',
+        'down_payment' => 'decimal:2',
     ];
 
     /**

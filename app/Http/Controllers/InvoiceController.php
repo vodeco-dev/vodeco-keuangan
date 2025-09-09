@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Transaction;
+use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Setting;
@@ -67,12 +69,46 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index');
     }
 
-    public function markPaid(Invoice $invoice): RedirectResponse
+    public function storePayment(Request $request, Invoice $invoice): RedirectResponse
     {
-        $this->authorize('markPaid', $invoice);
+        $this->authorize('storePayment', $invoice);
 
-        $invoice->update(['status' => 'Paid']);
-        return redirect()->route('invoices.index');
+        $request->validate([
+            'payment_amount' => 'required|numeric|min:0.01|max:' . ($invoice->total - $invoice->down_payment),
+            'payment_date' => 'required|date',
+        ]);
+
+        $paymentAmount = $request->input('payment_amount');
+        $paymentDate = $request->input('payment_date');
+
+        DB::transaction(function () use ($invoice, $paymentAmount, $paymentDate) {
+            $invoice->down_payment += $paymentAmount;
+            $invoice->payment_date = $paymentDate;
+
+            if ($invoice->down_payment >= $invoice->total) {
+                $invoice->status = 'Paid';
+            } else {
+                $invoice->status = 'Partially Paid';
+            }
+
+            $invoice->save();
+
+            // Create a transaction for the down payment
+            $category = Category::firstOrCreate(
+                ['name' => 'Down Payment'],
+                ['type' => 'pemasukan']
+            );
+
+            Transaction::create([
+                'category_id' => $category->id,
+                'user_id' => auth()->id(),
+                'amount' => $paymentAmount,
+                'description' => 'Down payment for Invoice #' . $invoice->number,
+                'date' => $paymentDate,
+            ]);
+        });
+
+        return redirect()->route('invoices.index')->with('success', 'Payment recorded successfully.');
     }
 
     public function pdf(Invoice $invoice)
