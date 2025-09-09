@@ -46,7 +46,7 @@
                                         </form>
                                         @endif
                                         @if($invoice->status !== 'Paid')
-                                        <button @click="openModal = true; selectedInvoice = {{ $invoice->id }};" class="text-green-600 hover:text-green-900">{{ __('Record Payment') }}</button>
+                                        <button type="button" @click="openModal = true; selectedInvoice = {{ $invoice->id }};" class="text-green-600 hover:text-green-900">{{ __('Record Payment') }}</button>
                                         @endif
                                     </div>
                                 </td>
