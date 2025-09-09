@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\TransactionsExport;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
 
 class SettingController extends Controller
 {
@@ -75,5 +77,29 @@ class SettingController extends Controller
 
         return redirect()->route('settings.notifications')
             ->with('success', 'Pengingat diperbarui.');
+    }
+
+    public function data(): View
+    {
+        return view('settings.data', [
+            'title' => 'Manajemen Data',
+        ]);
+    }
+
+    public function export(Request $request)
+    {
+        $validated = $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'format' => 'required|in:xlsx,csv',
+        ]);
+
+        $startDate = $validated['start_date'];
+        $endDate = $validated['end_date'];
+        $format = $validated['format'];
+
+        $fileName = 'Laporan_Transaksi_'.$startDate.'_sampai_'.$endDate.'.'.$format;
+
+        return Excel::download(new TransactionsExport($request->user()->id, $startDate, $endDate), $fileName);
     }
 }
