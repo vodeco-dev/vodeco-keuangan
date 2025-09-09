@@ -23,31 +23,33 @@
                         </thead>
                         <tbody class="divide-y">
                             @foreach ($invoices as $invoice)
-                                <tr>
-                                    <td class="px-6 py-4">{{ $invoice->number }}</td>
-                                    <td class="px-6 py-4">{{ $invoice->status }}</td>
-                                    <td class="px-6 py-4 text-right">Rp {{ number_format($invoice->total, 0, ',', '.') }}</td>
-                                    <td class="px-6 py-4 text-center">
-                                        <div class="flex justify-center items-center gap-2">
-                                            <a href="{{ route('invoices.pdf', $invoice) }}" class="text-gray-600 hover:text-gray-900" target="_blank">PDF</a>
-                                            <button type="button" class="text-purple-600 hover:text-purple-900" onclick="copyToClipboard('{{ route('invoices.public.show', ['token' => $invoice->public_token]) }}', this)">
-                                                {{ __('Copy Link') }}
-                                            </button>
-                                            @if($invoice->status === 'Draft')
-                                                <form method="POST" action="{{ route('invoices.send', $invoice) }}">
-                                                    @csrf
-                                                    <button type="submit" class="text-blue-600 hover:text-blue-900">{{ __('Send') }}</button>
-                                                </form>
-                                            @endif
-                                            @if($invoice->status !== 'Paid')
-                                                <form method="POST" action="{{ route('invoices.pay', $invoice) }}">
-                                                    @csrf
-                                                    <button type="submit" class="text-green-600 hover:text-green-900">{{ __('Mark Paid') }}</button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td class="px-6 py-4">{{ $invoice->number }}</td>
+                                <td class="px-6 py-4">{{ $invoice->status }}</td>
+                                <td class="px-6 py-4 text-right">Rp {{ number_format($invoice->total, 0, ',', '.') }}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <div class="flex justify-center items-center gap-2">
+                                        <a href="{{ route('invoices.pdf', $invoice) }}" class="text-gray-600 hover:text-gray-900" target="_blank">PDF</a>
+                                        @if($invoice->public_token)
+                                        <button type="button" class="text-purple-600 hover:text-purple-900" onclick="copyToClipboard('{{ route('invoices.public.show', ['token' => $invoice->public_token]) }}', this)">
+                                            {{ __('Copy Link') }}
+                                        </button>
+                                        @endif
+                                        @if($invoice->status === 'Draft')
+                                        <form method="POST" action="{{ route('invoices.send', $invoice) }}">
+                                            @csrf
+                                            <button type="submit" class="text-blue-600 hover:text-blue-900">{{ __('Send') }}</button>
+                                        </form>
+                                        @endif
+                                        @if($invoice->status !== 'Paid')
+                                        <form method="POST" action="{{ route('invoices.pay', $invoice) }}">
+                                            @csrf
+                                            <button type="submit" class="text-green-600 hover:text-green-900">{{ __('Mark Paid') }}</button>
+                                        </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
                             @endforeach
                         </tbody>
                     </table>
