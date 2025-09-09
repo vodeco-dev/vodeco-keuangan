@@ -9,6 +9,7 @@
         @endphp
         <meta name="default-theme" content="{{ $defaultTheme }}">
 
+        <link rel="icon" href="{{ asset('favicon.png') }}">
         <title>{{ config('app.name', 'Laravel') }}</title>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
