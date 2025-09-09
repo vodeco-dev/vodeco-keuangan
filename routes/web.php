@@ -42,7 +42,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     // Invoicing
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
     Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
-    Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'markPaid'])->name('invoices.pay');
+    Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'storePayment'])->name('invoices.pay');
     // Debts
     Route::post('debts/{debt}/pay', [DebtController::class, 'storePayment'])->name('debts.pay');
 

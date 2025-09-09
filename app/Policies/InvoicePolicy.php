@@ -37,7 +37,7 @@ class InvoicePolicy
         return true;
     }
 
-    public function markPaid(User $user, Invoice $invoice): bool
+    public function storePayment(User $user, Invoice $invoice): bool
     {
         return true;
     }
