@@ -75,13 +75,16 @@ class InvoiceTest extends TestCase
         $this->actingAs($user)->post(route('invoices.send', $invoice));
         $this->assertDatabaseHas('invoices', [
             'id' => $invoice->id,
-            'status' => 'Sent',
+            'status' => 'Proses',
         ]);
 
-        $this->actingAs($user)->post(route('invoices.pay', $invoice));
+        $this->actingAs($user)->post(route('invoices.pay', $invoice), [
+            'payment_amount' => $invoice->total,
+            'payment_date' => now()->toDateString(),
+        ]);
         $this->assertDatabaseHas('invoices', [
             'id' => $invoice->id,
-            'status' => 'Paid',
+            'status' => 'Terbayar',
         ]);
     }
 
@@ -90,7 +93,7 @@ class InvoiceTest extends TestCase
         $invoice = Invoice::create([
             'number' => 'PUB-001',
             'issue_date' => now()->toDateString(),
-            'status' => 'Sent',
+            'status' => 'Proses',
             'total' => 12345,
             'client_name' => 'Public Client',
             'client_email' => 'public@example.com',
