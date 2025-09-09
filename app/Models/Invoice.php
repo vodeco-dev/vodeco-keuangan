@@ -48,26 +48,6 @@ class Invoice extends Model
         static::creating(function (Invoice $invoice) {
             $invoice->public_token = Str::uuid();
         });
-
-        static::updated(function (Invoice $invoice) {
-            // Cek jika status berubah menjadi 'Paid' dan sebelumnya bukan 'Paid'
-            if ($invoice->isDirty('status') && $invoice->status === 'Paid') {
-                // Cari kategori default untuk pemasukan invoice, misal 'Penjualan Jasa'
-                // Fallback ke kategori pertama jika tidak ditemukan
-                $category = Category::where('name', 'Penjualan Jasa')->orWhere('type', 'pemasukan')->first();
-
-                // Pastikan ada kategori sebelum membuat transaksi
-                if ($category) {
-                    Transaction::create([
-                        'category_id' => $category->id,
-                        'user_id' => auth()->id(), // Gunakan user yang sedang login
-                        'amount' => $invoice->total,
-                        'description' => 'Pembayaran untuk Invoice #' . $invoice->number,
-                        'date' => now(),
-                    ]);
-                }
-            }
-        });
     }
 
     /**
@@ -78,4 +58,11 @@ class Invoice extends Model
         return $this->hasMany(InvoiceItem::class);
     }
 
+    /**
+     * Get all of the payments for the invoice.
+     */
+    public function payments(): MorphMany
+    {
+        return $this->morphMany(Payment::class, 'payable');
+    }
 }
