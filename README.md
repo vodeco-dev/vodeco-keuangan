@@ -1,204 +1,193 @@
-## **Dokumentasi Fitur dan Alur Penggunaan Aplikasi Keuangan**
+<div align="center">
+  <img src="public/vodeco.webp" alt="Vodeco Logo" width="200"/>
+  <h1>Vodeco Keuangan</h1>
+  <p>Aplikasi manajemen keuangan pribadi dan bisnis kecil yang modern, intuitif, dan <em>open-source</em>.</p>
+</div>
 
-Dokumentasi ini terbagi menjadi dua bagian utama: **Panduan Pengguna** yang ditujukan untuk pengguna akhir aplikasi, dan **Dokumentasi Teknis** untuk para *developer*.
+<!-- Badges -->
+<div align="center">
+  <!-- GitHub Actions CI -->
+  <a href="https://github.com/Vodeco/vodeco-keuangan/actions/workflows/ci.yml">
+    <img src="https://github.com/Vodeco/vodeco-keuangan/actions/workflows/ci.yml/badge.svg" alt="Build Status">
+  </a>
+  <!-- License -->
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License">
+  </a>
+  <!-- Laravel Version -->
+  <a href="https://laravel.com">
+    <img src="https://img.shields.io/badge/Laravel-v12.0-FF2D20.svg?style=flat&logo=laravel" alt="Laravel v12.0">
+  </a>
+  <!-- PHP Version -->
+  <a href="https://www.php.net">
+    <img src="https://img.shields.io/badge/PHP-%5E8.2-777BB4.svg?style=flat&logo=php" alt="PHP ^8.2">
+  </a>
+</div>
 
------
+---
 
-### **Bagian 1: Panduan Pengguna (User Guide)**
+## 📜 Daftar Isi
 
-#### **1.1. Panduan Memulai (Getting Started)**
+- [Tentang Proyek](#-tentang-proyek)
+- [✨ Fitur Utama](#-fitur-utama)
+- [📸 Tangkapan Layar](#-tangkapan-layar)
+- [🛠️ Tumpukan Teknologi](#️-tumpukan-teknologi)
+- [🚀 Panduan Memulai](#-panduan-memulai)
+  - [Prasyarat](#prasyarat)
+  - [Instalasi](#instalasi)
+- [🧪 Menjalankan Pengujian](#-menjalankan-pengujian)
+- [🤝 Berkontribusi](#-berkontribusi)
+- [📄 Lisensi](#-lisensi)
 
-Selamat datang di aplikasi Vodeco Keuangan\! Panduan ini akan membantu Anda memulai penggunaan aplikasi, mulai dari pendaftaran hingga memahami fitur-fitur utama.
+---
 
-**Langkah 1: Registrasi Akun**
+## 📖 Tentang Proyek
 
-1.  Buka halaman utama aplikasi dan klik tombol "**Register**".
-2.  Isi formulir pendaftaran dengan informasi yang diperlukan:
-      * **Name**: Nama lengkap Anda.
-      * **Email Address**: Alamat email yang akan digunakan untuk login.
-      * **Password**: Kata sandi yang aman.
-      * **Confirm Password**: Ulangi kata sandi Anda.
-3.  Klik tombol "**Register**" untuk membuat akun Anda.
+**Vodeco Keuangan** adalah aplikasi web yang dirancang untuk membantu Anda mengelola keuangan dengan lebih mudah dan efisien. Baik untuk kebutuhan pribadi, <em>freelancer</em>, maupun usaha kecil, aplikasi ini menyediakan alat yang Anda butuhkan untuk melacak pemasukan, pengeluaran, utang-piutang, hingga membuat <em>invoice</em> profesional.
 
-**Langkah 2: Login ke Aplikasi**
+Dibangun dengan teknologi modern, Vodeco Keuangan menawarkan pengalaman pengguna yang bersih, cepat, dan responsif.
 
-1.  Setelah registrasi berhasil, Anda akan diarahkan ke halaman login, atau Anda bisa mengaksesnya melalui URL `/login`.
-2.  Masukkan **Email** dan **Password** yang telah Anda daftarkan.
-3.  Klik tombol "**Log in**".
+---
 
-**Langkah 3: Mengenal Tampilan Utama (Dashboard)**
-Setelah berhasil login, Anda akan disambut oleh halaman **Dashboard**. Di sini Anda dapat melihat ringkasan kondisi keuangan Anda, termasuk:
+## ✨ Fitur Utama
 
-  * Grafik pemasukan dan pengeluaran.
-  * Transaksi terbaru.
-  * Status utang dan piutang.
+-   **📊 Dashboard Interaktif**: Lihat ringkasan kondisi keuangan Anda secara visual, termasuk grafik pemasukan dan pengeluaran.
+-   **💸 Manajemen Transaksi**: Catat semua pemasukan dan pengeluaran dengan mudah. Kelompokkan berdasarkan kategori untuk analisis yang lebih mendalam.
+-   **🧾 Manajemen Invoice**: Buat, kelola, dan kirim <em>invoice</em> profesional ke klien Anda hanya dalam beberapa klik.
+-   **💳 Manajemen Utang & Piutang**: Lacak semua utang yang harus Anda bayar dan piutang yang harus diterima, lengkap dengan tanggal jatuh tempo.
+-   **📈 Laporan Keuangan**: Hasilkan laporan keuangan periodik untuk memahami arus kas Anda. Filter berdasarkan rentang tanggal untuk mendapatkan data yang spesifik.
+-   **👥 Manajemen Pengguna**: (Untuk Admin) Kelola pengguna yang dapat mengakses aplikasi, lengkap dengan peran dan hak akses.
+-   **⚙️ Pengaturan Fleksibel**: Sesuaikan pengaturan aplikasi sesuai kebutuhan Anda.
 
-#### **1.2. Dokumentasi per Fitur**
+---
 
-Berikut adalah penjelasan fitur-fitur utama yang tersedia di aplikasi:
+## 📸 Tangkapan Layar
 
-**A. Manajemen Transaksi**
-Fitur ini adalah inti dari aplikasi, tempat Anda mencatat semua pemasukan dan pengeluaran.
+<div align="center">
+  <img src="public/image1.png" alt="Dashboard" width="48%" style="margin: 1%;"/>
+  <img src="public/image2.png" alt="Transactions" width="48%" style="margin: 1%;"/>
+  <img src="public/image3.png" alt="Invoices" width="48%" style="margin: 1%;"/>
+  <img src="public/image4.png" alt="Debts" width="48%" style="margin: 1%;"/>
+</div>
 
-  * **Melihat Transaksi:**
-      * Akses menu **"Transactions"** dari *sidebar*.
-      * Di halaman ini, Anda akan melihat daftar semua transaksi yang pernah Anda catat, diurutkan berdasarkan tanggal terbaru.
-  * **Menambah Transaksi Baru:**
-    1.  Klik tombol **"+ Tambah Transaksi"**.
-    2.  Isi formulir dengan detail berikut:
-          * **Tanggal**: Tanggal transaksi terjadi.
-          * **Kategori**: Pilih kategori yang sesuai (misal: "Gaji", "Biaya Operasional"). Kategori ini menentukan apakah transaksi tersebut adalah **Pemasukan** atau **Pengeluaran**.
-          * **Jumlah (Rp)**: Nominal transaksi.
-          * **Deskripsi**: Catatan singkat mengenai transaksi.
-    3.  Klik "**Simpan**".
+---
 
-**B. Laporan Keuangan**
-Fitur ini menyajikan visualisasi dan ringkasan data keuangan Anda dalam periode tertentu.
+## 🛠️ Tumpukan Teknologi
 
-1.  Akses menu **"Reports"** dari *sidebar*.
-2.  Anda dapat memfilter laporan berdasarkan rentang tanggal (**Tanggal Mulai** dan **Tanggal Selesai**).
-3.  Laporan akan menampilkan:
-      * **Total Pemasukan**: Jumlah semua pemasukan pada periode yang dipilih.
-      * **Total Pengeluaran**: Jumlah semua pengeluaran pada periode yang dipilih.
-      * **Selisih**: Perbedaan antara pemasukan dan pengeluaran.
-      * **Grafik Pemasukan vs Pengeluaran**.
+Aplikasi ini dibangun menggunakan komponen dan teknologi terdepan di industri:
 
-**C. Manajemen Utang**
-Catat dan kelola semua utang (yang harus Anda bayar) dan piutang (yang harus orang lain bayar kepada Anda).
+| Kategori      | Teknologi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| :------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Backend**   | <a href="https://laravel.com/"><img src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel"></a> <a href="https://www.php.net/"><img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP"></a> <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL"></a>                                                                                                  |
+| **Frontend**  | <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"></a> <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite"></a> <a href="https://alpinejs.dev/"><img src="https://img.shields.io/badge/Alpine.js-8BC0D0?style=for-the-badge&logo=alpine.js&logoColor=white" alt="Alpine.js"></a>                                                                 |
+| **DevOps**    | <a href="https://github.com/features/actions"><img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions"></a> <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"></a>                                                                                                                                                                                                    |
+| **Testing**   | <a href="https://phpunit.de/"><img src="https://img.shields.io/badge/PHPUnit-8BC0D0?style=for-the-badge&logo=phpunit&logoColor=white" alt="PHPUnit"></a>                                                                                                                                                                                                                                                                                                                                                                                                           |
 
-1.  Akses menu **"Debts"** dari *sidebar*.
-2.  **Untuk Mencatat Utang/Piutang Baru:**
-      * Isi formulir di bagian atas halaman.
-      * **Tipe**: Pilih **"Utang"** (Anda berutang) atau **"Piutang"** (Anda memberi utang).
-      * **Jumlah**: Nominal utang/piutang.
-      * **Pemberi/Penerima**: Nama orang atau pihak terkait.
-      * **Tanggal Jatuh Tempo**: Batas waktu pembayaran.
-      * Klik **"Simpan"**.
-3.  **Untuk Melunasi Utang/Piutang:**
-      * Pada daftar utang/piutang, klik tombol **"Lunasi"** pada item yang relevan.
-      * Konfirmasi pembayaran, dan statusnya akan berubah menjadi **"Lunas"**.
+---
 
-**D. Manajemen Invoice**
-Buat dan kelola tagihan (*invoice*) untuk klien Anda secara profesional.
+## 🚀 Panduan Memulai
 
-1.  Akses menu **"Invoices"** dari *sidebar*.
-2.  Klik **"+ Buat Invoice Baru"**.
-3.  Isi detail *invoice*: nama klien, nomor *invoice*, tanggal, dan tanggal jatuh tempo.
-4.  Tambahkan item-item tagihan pada bagian **"Invoice Items"**, lengkap dengan deskripsi, jumlah, dan harga.
-5.  Total akan dihitung otomatis. Klik **"Simpan"** untuk membuat *invoice*.
+Ikuti langkah-langkah berikut untuk menjalankan salinan proyek ini di lingkungan lokal Anda untuk tujuan pengembangan dan pengujian.
 
-#### **1.3. Contoh Studi Kasus**
+### Prasyarat
 
-  * **Cara Mencatat Biaya Operasional Proyek A:**
+Pastikan Anda telah menginstal perangkat lunak berikut di sistem Anda:
+- PHP >= 8.2
+- Composer
+- Node.js & NPM
+- Database (misal: MySQL, PostgreSQL)
 
-    1.  Masuk ke menu **"Transactions"** -\> **"+ Tambah Transaksi"**.
-    2.  Pilih **Kategori** "Biaya Operasional" (atau kategori pengeluaran lain yang sesuai).
-    3.  Masukkan **Jumlah** biaya yang dikeluarkan.
-    4.  Pada **Deskripsi**, tulis "Biaya operasional untuk Proyek A".
-    5.  Klik **"Simpan"**.
+### Instalasi
 
-  * **Langkah-Langkah Membuat Invoice untuk Klien B:**
+1.  **Clone repositori ini:**
+    ```sh
+    git clone https://github.com/Vodeco/vodeco-keuangan.git
+    cd vodeco-keuangan
+    ```
 
-    1.  Masuk ke menu **"Invoices"** -\> **"+ Buat Invoice Baru"**.
-    2.  Isi **"Billed To"** dengan nama "Klien B".
-    3.  Isi nomor *invoice* dan tanggal yang relevan.
-    4.  Pada bagian **"Invoice Items"**, tambahkan baris baru.
-    5.  Isi deskripsi (misal: "Jasa Pembuatan Website"), `Qty` (1), dan `Price` (misal: 5.000.000).
-    6.  Klik **"Simpan"**.
+2.  **Salin file environment:**
+    ```sh
+    cp .env.example .env
+    ```
 
------
+3.  **Install dependensi PHP (Composer):**
+    ```sh
+    composer install
+    ```
 
-### **Bagian 2: Dokumentasi Teknis (Technical Documentation)**
+4.  **Install dependensi JavaScript (NPM):**
+    ```sh
+    npm install
+    ```
 
-#### **2.1. Dokumentasi API**
+5.  **Generate <em>application key</em>:**
+    ```sh
+    php artisan key:generate
+    ```
 
-Saat ini, aplikasi ini dibangun sebagai aplikasi web monolitik (bukan berbasis API). Semua interaksi data terjadi melalui rute web yang me-*render* tampilan Blade. Tidak ada *endpoint* API publik yang tersedia untuk dikonsumsi oleh layanan eksternal.
+6.  **Konfigurasi database Anda di dalam file `.env`:**
+    ```env
+    DB_CONNECTION=mysql
+    DB_HOST=127.0.0.1
+    DB_PORT=3306
+    DB_DATABASE=vodeco_keuangan
+    DB_USERNAME=root
+    DB_PASSWORD=
+    ```
 
-#### **2.2. Arsitektur Aplikasi**
+7.  **Jalankan migrasi database:**
+    Ini akan membuat semua tabel yang diperlukan oleh aplikasi.
+    ```sh
+    php artisan migrate
+    ```
 
-Aplikasi ini dibangun menggunakan **Laravel Framework** dengan pola arsitektur **Model-View-Controller (MVC)**.
+8.  **(Opsional) Jalankan <em>seeder</em> untuk mengisi data awal:**
+    Ini akan mengisi database dengan data contoh (pengguna, kategori, dll).
+    ```sh
+    php artisan db:seed
+    ```
 
-  * **Model**: Merepresentasikan struktur data dan logika bisnis. Terletak di `app/Models/`.
-      * `User.php`: Model untuk data pengguna.
-      * `Transaction.php`: Model untuk data transaksi.
-      * `Category.php`, `Debt.php`, `Invoice.php`, dll.
-  * **View**: Bertanggung jawab untuk menampilkan data kepada pengguna. Menggunakan *template engine* **Blade**. Terletak di `resources/views/`.
-      * `transactions/index.blade.php`: Menampilkan daftar transaksi.
-      * `reports/index.blade.php`: Menampilkan halaman laporan.
-  * **Controller**: Menerima input dari pengguna, berinteraksi dengan *Model*, dan menentukan *View* mana yang akan ditampilkan. Terletak di `app/Http/Controllers/`.
-      * `TransactionController.php`: Mengelola logika untuk CRUD transaksi.
-      * `ReportController.php`: Menyiapkan data untuk halaman laporan.
-  * **Service Layer**: Logika bisnis yang kompleks dipisahkan ke dalam kelas *Service* untuk menjaga *Controller* tetap ramping. Terletak di `app/Services/`.
-      * `TransactionService.php`: Menyediakan logika bisnis terkait transaksi.
-      * `DebtService.php`: Mengelola logika terkait pembayaran utang.
-  * **Routing**: Definisi URL dan pemetaannya ke *Controller* diatur dalam `routes/web.php`.
-  * **Frontend**: Menggunakan **Tailwind CSS** untuk *styling* dan **Vite** untuk kompilasi *assets* (CSS & JS).
+9.  **Compile <em>assets frontend</em>:**
+    Jalankan <em>Vite development server</em>.
+    ```sh
+    npm run dev
+    ```
 
-#### **2.3. Panduan Kontribusi**
-
-Berikut adalah panduan bagi *developer* yang ingin berkontribusi pada proyek ini.
-
-**1. Instalasi Lingkungan Lokal**
-
-Setelah melakukan clone repositori, jalankan `npm install` untuk mengunduh dependensi JavaScript.
-
-```bash
-# 1. Clone repositori dari GitHub
-git clone [URL_REPOSITORI_ANDA]
-cd [NAMA_FOLDER_PROYEK]
-
-# 2. Salin file environment
-cp .env.example .env
-
-# 3. Install dependency PHP (Composer)
-composer install
-
-# 4. Install dependency JavaScript (NPM)
-npm install
-
-# 5. Generate application key
-php artisan key:generate
-
-# 6. Konfigurasi database Anda di dalam file .env
-# DB_CONNECTION=mysql
-# DB_HOST=127.0.0.1
-# DB_PORT=3306
-# DB_DATABASE=vodeco_keuangan
-# DB_USERNAME=root
-# DB_PASSWORD=
-
-# 7. Jalankan migrasi database
-php artisan migrate
-
-# 8. Jalankan seeder untuk mengisi data awal
-php artisan db:seed
-
-# 9. Compile assets frontend
-npm run dev
-
-# 10. Jalankan server development lokal
-php artisan serve
-```
+10. **Jalankan <em>server development</em> lokal:**
+    Buka terminal baru dan jalankan perintah ini.
+    ```sh
+    php artisan serve
+    ```
 
 Aplikasi sekarang seharusnya bisa diakses di `http://127.0.0.1:8000`.
 
-**2. Menjalankan *Testing***
-Proyek ini menggunakan PHPUnit untuk *testing*. Pastikan Anda sudah membuat *database* khusus untuk *testing* (jika diperlukan) dan mengkonfigurasinya di `phpunit.xml`.
+---
 
-```bash
-# Menjalankan semua tests
+## 🧪 Menjalankan Pengujian
+
+Proyek ini menggunakan PHPUnit untuk <em>testing</em>. Pastikan Anda sudah membuat <em>database</em> khusus untuk <em>testing</em> dan mengkonfigurasinya di `phpunit.xml` atau `.env.testing`.
+
+Untuk menjalankan semua <em>test case</em>, gunakan perintah Artisan berikut:
+```sh
 php artisan test
 ```
 
-File-file *test* terletak di dalam direktori `tests/Feature` dan `tests/Unit`.
+---
 
-**3. Standar *Coding***
+## 🤝 Berkontribusi
 
-  * Ikuti standar *coding* **PSR-12** untuk kode PHP.
-  * Gunakan nama variabel, fungsi, dan kelas yang jelas dan deskriptif dalam bahasa Inggris.
-  * Pastikan untuk menulis *test* untuk setiap fitur atau perbaikan *bug* yang Anda tambahkan.
-  * Jaga agar *Controller* tetap ramping dengan memindahkan logika bisnis ke dalam *Service Class* jika memungkinkan.
+Kontribusi adalah hal yang membuat komunitas <em>open source</em> menjadi tempat yang luar biasa untuk belajar, menginspirasi, dan berkreasi. Setiap kontribusi yang Anda berikan sangat **kami hargai**.
 
-### Lisensi
+Jika Anda memiliki saran untuk perbaikan, silakan <em>fork</em> repositori ini dan buat <em>pull request</em>. Anda juga bisa membuka <em>issue</em> dengan <em>tag</em> "enhancement". Jangan lupa untuk memberikan bintang pada proyek ini! Terima kasih sekali lagi!
 
-Proyek ini dilisensikan di bawah [MIT License](LICENSE).
+1.  <em>Fork</em> Proyek ini
+2.  Buat <em>Feature Branch</em> Anda (`git checkout -b feature/AmazingFeature`)
+3.  <em>Commit</em> Perubahan Anda (`git commit -m 'Add some AmazingFeature'`)
+4.  <em>Push</em> ke <em>Branch</em> tersebut (`git push origin feature/AmazingFeature`)
+5.  Buka sebuah <em>Pull Request</em>
+
+---
+
+## 📄 Lisensi
+
+Didistribusikan di bawah Lisensi MIT. Lihat `LICENSE` untuk informasi lebih lanjut.
