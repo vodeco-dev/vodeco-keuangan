@@ -10,15 +10,14 @@ class Payment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'payable_id',
-        'payable_type',
+        'debt_id',
         'amount',
         'payment_date',
         'notes',
     ];
 
-    public function payable()
+    public function debt()
     {
-        return $this->morphTo();
+        return $this->belongsTo(Debt::class);
     }
 }

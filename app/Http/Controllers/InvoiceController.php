@@ -2,13 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreInvoicePaymentRequest;
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Models\Category;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
-use App\Models\Payment;
-use App\Models\Transaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Setting;
@@ -24,7 +20,7 @@ class InvoiceController extends Controller
     }
     public function index(): View
     {
-        $invoices = Invoice::with('payments')->latest()->paginate();
+        $invoices = Invoice::latest()->paginate();
         return view('invoices.index', compact('invoices'));
     }
 
@@ -71,40 +67,11 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index');
     }
 
-    public function markPaid(StoreInvoicePaymentRequest $request, Invoice $invoice): RedirectResponse
+    public function markPaid(Invoice $invoice): RedirectResponse
     {
         $this->authorize('markPaid', $invoice);
 
-        $data = $request->validated();
-        $amount = (float) $data['amount'];
-
-        DB::transaction(function () use ($invoice, $amount) {
-            $invoice->payments()->create([
-                'amount' => $amount,
-                'payment_date' => now(),
-            ]);
-
-            $totalPaid = $invoice->payments()->sum('amount');
-
-            if ($totalPaid >= $invoice->total) {
-                $invoice->update(['status' => 'Paid']);
-            } else {
-                $invoice->update(['status' => 'Partially Paid']);
-            }
-
-            // Create a transaction for the payment
-            $category = Category::where('name', 'Penjualan Jasa')->orWhere('type', 'pemasukan')->first();
-            if ($category) {
-                Transaction::create([
-                    'category_id' => $category->id,
-                    'user_id' => auth()->id(),
-                    'amount' => $amount,
-                    'description' => 'Pembayaran untuk Invoice #' . $invoice->number,
-                    'date' => now(),
-                ]);
-            }
-        });
-
+        $invoice->update(['status' => 'Paid']);
         return redirect()->route('invoices.index');
     }
 

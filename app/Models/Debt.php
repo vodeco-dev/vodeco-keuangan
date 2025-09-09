@@ -27,7 +27,7 @@ class Debt extends Model
 
     public function payments()
     {
-        return $this->morphMany(Payment::class, 'payable');
+        return $this->hasMany(Payment::class);
     }
 
     public function getPaidAmountAttribute()
