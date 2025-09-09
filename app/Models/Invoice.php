@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Invoice extends Model
 {
@@ -16,6 +17,7 @@ class Invoice extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'public_token',
         'number',
         'issue_date',
         'due_date',
@@ -43,6 +45,10 @@ class Invoice extends Model
      */
     protected static function booted()
     {
+        static::creating(function (Invoice $invoice) {
+            $invoice->public_token = Str::uuid();
+        });
+
         static::updated(function (Invoice $invoice) {
             // Cek jika status berubah menjadi 'Paid' dan sebelumnya bukan 'Paid'
             if ($invoice->isDirty('status') && $invoice->status === 'Paid') {

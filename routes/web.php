@@ -18,6 +18,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Route untuk melihat invoice secara publik tanpa perlu login
+Route::get('/invoices/view/{token}', [InvoiceController::class, 'showPublic'])->name('invoices.public.show');
+
 // Menggunakan middleware 'auth' untuk memastikan hanya user yang sudah login
 // yang bisa mengakses halaman-halaman ini.
 Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
