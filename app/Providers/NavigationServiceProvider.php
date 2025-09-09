@@ -57,6 +57,12 @@ class NavigationServiceProvider extends ServiceProvider
                 'icon' => view('components.icons.activity_logs')->render(),
             ],
             [
+                'name' => 'Permintaan Hapus',
+                'route' => 'admin.deletion-requests.index',
+                'icon' => view('components.icons.activity_logs')->render(),
+                'can' => 'admin',
+            ],
+            [
                 'name' => 'Activity Logs',
                 'route' => 'admin.activity-logs.index',
                 'icon' => view('components.icons.activity_logs')->render(),
