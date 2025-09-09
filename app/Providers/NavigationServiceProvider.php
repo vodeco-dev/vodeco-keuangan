@@ -51,22 +51,35 @@ class NavigationServiceProvider extends ServiceProvider
                 'route' => 'reports.index',
                 'icon' => view('components.icons.reports')->render(),
             ],
+            // Dropdown for Admins
+            [
+                'name' => 'Riwayat & Log',
+                'icon' => view('components.icons.activity_logs')->render(),
+                'can' => 'admin',
+                'children' => [
+                    [
+                        'name' => 'Riwayat Permintaan',
+                        'route' => 'user-deletion-requests.index',
+                        'active_routes' => ['user-deletion-requests.index']
+                    ],
+                    [
+                        'name' => 'Permintaan Hapus',
+                        'route' => 'admin.deletion-requests.index',
+                        'active_routes' => ['admin.deletion-requests.index']
+                    ],
+                    [
+                        'name' => 'Activity Logs',
+                        'route' => 'admin.activity-logs.index',
+                        'active_routes' => ['admin.activity-logs.index']
+                    ],
+                ]
+            ],
+            // Standalone link for non-admins
             [
                 'name' => 'Riwayat Permintaan',
                 'route' => 'user-deletion-requests.index',
                 'icon' => view('components.icons.activity_logs')->render(),
-            ],
-            [
-                'name' => 'Permintaan Hapus',
-                'route' => 'admin.deletion-requests.index',
-                'icon' => view('components.icons.activity_logs')->render(),
-                'can' => 'admin',
-            ],
-            [
-                'name' => 'Activity Logs',
-                'route' => 'admin.activity-logs.index',
-                'icon' => view('components.icons.activity_logs')->render(),
-                'can' => 'admin',
+                'can_not' => 'admin',
             ],
             [
                 'name' => 'Users',
