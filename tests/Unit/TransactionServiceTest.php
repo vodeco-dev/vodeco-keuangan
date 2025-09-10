@@ -85,6 +85,67 @@ class TransactionServiceTest extends TestCase
         $this->assertFalse(\Illuminate\Support\Facades\Cache::has($cacheKey));
     }
 
+    public function test_get_all_transactions_can_be_filtered()
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $incomeCategory = Category::factory()->create(['type' => 'pemasukan']);
+        $expenseCategory = Category::factory()->create(['type' => 'pengeluaran']);
+
+        $transaction1 = Transaction::factory()->create([
+            'user_id' => $user1->id,
+            'description' => 'Gaji Bulanan',
+            'date' => '2023-01-01',
+            'category_id' => $incomeCategory->id,
+        ]);
+        $transaction2 = Transaction::factory()->create([
+            'user_id' => $user2->id,
+            'description' => 'Beli Kopi',
+            'date' => '2023-01-02',
+            'category_id' => $expenseCategory->id,
+        ]);
+
+        $request = new Request(['search' => 'Gaji']);
+        $transactions = $this->service->getAllTransactions($request);
+        $this->assertCount(1, $transactions);
+        $this->assertTrue($transactions->contains($transaction1));
+    }
+
+    public function test_get_all_summary()
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $incomeCategory = Category::factory()->create(['type' => 'pemasukan']);
+        $expenseCategory = Category::factory()->create(['type' => 'pengeluaran']);
+
+        Transaction::factory()->create([
+            'user_id' => $user1->id,
+            'category_id' => $incomeCategory->id,
+            'amount' => 1000,
+        ]);
+        Transaction::factory()->create([
+            'user_id' => $user2->id,
+            'category_id' => $expenseCategory->id,
+            'amount' => 300,
+        ]);
+
+        $summary = $this->service->getAllSummary();
+
+        $this->assertEquals(1000, $summary['totalPemasukan']);
+        $this->assertEquals(300, $summary['totalPengeluaran']);
+        $this->assertEquals(700, $summary['saldo']);
+    }
+
+    public function test_clear_all_summary_cache()
+    {
+        $cacheKey = 'transaction_summary_for_all';
+        \Illuminate\Support\Facades\Cache::put($cacheKey, 'test_value', 60);
+
+        $this->service->clearAllSummaryCache();
+
+        $this->assertFalse(\Illuminate\Support\Facades\Cache::has($cacheKey));
+    }
+
     public function test_prepare_chart_data()
     {
         $incomeCategory = Category::factory()->create(['type' => 'pemasukan']);

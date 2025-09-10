@@ -62,6 +62,7 @@
                         <thead class="border-b">
                             <tr>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
+                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Pengguna</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Kategori</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Deskripsi</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Jumlah</th>
@@ -72,6 +73,7 @@
                             @forelse ($transactions as $transaction)
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap">{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMM YYYY') }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">{{ $transaction->user->name }}</td>
                                     
                                     {{-- INI BAGIAN YANG DIPERBAIKI --}}
                                     <td class="px-6 py-4 whitespace-nowrap">{{ $transaction->category?->name ?? 'Tanpa Kategori' }}</td>
@@ -95,7 +97,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
                                         Belum ada transaksi.
                                     </td>
                                 </tr>
