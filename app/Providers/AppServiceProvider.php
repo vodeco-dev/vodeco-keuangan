@@ -25,8 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Hanya paksa HTTPS jika environment adalah 'production' dan tidak berjalan di konsol
-        if ($this->app->environment('production') && !$this->app->runningInConsole()) {
+        // Hanya paksa HTTPS jika environment adalah 'production', diakses via ngrok, dan tidak berjalan di konsol
+        if (($this->app->environment('production') || request()->header('X-Original-Host')) && !$this->app->runningInConsole()) {
             URL::forceScheme('https');
         }
 
