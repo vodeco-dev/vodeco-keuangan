@@ -77,6 +77,66 @@ class TransactionService
     }
 
     /**
+     * Ambil semua transaksi dengan filter dan paginasi.
+     */
+    public function getAllTransactions(Request $request)
+    {
+        $query = Transaction::with(['category', 'user'])->latest('date');
+
+        if ($request->filled('search')) {
+            $query->where('description', 'like', '%' . $request->search . '%');
+        }
+        if ($request->filled('date')) {
+            $query->whereDate('date', $request->date);
+        }
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+        if ($request->filled('type')) {
+            $query->whereHas('category', function ($q) use ($request) {
+                $q->where('type', $request->type);
+            });
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Hapus cache ringkasan semua transaksi.
+     */
+    public function clearAllSummaryCache(): void
+    {
+        Cache::forget('transaction_summary_for_all');
+    }
+
+    /**
+     * Ambil ringkasan keuangan untuk semua transaksi.
+     */
+    public function getAllSummary(): array
+    {
+        $cacheKey = 'transaction_summary_for_all';
+
+        return Cache::remember($cacheKey, 300, function () {
+            $summary = Transaction::query()
+                ->join('categories', 'transactions.category_id', '=', 'categories.id')
+                ->selectRaw('
+                    SUM(CASE WHEN categories.type = "pemasukan" THEN transactions.amount ELSE 0 END) AS totalPemasukan,
+                    SUM(CASE WHEN categories.type = "pengeluaran" THEN transactions.amount ELSE 0 END) AS totalPengeluaran
+                ')
+                ->first();
+
+            $pemasukan = $summary->totalPemasukan ?? 0;
+            $pengeluaran = $summary->totalPengeluaran ?? 0;
+
+            return [
+                'totalPemasukan'   => $pemasukan,
+                'totalPengeluaran' => $pengeluaran,
+                'saldo'            => $pemasukan - $pengeluaran,
+            ];
+        });
+    }
+
+    /**
      * Siapkan data untuk chart pemasukan dan pengeluaran.
      */
     public function prepareChartData(User $user, $startDate, $endDate): array

@@ -20,11 +20,19 @@ class TransactionTest extends TestCase
         $response->assertRedirect('/login');
     }
 
-    public function test_authenticated_user_can_view_transactions_page(): void
+    public function test_authenticated_user_can_view_all_transactions(): void
     {
-        $user = User::factory()->create();
-        $response = $this->actingAs($user)->get('/transactions');
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+
+        $transaction1 = Transaction::factory()->create(['user_id' => $user1->id, 'description' => 'Transaction 1']);
+        $transaction2 = Transaction::factory()->create(['user_id' => $user2->id, 'description' => 'Transaction 2']);
+
+        $response = $this->actingAs($user1)->get('/transactions');
+
         $response->assertStatus(200);
+        $response->assertSeeText('Transaction 1');
+        $response->assertSeeText('Transaction 2');
     }
 
     public function test_store_requires_fields(): void

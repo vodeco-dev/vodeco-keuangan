@@ -23,18 +23,18 @@ class TransactionController extends Controller
     public function __construct(private TransactionService $transactionService)
     {
         $this->authorizeResource(Transaction::class, 'transaction', [
-            'except' => ['destroy'],
+            'except' => ['destroy', 'index'],
         ]);
     }
 
     /**
-     * Menampilkan daftar transaksi milik pengguna.
+     * Menampilkan daftar semua transaksi.
      */
     public function index(Request $request): View
     {
-        $transactions = $this->transactionService->getTransactionsForUser($request->user(), $request);
+        $transactions = $this->transactionService->getAllTransactions($request);
         $categories = Category::orderBy('name')->get();
-        $summary = $this->transactionService->getSummaryForUser($request->user());
+        $summary = $this->transactionService->getAllSummary();
 
         return view(
             'transactions.index',
@@ -65,7 +65,7 @@ class TransactionController extends Controller
         $transactionData['user_id'] = $request->user()->id;
 
         Transaction::create($transactionData);
-        $this->transactionService->clearSummaryCacheForUser($request->user());
+        $this->transactionService->clearAllSummaryCache();
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil ditambahkan.');
@@ -79,7 +79,7 @@ class TransactionController extends Controller
         $validated = $request->validated();
 
         $transaction->update($validated);
-        $this->transactionService->clearSummaryCacheForUser($request->user());
+        $this->transactionService->clearAllSummaryCache();
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil diperbarui.');
@@ -105,7 +105,7 @@ class TransactionController extends Controller
 
         $user = $transaction->user;
         $transaction->delete();
-        $this->transactionService->clearSummaryCacheForUser($user);
+        $this->transactionService->clearAllSummaryCache();
 
         if (Setting::get('notify_transaction_deleted')) {
             $user->notify(new TransactionDeleted($transaction));
