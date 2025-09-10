@@ -1,0 +1,5 @@
+name: vodeco-keuangan
+app_id: da_nkPI5tJUBPZe
+owner: ademas-wahyu
+package: '.'
+kind: wasmer.io/App.v0

@@ -29,8 +29,16 @@ main-args = [
 # Define the command to run the application
 [[command]]
 name = "run"
-module = "php/php:php"
+module = "sharrattj/bash"
 runner = "wasi"
+args = [
+  "-c",
+  """
+  composer install --no-dev --optimize-autoloader &&
+  php artisan key:generate --force &&
+  php artisan serve --host 0.0.0.0 --port ${PORT:-8080}
+  """,
+]
 [command.annotations.wasi]
 main-args = [
   "artisan",
