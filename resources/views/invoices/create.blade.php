@@ -32,10 +32,6 @@
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Detail Invoice</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>
-                            <label for="number" class="block text-sm font-medium text-gray-700">Nomor Invoice</label>
-                            <input type="text" name="number" id="number" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                        </div>
-                        <div>
                             <label for="due_date" class="block text-sm font-medium text-gray-700">Tanggal Jatuh Tempo</label>
                             <input type="date" name="due_date" id="due_date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                         </div>
