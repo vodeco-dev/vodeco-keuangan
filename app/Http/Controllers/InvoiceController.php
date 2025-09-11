@@ -36,11 +36,17 @@ class InvoiceController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($data) {
+            // Generate Invoice Number
+            $date = now()->format('Ymd');
+            $count = Invoice::whereDate('created_at', today())->count();
+            $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+            $invoiceNumber = "{$date}-{$sequence}";
+
             $invoice = Invoice::create([
                 'client_name' => $data['client_name'],
                 'client_email' => $data['client_email'],
                 'client_address' => $data['client_address'],
-                'number' => $data['number'],
+                'number' => $invoiceNumber,
                 'issue_date' => $data['issue_date'] ?? now(),
                 'due_date' => $data['due_date'] ?? null,
                 'status' => 'Draft',
