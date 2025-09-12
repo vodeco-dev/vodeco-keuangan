@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\TransactionsExport;
+use App\Exports\FinancialReportExport;
 use App\Http\Requests\ReportRequest;
+use App\Models\Debt;
 use App\Models\Transaction;
 use App\Services\TransactionService;
 use Maatwebsite\Excel\Facades\Excel;
@@ -31,6 +32,18 @@ class ReportController extends Controller
         $totalPengeluaran = $transactions->where('category.type', 'pengeluaran')->sum('amount');
         $selisih = $totalPemasukan - $totalPengeluaran;
 
+        // Ambil data hutang dalam rentang tanggal
+        $debts = Debt::with('payments')
+            ->where('user_id', $request->user()->id)
+            ->whereBetween('due_date', [$startDate, $endDate])
+            ->orderBy('due_date', 'desc')
+            ->get();
+
+        // Hitung total hutang dan pembayaran
+        $totalHutang = $debts->sum('amount');
+        $totalPembayaranHutang = $debts->sum('paid_amount');
+        $sisaHutang = $totalHutang - $totalPembayaranHutang;
+
         // Siapkan data untuk chart
         $chartData = $this->transactionService->prepareChartData($request->user(), $startDate, $endDate);
 
@@ -40,6 +53,10 @@ class ReportController extends Controller
             'totalPemasukan' => $totalPemasukan,
             'totalPengeluaran' => $totalPengeluaran,
             'selisih' => $selisih,
+            'debts' => $debts,
+            'totalHutang' => $totalHutang,
+            'totalPembayaranHutang' => $totalPembayaranHutang,
+            'sisaHutang' => $sisaHutang,
             'startDate' => $startDate,
             'endDate' => $endDate,
             'chartData' => $chartData,
@@ -57,6 +74,6 @@ class ReportController extends Controller
 
         $fileName = 'Laporan_Keuangan_'.$startDate.'_sampai_'.$endDate.'.'.$format;
 
-        return Excel::download(new TransactionsExport($request->user()->id, $startDate, $endDate), $fileName);
+        return Excel::download(new FinancialReportExport($request->user()->id, $startDate, $endDate), $fileName);
     }
 }
