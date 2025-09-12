@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import laravel from 'laravel-vite-plugin';
-import mkcert from 'vite-plugin-mkcert';
+
 
 export default defineConfig(({ mode }) => {
     // Load env variables based on the current mode
