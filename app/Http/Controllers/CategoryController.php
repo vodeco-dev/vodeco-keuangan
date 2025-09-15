@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
+use App\Services\CategoryService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -14,7 +15,7 @@ class CategoryController extends Controller
     /**
      * Terapkan authorization policy
      */
-    public function __construct()
+    public function __construct(protected CategoryService $categoryService)
     {
         $this->authorizeResource(Category::class, 'category');
     }
@@ -59,13 +60,12 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category): RedirectResponse
     {
-        // Mencegah penghapusan jika kategori masih digunakan oleh transaksi
-        if ($category->transactions()->exists()) {
+        $success = $this->categoryService->delete($category);
+
+        if (!$success) {
             return redirect()->route('categories.index')
                 ->with('error', 'Kategori "' . $category->name . '" tidak dapat dihapus karena masih digunakan oleh transaksi.');
         }
-
-        $category->delete();
 
         return redirect()->route('categories.index')->with('success', 'Kategori berhasil dihapus.');
     }
