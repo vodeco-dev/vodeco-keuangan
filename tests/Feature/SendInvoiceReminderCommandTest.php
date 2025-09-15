@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Invoice;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -12,37 +13,24 @@ class SendInvoiceReminderCommandTest extends TestCase
 
     public function test_command_sends_reminders_for_due_invoices(): void
     {
-        $due = Invoice::create([
-            'number' => 'INV-001',
-            'issue_date' => now()->subWeek()->toDateString(),
-            'due_date' => now()->subDay()->toDateString(),
+        $user = User::factory()->create();
+
+        $due = Invoice::factory()->create([
+            'user_id' => $user->id,
+            'due_date' => now()->subDay(),
             'status' => 'Proses',
-            'total' => 100,
-            'client_name' => 'Client A',
-            'client_email' => 'a@example.com',
-            'client_address' => 'Address',
         ]);
 
-        $future = Invoice::create([
-            'number' => 'INV-002',
-            'issue_date' => now()->toDateString(),
-            'due_date' => now()->addDay()->toDateString(),
+        $future = Invoice::factory()->create([
+            'user_id' => $user->id,
+            'due_date' => now()->addDay(),
             'status' => 'Proses',
-            'total' => 200,
-            'client_name' => 'Client B',
-            'client_email' => 'b@example.com',
-            'client_address' => 'Address',
         ]);
 
-        $draft = Invoice::create([
-            'number' => 'INV-003',
-            'issue_date' => now()->toDateString(),
-            'due_date' => now()->toDateString(),
+        $draft = Invoice::factory()->create([
+            'user_id' => $user->id,
+            'due_date' => now(),
             'status' => 'Draft',
-            'total' => 300,
-            'client_name' => 'Client C',
-            'client_email' => 'c@example.com',
-            'client_address' => 'Address',
         ]);
 
         $this->artisan('invoices:reminder')

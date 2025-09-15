@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Role;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -22,7 +23,11 @@ class InvoiceController extends Controller
     }
     public function index(): View
     {
-        $invoices = Invoice::latest()->paginate();
+        if (auth()->user()->role === Role::ADMIN) {
+            $invoices = Invoice::latest()->paginate();
+        } else {
+            $invoices = Invoice::where('user_id', auth()->id())->latest()->paginate();
+        }
         return view('invoices.index', compact('invoices'));
     }
 
@@ -43,6 +48,7 @@ class InvoiceController extends Controller
             $invoiceNumber = "{$date}-{$sequence}";
 
             $invoice = Invoice::create([
+                'user_id' => auth()->id(),
                 'client_name' => $data['client_name'],
                 'client_email' => $data['client_email'],
                 'client_address' => $data['client_address'],
@@ -151,5 +157,59 @@ class InvoiceController extends Controller
             ->name($invoice->number . '.pdf');
 
         return $pdf;
+    }
+
+    public function show(Invoice $invoice)
+    {
+        $this->authorize('view', $invoice);
+
+        return view('invoices.show', compact('invoice'));
+    }
+
+    public function edit(Invoice $invoice)
+    {
+        $this->authorize('update', $invoice);
+
+        return view('invoices.edit', compact('invoice'));
+    }
+
+    public function update(StoreInvoiceRequest $request, Invoice $invoice)
+    {
+        $this->authorize('update', $invoice);
+
+        $data = $request->validated();
+
+        DB::transaction(function () use ($invoice, $data) {
+            $invoice->update([
+                'client_name' => $data['client_name'],
+                'client_email' => $data['client_email'],
+                'client_address' => $data['client_address'],
+                'issue_date' => $data['issue_date'] ?? now(),
+                'due_date' => $data['due_date'] ?? null,
+                'total' => collect($data['items'])->sum(fn ($item) => $item['quantity'] * $item['price']),
+            ]);
+
+            $invoice->items()->delete();
+
+            foreach ($data['items'] as $item) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => $item['description'],
+                    'quantity' => $item['quantity'],
+                    'price' => $item['price'],
+                ]);
+            }
+        });
+
+        return redirect()->route('invoices.index');
+    }
+
+    public function destroy(Invoice $invoice)
+    {
+        $this->authorize('delete', $invoice);
+
+        $invoice->delete();
+
+        return redirect()->route('invoices.index');
     }
 }

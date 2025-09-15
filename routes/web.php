@@ -36,7 +36,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::resource('transactions', TransactionController::class)->except(['edit', 'show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::resource('debts', DebtController::class);
-    Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store']);
+    Route::resource('invoices', InvoiceController::class);
 
     // Route untuk Aksi Spesifik
     // Invoicing

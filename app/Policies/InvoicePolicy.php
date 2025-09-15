@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\Invoice;
 use App\Models\User;
 
@@ -14,7 +15,7 @@ class InvoicePolicy
 
     public function view(User $user, Invoice $invoice): bool
     {
-        return true;
+        return $user->id === $invoice->user_id || $user->role === Role::ADMIN;
     }
 
     public function create(User $user): bool
@@ -24,21 +25,21 @@ class InvoicePolicy
 
     public function update(User $user, Invoice $invoice): bool
     {
-        return true;
+        return $user->id === $invoice->user_id || $user->role === Role::ADMIN;
     }
 
     public function delete(User $user, Invoice $invoice): bool
     {
-        return true;
+        return $user->id === $invoice->user_id || $user->role === Role::ADMIN;
     }
 
     public function send(User $user, Invoice $invoice): bool
     {
-        return true;
+        return $user->id === $invoice->user_id;
     }
 
     public function storePayment(User $user, Invoice $invoice): bool
     {
-        return true;
+        return $user->id === $invoice->user_id;
     }
 }

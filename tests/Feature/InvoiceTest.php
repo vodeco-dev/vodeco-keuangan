@@ -42,6 +42,7 @@ class InvoiceTest extends TestCase
         $this->assertDatabaseHas('invoices', [
             'client_name' => 'Client',
             'total' => 1000,
+            'user_id' => $user->id,
         ]);
         $this->assertDatabaseHas('invoice_items', [
             'description' => 'Service',
@@ -53,16 +54,7 @@ class InvoiceTest extends TestCase
     public function test_user_can_send_and_mark_invoice_paid()
     {
         $user = User::factory()->create();
-        $invoice = Invoice::create([
-            'number' => 'INV-100',
-            'issue_date' => now()->toDateString(),
-            'due_date' => now()->addWeek()->toDateString(),
-            'status' => 'Draft',
-            'total' => 500,
-            'client_name' => 'Client',
-            'client_email' => 'client@example.com',
-            'client_address' => 'Address',
-        ]);
+        $invoice = Invoice::factory()->create(['user_id' => $user->id]);
 
         InvoiceItem::create([
             'invoice_id' => $invoice->id,
@@ -89,14 +81,10 @@ class InvoiceTest extends TestCase
 
     public function test_can_view_invoice_publicly_with_valid_token()
     {
-        $invoice = Invoice::create([
-            'number' => 'PUB-001',
-            'issue_date' => now()->toDateString(),
-            'status' => 'Proses',
-            'total' => 12345,
-            'client_name' => 'Public Client',
-            'client_email' => 'public@example.com',
-            'client_address' => 'Public Address',
+        $user = User::factory()->create();
+        $invoice = Invoice::factory()->create([
+            'user_id' => $user->id,
+            'issue_date' => now(),
         ]);
 
         $this->assertNotNull($invoice->public_token);
@@ -104,7 +92,7 @@ class InvoiceTest extends TestCase
         $response = $this->get(route('invoices.public.show', ['token' => $invoice->public_token]));
 
         $response->assertStatus(200);
-        $response->assertHeader('Content-Disposition', 'inline; filename="PUB-001.pdf"');
+        $response->assertHeader('Content-Disposition', 'inline; filename="' . $invoice->number . '.pdf"');
     }
 
     public function test_cannot_view_invoice_publicly_with_invalid_token()

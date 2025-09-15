@@ -17,6 +17,7 @@ class Invoice extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'user_id',
         'public_token',
         'number',
         'issue_date',
