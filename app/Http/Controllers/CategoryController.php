@@ -6,9 +6,10 @@ use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use App\Services\CategoryService;
-use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\View\View;
 
 class CategoryController extends Controller
 {
@@ -26,7 +27,9 @@ class CategoryController extends Controller
     public function index(): View
     {
         // Mengambil semua kategori dan mengelompokkannya berdasarkan 'type'
-        $categories = Category::orderBy('name')->get()->groupBy('type');
+        $categories = Cache::rememberForever('categories.grouped', function () {
+            return Category::orderBy('name')->get()->groupBy('type');
+        });
 
         // Memisahkan koleksi menjadi pemasukan dan pengeluaran
         $pemasukan = $categories->get('pemasukan', collect());
@@ -42,6 +45,9 @@ class CategoryController extends Controller
     {
         Category::create($request->validated());
 
+        Cache::forget('categories');
+        Cache::forget('categories.grouped');
+
         return redirect()->route('categories.index')->with('success', 'Kategori baru berhasil ditambahkan.');
     }
 
@@ -51,6 +57,9 @@ class CategoryController extends Controller
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
         $category->update($request->validated());
+
+        Cache::forget('categories');
+        Cache::forget('categories.grouped');
 
         return redirect()->route('categories.index')->with('success', 'Kategori berhasil diperbarui.');
     }
@@ -66,6 +75,9 @@ class CategoryController extends Controller
             return redirect()->route('categories.index')
                 ->with('error', 'Kategori "' . $category->name . '" tidak dapat dihapus karena masih digunakan oleh transaksi.');
         }
+
+        Cache::forget('categories');
+        Cache::forget('categories.grouped');
 
         return redirect()->route('categories.index')->with('success', 'Kategori berhasil dihapus.');
     }
