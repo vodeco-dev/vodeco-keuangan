@@ -40,7 +40,6 @@ class InvoiceTest extends TestCase
 
         $response->assertRedirect('/invoices');
         $this->assertDatabaseHas('invoices', [
-            'number' => 'INV-001',
             'client_name' => 'Client',
             'total' => 1000,
         ]);

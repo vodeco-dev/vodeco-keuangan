@@ -6,6 +6,7 @@ use App\Exports\TransactionsExport;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -46,6 +47,7 @@ class SettingController extends Controller
         // Logika inti untuk menyimpan pengaturan
         foreach ($request->except('_token') as $key => $value) {
             Setting::updateOrCreate(['key' => $key], ['value' => $value]);
+            Cache::forget('setting:'.$key);
         }
 
         // Redirect kembali dengan pesan sukses
@@ -60,6 +62,7 @@ class SettingController extends Controller
         ]);
 
         Setting::updateOrCreate(['key' => 'theme'], ['value' => $validated['theme']]);
+        Cache::forget('setting:theme');
 
         return redirect()->route('settings.display')
             ->with('success', 'Preferensi tampilan diperbarui.');
@@ -73,7 +76,9 @@ class SettingController extends Controller
         ]);
 
         Setting::updateOrCreate(['key' => 'notify_transaction_approved'], ['value' => $request->boolean('notify_transaction_approved')]);
+        Cache::forget('setting:notify_transaction_approved');
         Setting::updateOrCreate(['key' => 'notify_transaction_deleted'], ['value' => $request->boolean('notify_transaction_deleted')]);
+        Cache::forget('setting:notify_transaction_deleted');
 
         return redirect()->route('settings.notifications')
             ->with('success', 'Pengingat diperbarui.');

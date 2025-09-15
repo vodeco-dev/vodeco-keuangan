@@ -13,6 +13,7 @@ use App\Notifications\TransactionDeleted;
 use App\Services\TransactionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class TransactionController extends Controller
@@ -32,8 +33,12 @@ class TransactionController extends Controller
      */
     public function index(Request $request): View
     {
+        // Eager loading for 'category' and 'user' relationships is handled
+        // in the TransactionService::getAllTransactions() method to prevent N+1 queries.
         $transactions = $this->transactionService->getAllTransactions($request);
-        $categories = Category::orderBy('name')->get();
+        $categories = Cache::rememberForever('categories', function () {
+            return Category::orderBy('name')->get();
+        });
         $summary = $this->transactionService->getAllSummary();
 
         return view(
@@ -50,7 +55,9 @@ class TransactionController extends Controller
      */
     public function create(Request $request): View
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = Cache::rememberForever('categories', function () {
+            return Category::orderBy('name')->get();
+        });
         return view('transactions.create', compact('categories'));
     }
 
