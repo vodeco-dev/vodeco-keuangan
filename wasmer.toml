@@ -1,17 +1,22 @@
 # wasmer.toml
 
-# Define the package information
+# 1. Informasi Paket
+# Mendefinisikan nama, versi, dan deskripsi aplikasi Anda.
 [package]
-name = "php-laravel-app"
+name = "vodeco-keuangan"
 version = "0.1.0"
-description = "A PHP Laravel application packaged for Wasmer"
+description = "Aplikasi Keuangan Vodeco"
 
-# Define dependencies
+# 2. Dependensi
+# Menentukan paket-paket yang dibutuhkan dari registry Wasmer.
+# Untuk aplikasi Laravel, kita butuh PHP dan Bash.
 [dependencies]
 "php/php" = "^8.2"
 "sharrattj/bash" = "^1.0.0"
 
-# Setup command to install dependencies and build assets
+# 3. Perintah Setup (Build)
+# Perintah ini akan dijalankan sekali saat proses "wasmer deploy".
+# Tujuannya adalah untuk menginstal semua dependensi dan membangun aset.
 [[command]]
 name = "setup"
 module = "sharrattj/bash:bash"
@@ -19,30 +24,31 @@ runner = "wasi"
 [command.annotations.wasi]
 main-args = [
   "-c",
-  "cp .env.example .env && composer install --no-dev --no-interaction --prefer-dist && php artisan key:generate && npm install && npm run build"
+  # Langkah-langkah setup:
+  # a. Salin .env.example menjadi .env
+  # b. Install dependensi composer (tanpa dev dependencies)
+  # c. Generate kunci aplikasi Laravel
+  # d. Install dependensi NPM
+  # e. Build aset frontend (CSS, JS)
+  "cp .env.example .env && composer install --no-dev --no-interaction --optimize-autoloader && php artisan key:generate --force && npm install && npm run build"
 ]
 
-# Map the project directory to /app in the container
+# 4. Mapping File System
+# Memetakan direktori proyek Anda ke dalam container Wasmer.
 [fs]
 "app" = "."
 
-# Define the command to run the application
+# 5. Perintah Run (Entrypoint) - VERSI BARU
+# Perintah ini yang akan dijalankan saat aplikasi Anda dimulai di server Wasmer.
+# Kita menggunakan server web bawaan PHP dan secara eksplisit menunjuk ke direktori /public.
 [[command]]
 name = "run"
-module = "sharrattj/bash"
+module = "php/php"
 runner = "wasi"
-args = [
-  "-c",
-  """
-  composer install --no-dev --optimize-autoloader &&
-  php artisan key:generate --force &&
-  php artisan serve --host 0.0.0.0 --port ${PORT:-8080}
-  """,
-]
 [command.annotations.wasi]
 main-args = [
-  "artisan",
-  "serve",
-  "--host=0.0.0.0",
-  "--port=${PORT:-8080}"
+    "-S",                      # Flag untuk memulai web server bawaan PHP
+    "0.0.0.0:${PORT:-8080}",   # Bind ke host dan port yang disediakan Wasmer
+    "-t",                      # Flag untuk menentukan document root
+    "public"                   # Menunjuk ke direktori /public milik Laravel
 ]
