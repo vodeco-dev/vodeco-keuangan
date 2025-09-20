@@ -50,5 +50,5 @@ main-args = [
     "-S",                      # Flag untuk memulai web server bawaan PHP
     "0.0.0.0:${PORT:-8080}",   # Bind ke host dan port yang disediakan Wasmer
     "-t",                      # Flag untuk menentukan document root
-    "public"                   # Menunjuk ke direktori /public milik Laravel
+    "app/public"                   # Menunjuk ke direktori /public milik Laravel
 ]
