@@ -1,54 +1,12 @@
-# wasmer.toml
-
-# 1. Informasi Paket
-# Mendefinisikan nama, versi, dan deskripsi aplikasi Anda.
-[package]
-name = "vodeco-keuangan"
-version = "0.1.0"
-description = "Aplikasi Keuangan Vodeco"
-
-# 2. Dependensi
-# Menentukan paket-paket yang dibutuhkan dari registry Wasmer.
-# Untuk aplikasi Laravel, kita butuh PHP dan Bash.
 [dependencies]
 "php/php" = "^8.2"
-"sharrattj/bash" = "^1.0.0"
 
-# 3. Perintah Setup (Build)
-# Perintah ini akan dijalankan sekali saat proses "wasmer deploy".
-# Tujuannya adalah untuk menginstal semua dependensi dan membangun aset.
-[[command]]
-name = "setup"
-module = "sharrattj/bash:bash"
-runner = "wasi"
-[command.annotations.wasi]
-main-args = [
-  "-c",
-  # Langkah-langkah setup:
-  # a. Salin .env.example menjadi .env
-  # b. Install dependensi composer (tanpa dev dependencies)
-  # c. Generate kunci aplikasi Laravel
-  # d. Install dependensi NPM
-  # e. Build aset frontend (CSS, JS)
-  "cp .env.example .env && composer install --no-dev --no-interaction --optimize-autoloader && php artisan key:generate --force && npm install && npm run build"
-]
-
-# 4. Mapping File System
-# Memetakan direktori proyek Anda ke dalam container Wasmer.
 [fs]
-"app" = "."
+"/app/" = "."
 
-# 5. Perintah Run (Entrypoint) - VERSI BARU
-# Perintah ini yang akan dijalankan saat aplikasi Anda dimulai di server Wasmer.
-# Kita menggunakan server web bawaan PHP dan secara eksplisit menunjuk ke direktori /public.
 [[command]]
 name = "run"
 module = "php/php"
 runner = "wasi"
 [command.annotations.wasi]
-main-args = [
-    "-S",                      # Flag untuk memulai web server bawaan PHP
-    "0.0.0.0:${PORT:-8080}",   # Bind ke host dan port yang disediakan Wasmer
-    "-t",                      # Flag untuk menentukan document root
-    "public"                   # Menunjuk ke direktori /public milik Laravel
-]
+main-args = ["-t", "/app/public", "-S", "localhost:8080"]
