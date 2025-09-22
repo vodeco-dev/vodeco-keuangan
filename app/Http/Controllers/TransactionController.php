@@ -56,10 +56,10 @@ class TransactionController extends Controller
     public function create(Request $request): View
     {
         $incomeCategories = Cache::rememberForever('income_categories', function () {
-            return Category::where('type', 'income')->orderBy('name')->get();
+            return Category::where('type', 'pemasukan')->orderBy('name')->get();
         });
         $expenseCategories = Cache::rememberForever('expense_categories', function () {
-            return Category::where('type', 'expense')->orderBy('name')->get();
+            return Category::where('type', 'pengeluaran')->orderBy('name')->get();
         });
 
         return view('transactions.create', compact('incomeCategories', 'expenseCategories'));

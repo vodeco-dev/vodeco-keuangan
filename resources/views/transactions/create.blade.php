@@ -25,8 +25,8 @@
                             <label for="type" class="block text-sm font-medium text-gray-700">Jenis Transaksi</label>
                             <select name="type" id="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
                                 <option value="">-- Pilih Jenis --</option>
-                                <option value="income" {{ old('type') == 'income' ? 'selected' : '' }}>Pemasukan</option>
-                                <option value="expense" {{ old('type') == 'expense' ? 'selected' : '' }}>Pengeluaran</option>
+                                <option value="pemasukan" {{ old('type') == 'pemasukan' ? 'selected' : '' }}>Pemasukan</option>
+                                <option value="pengeluaran" {{ old('type') == 'pengeluaran' ? 'selected' : '' }}>Pengeluaran</option>
                             </select>
                         </div>
 
@@ -34,11 +34,11 @@
                             <label for="category_id" class="block text-sm font-medium text-gray-700">Kategori</label>
                             <select name="category_id" id="category_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
                                 <option value="">-- Pilih Kategori --</option>
-                                @if(old('type') === 'income')
+                                @if(old('type') === 'pemasukan')
                                     @foreach($incomeCategories as $category)
                                         <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
                                     @endforeach
-                                @elseif(old('type') === 'expense')
+                                @elseif(old('type') === 'pengeluaran')
                                     @foreach($expenseCategories as $category)
                                         <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
                                     @endforeach
@@ -90,9 +90,9 @@
                 const selectedType = typeDropdown.value;
                 let categories = [];
 
-                if (selectedType === 'income') {
+                if (selectedType === 'pemasukan') {
                     categories = incomeCategories;
-                } else if (selectedType === 'expense') {
+                } else if (selectedType === 'pengeluaran') {
                     categories = expenseCategories;
                 }
 
