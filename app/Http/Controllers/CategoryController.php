@@ -46,6 +46,8 @@ class CategoryController extends Controller
         Category::create($request->validated());
 
         Cache::forget('categories');
+        Cache::forget('income_categories');
+        Cache::forget('expense_categories');
         Cache::forget('categories.grouped');
 
         return redirect()->route('categories.index')->with('success', 'Kategori baru berhasil ditambahkan.');
@@ -59,6 +61,8 @@ class CategoryController extends Controller
         $category->update($request->validated());
 
         Cache::forget('categories');
+        Cache::forget('income_categories');
+        Cache::forget('expense_categories');
         Cache::forget('categories.grouped');
 
         return redirect()->route('categories.index')->with('success', 'Kategori berhasil diperbarui.');
@@ -77,6 +81,8 @@ class CategoryController extends Controller
         }
 
         Cache::forget('categories');
+        Cache::forget('income_categories');
+        Cache::forget('expense_categories');
         Cache::forget('categories.grouped');
 
         return redirect()->route('categories.index')->with('success', 'Kategori berhasil dihapus.');
