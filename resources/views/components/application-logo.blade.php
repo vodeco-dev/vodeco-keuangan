@@ -10,5 +10,5 @@
 
 <span {{ $wrapperAttributes }}>
     <img src="{{ asset('vodeco.webp') }}" alt="{{ $alt }}" class="{{ trim('block dark:hidden ' . $imageClasses) }}">
-    <img src="{{ asset('logo-vodeco-dark-mode.jpg') }}" alt="{{ $alt }}" class="{{ trim('hidden dark:block ' . $imageClasses) }}">
+    <img src="{{ asset('logo-vodeco-dark-mode.png') }}" alt="{{ $alt }}" class="{{ trim('hidden dark:block ' . $imageClasses) }}">
 </span>
