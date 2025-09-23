@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Role;
 use App\Exports\FinancialReportExport;
 use App\Models\Category;
 use App\Models\Debt;
@@ -15,112 +16,139 @@ class ReportTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_report_shows_only_transactions_belonging_to_user()
+    public function test_admin_report_shows_all_transactions()
     {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
         $category = Category::factory()->create();
+        $now = now();
 
-        $userTransaction = Transaction::factory()->create([
-            'user_id' => $user->id,
+        $firstTransaction = Transaction::factory()->create([
             'category_id' => $category->id,
-            'date' => now()->toDateString(),
+            'date' => $now->toDateString(),
         ]);
 
-        $otherTransaction = Transaction::factory()->create([
-            'user_id' => $otherUser->id,
+        $secondTransaction = Transaction::factory()->create([
             'category_id' => $category->id,
-            'date' => now()->toDateString(),
+            'date' => $now->toDateString(),
         ]);
 
-        $start = now()->startOfMonth()->toDateString();
-        $end = now()->endOfMonth()->toDateString();
+        $excludedTransaction = Transaction::factory()->create([
+            'category_id' => $category->id,
+            'date' => $now->copy()->subMonth()->toDateString(),
+        ]);
 
-        $response = $this->actingAs($user)->get("/reports?start_date={$start}&end_date={$end}");
+        $start = $now->copy()->startOfMonth()->toDateString();
+        $end = $now->copy()->endOfMonth()->toDateString();
+
+        $response = $this->actingAs($admin)->get("/reports?start_date={$start}&end_date={$end}");
 
         $response->assertStatus(200);
-        $response->assertViewHas('transactions', function ($transactions) use ($userTransaction, $otherTransaction) {
-            return $transactions->contains('id', $userTransaction->id)
-                && ! $transactions->contains('id', $otherTransaction->id);
+        $response->assertViewHas('transactions', function ($transactions) use ($firstTransaction, $secondTransaction, $excludedTransaction) {
+            return $transactions->contains('id', $firstTransaction->id)
+                && $transactions->contains('id', $secondTransaction->id)
+                && ! $transactions->contains('id', $excludedTransaction->id);
         });
     }
 
-    public function test_report_shows_only_debts_belonging_to_user()
+    public function test_admin_report_shows_all_debts()
     {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
+        $now = now();
 
-        $userDebt = Debt::factory()->create([
-            'user_id' => $user->id,
-            'due_date' => now()->toDateString(),
+        $firstDebt = Debt::factory()->create([
+            'due_date' => $now->toDateString(),
         ]);
 
-        $otherDebt = Debt::factory()->create([
-            'user_id' => $otherUser->id,
-            'due_date' => now()->toDateString(),
+        $secondDebt = Debt::factory()->create([
+            'due_date' => $now->toDateString(),
         ]);
 
-        $start = now()->startOfMonth()->toDateString();
-        $end = now()->endOfMonth()->toDateString();
+        $excludedDebt = Debt::factory()->create([
+            'due_date' => $now->copy()->addMonth()->toDateString(),
+        ]);
 
-        $response = $this->actingAs($user)->get("/reports?start_date={$start}&end_date={$end}");
+        $start = $now->copy()->startOfMonth()->toDateString();
+        $end = $now->copy()->endOfMonth()->toDateString();
+
+        $response = $this->actingAs($admin)->get("/reports?start_date={$start}&end_date={$end}");
 
         $response->assertStatus(200);
-        $response->assertViewHas('debts', function ($debts) use ($userDebt, $otherDebt) {
-            return $debts->contains('id', $userDebt->id)
-                && ! $debts->contains('id', $otherDebt->id);
+        $response->assertViewHas('debts', function ($debts) use ($firstDebt, $secondDebt, $excludedDebt) {
+            return $debts->contains('id', $firstDebt->id)
+                && $debts->contains('id', $secondDebt->id)
+                && ! $debts->contains('id', $excludedDebt->id);
         });
     }
 
-    public function test_export_generates_file_with_correct_data()
+    public function test_export_generates_file_with_all_data_for_admin()
     {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
         $category = Category::factory()->create();
+        $now = now();
 
-        $transaction = Transaction::factory()->create([
-            'user_id' => $user->id,
+        $firstTransaction = Transaction::factory()->create([
             'category_id' => $category->id,
-            'date' => now()->toDateString(),
+            'date' => $now->toDateString(),
         ]);
 
-        $debt = Debt::factory()->create([
-            'user_id' => $user->id,
-            'due_date' => now()->toDateString(),
-        ]);
-
-        // Data that should not be in the export
-        Transaction::factory()->create([
-            'user_id' => $user->id,
+        $secondTransaction = Transaction::factory()->create([
             'category_id' => $category->id,
-            'date' => now()->subMonth()->toDateString(),
+            'date' => $now->toDateString(),
         ]);
-        Debt::factory()->create([
-            'user_id' => $otherUser->id,
-            'due_date' => now()->toDateString(),
+
+        $excludedTransaction = Transaction::factory()->create([
+            'category_id' => $category->id,
+            'date' => $now->copy()->subMonth()->toDateString(),
+        ]);
+
+        $firstDebt = Debt::factory()->create([
+            'due_date' => $now->toDateString(),
+        ]);
+
+        $secondDebt = Debt::factory()->create([
+            'due_date' => $now->toDateString(),
+        ]);
+
+        $excludedDebt = Debt::factory()->create([
+            'due_date' => $now->copy()->addMonth()->toDateString(),
         ]);
 
         Excel::fake();
 
-        $start = now()->startOfMonth()->toDateString();
-        $end = now()->endOfMonth()->toDateString();
+        $start = $now->copy()->startOfMonth()->toDateString();
+        $end = $now->copy()->endOfMonth()->toDateString();
 
-        $response = $this->actingAs($user)->get("/reports/export?start_date={$start}&end_date={$end}&format=xlsx");
+        $response = $this->actingAs($admin)->get("/reports/export?start_date={$start}&end_date={$end}&format=xlsx");
 
         $response->assertStatus(200);
 
         $fileName = "Laporan_Keuangan_{$start}_sampai_{$end}.xlsx";
-        Excel::assertDownloaded($fileName, function (FinancialReportExport $export) use ($transaction, $debt) {
+        Excel::assertDownloaded($fileName, function (FinancialReportExport $export) use ($firstTransaction, $secondTransaction, $excludedTransaction, $firstDebt, $secondDebt, $excludedDebt) {
             $view = $export->view();
             $viewData = $view->getData();
 
             $transactions = $viewData['transactions'];
             $debts = $viewData['debts'];
 
-            return $transactions->count() === 1 &&
-                   $transactions->first()->id === $transaction->id &&
-                   $debts->count() === 1 &&
-                   $debts->first()->id === $debt->id;
+            return $transactions->contains('id', $firstTransaction->id)
+                && $transactions->contains('id', $secondTransaction->id)
+                && ! $transactions->contains('id', $excludedTransaction->id)
+                && $debts->contains('id', $firstDebt->id)
+                && $debts->contains('id', $secondDebt->id)
+                && ! $debts->contains('id', $excludedDebt->id);
         });
+    }
+
+    public function test_staff_cannot_access_reports()
+    {
+        $staff = User::factory()->create(['role' => Role::STAFF]);
+        $now = now();
+
+        $start = $now->copy()->startOfMonth()->toDateString();
+        $end = $now->copy()->endOfMonth()->toDateString();
+
+        $response = $this->actingAs($staff)->get("/reports?start_date={$start}&end_date={$end}");
+
+        $response->assertStatus(403);
     }
 }

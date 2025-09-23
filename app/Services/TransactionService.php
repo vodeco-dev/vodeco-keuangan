@@ -234,9 +234,12 @@ class TransactionService
     /**
      * Siapkan data untuk chart pemasukan dan pengeluaran.
      */
-    public function prepareChartData(User $user, $startDate, $endDate, ?int $categoryId = null, ?string $type = null): array
+    public function prepareChartData(?User $user, $startDate, $endDate, ?int $categoryId = null, ?string $type = null): array
     {
-        $baseQuery = Transaction::where('user_id', $user->id)
+        $baseQuery = Transaction::query()
+            ->when($user !== null, function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
             ->whereBetween('date', [$startDate, $endDate]);
 
         if ($categoryId) {

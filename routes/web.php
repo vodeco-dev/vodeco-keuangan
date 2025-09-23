@@ -47,8 +47,12 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('debts/{debt}/pay', [DebtController::class, 'storePayment'])->name('debts.pay');
 
     // Laporan
-    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+    Route::get('/reports', [ReportController::class, 'index'])
+        ->middleware('role:accountant')
+        ->name('reports.index');
+    Route::get('/reports/export', [ReportController::class, 'export'])
+        ->middleware('role:accountant')
+        ->name('reports.export');
 
     // Pengaturan
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
