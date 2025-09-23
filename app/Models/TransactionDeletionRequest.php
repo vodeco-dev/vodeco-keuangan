@@ -19,6 +19,8 @@ class TransactionDeletionRequest extends Model
         'transaction_id',
         'requested_by',
         'status',
+        'deletion_reason',
+        'reason',
         'approved_by',
         'approved_at',
     ];

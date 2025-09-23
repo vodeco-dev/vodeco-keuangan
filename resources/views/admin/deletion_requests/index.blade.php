@@ -14,6 +14,7 @@
                             <tr>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Transaksi</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detail Transaksi</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alasan Penghapusan</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diminta Oleh</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                             </tr>
@@ -26,6 +27,7 @@
                                         <div class="font-medium">{{ $request->transaction->description ?? 'Tanpa Deskripsi' }}</div>
                                         <div>Rp {{ number_format($request->transaction->amount, 0, ',', '.') }}</div>
                                     </td>
+                                    <td class="px-6 py-4 whitespace-pre-line text-sm text-gray-500">{{ $request->deletion_reason ?? '-' }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $request->requester->name }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <form method="POST" action="{{ route('admin.deletion-requests.approve', $request) }}" class="inline">

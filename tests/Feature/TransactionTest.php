@@ -89,12 +89,15 @@ class TransactionTest extends TestCase
         $user = User::factory()->create();
         $transaction = Transaction::factory()->create(['user_id' => $user->id]);
 
-        $response = $this->actingAs($user)->delete('/transactions/' . $transaction->id);
+        $response = $this->actingAs($user)->delete('/transactions/' . $transaction->id, [
+            'reason' => 'Butuh koreksi data',
+        ]);
         $response->assertRedirect('/transactions');
         $this->assertDatabaseHas('transaction_deletion_requests', [
             'transaction_id' => $transaction->id,
             'requested_by' => $user->id,
             'status' => 'pending',
+            'deletion_reason' => 'Butuh koreksi data',
         ]);
         $this->assertDatabaseHas('transactions', ['id' => $transaction->id]);
     }
@@ -118,6 +121,7 @@ class TransactionTest extends TestCase
             'transaction_id' => $transaction->id,
             'requested_by' => $user->id,
             'status' => 'pending',
+            'deletion_reason' => 'Butuh koreksi data',
         ]);
 
         $response = $this->actingAs($admin)->post('/admin/deletion-requests/' . $request->id . '/approve');

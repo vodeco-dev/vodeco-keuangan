@@ -16,6 +16,7 @@
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detail Transaksi</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Permintaan</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alasan Penghapusan</th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alasan Penolakan</th>
                                 </tr>
                             </thead>
@@ -44,13 +45,16 @@
                                                 </span>
                                             @endif
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">
+                                        <td class="px-6 py-4 whitespace-pre-line text-sm text-gray-500">
+                                            {{ $request->deletion_reason ?? '-' }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-pre-line text-sm text-gray-500">
                                             {{ $request->reason ?? '-' }}
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                    <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                                             Anda belum pernah membuat permintaan penghapusan.
                                         </td>
                                     </tr>
