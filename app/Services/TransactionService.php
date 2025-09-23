@@ -23,7 +23,13 @@ class TransactionService
         if ($request->filled('search')) {
             $query->where('description', 'like', '%' . $request->search . '%');
         }
-        if ($request->filled('date')) {
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('date', [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('date', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('date', '<=', $request->end_date);
+        } elseif ($request->filled('date')) {
             $query->whereDate('date', $request->date);
         }
         if ($request->filled('category_id')) {
@@ -33,6 +39,14 @@ class TransactionService
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('type', $request->type);
             });
+        }
+        if (!$request->filled('start_date') && !$request->filled('end_date')) {
+            if ($request->filled('month')) {
+                $query->whereMonth('date', $request->month);
+            }
+            if ($request->filled('year')) {
+                $query->whereYear('date', $request->year);
+            }
         }
 
         return $query->paginate(10);
@@ -86,7 +100,13 @@ class TransactionService
         if ($request->filled('search')) {
             $query->where('description', 'like', '%' . $request->search . '%');
         }
-        if ($request->filled('date')) {
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('date', [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('date', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('date', '<=', $request->end_date);
+        } elseif ($request->filled('date')) {
             $query->whereDate('date', $request->date);
         }
         if ($request->filled('category_id')) {
@@ -96,6 +116,14 @@ class TransactionService
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('type', $request->type);
             });
+        }
+        if (!$request->filled('start_date') && !$request->filled('end_date')) {
+            if ($request->filled('month')) {
+                $query->whereMonth('date', $request->month);
+            }
+            if ($request->filled('year')) {
+                $query->whereYear('date', $request->year);
+            }
         }
 
         return $query->paginate(10);
@@ -112,14 +140,39 @@ class TransactionService
     /**
      * Ambil ringkasan keuangan untuk semua transaksi.
      */
-    public function getAllSummary(): array
+    public function getAllSummary(?Request $request = null): array
     {
-        $cacheKey = 'transaction_summary_for_all';
+        $request = $request ?? new Request();
 
-        return Cache::remember($cacheKey, 300, function () {
-            $summary = Transaction::query()
-                ->join('categories', 'transactions.category_id', '=', 'categories.id')
-                ->selectRaw('
+        $query = Transaction::query()
+            ->join('categories', 'transactions.category_id', '=', 'categories.id');
+
+        $useFilters = false;
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('transactions.date', [$request->start_date, $request->end_date]);
+            $useFilters = true;
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('transactions.date', '>=', $request->start_date);
+            $useFilters = true;
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('transactions.date', '<=', $request->end_date);
+            $useFilters = true;
+        }
+
+        if (!$request->filled('start_date') && !$request->filled('end_date')) {
+            if ($request->filled('month')) {
+                $query->whereMonth('transactions.date', $request->month);
+                $useFilters = true;
+            }
+            if ($request->filled('year')) {
+                $query->whereYear('transactions.date', $request->year);
+                $useFilters = true;
+            }
+        }
+
+        $calculateSummary = function () use ($query) {
+            $summary = $query->selectRaw('
                     SUM(CASE WHEN categories.type = "pemasukan" THEN transactions.amount ELSE 0 END) AS totalPemasukan,
                     SUM(CASE WHEN categories.type = "pengeluaran" THEN transactions.amount ELSE 0 END) AS totalPengeluaran
                 ')
@@ -133,7 +186,49 @@ class TransactionService
                 'totalPengeluaran' => $pengeluaran,
                 'saldo'            => $pemasukan - $pengeluaran,
             ];
-        });
+        };
+
+        if ($useFilters) {
+            return $calculateSummary();
+        }
+
+        $cacheKey = 'transaction_summary_for_all';
+
+        return Cache::remember($cacheKey, 300, $calculateSummary);
+    }
+
+    /**
+     * Ambil daftar bulan yang memiliki transaksi.
+     */
+    public function getAvailableMonths(int $limit = 12)
+    {
+        $connection = Transaction::query()->getConnection()->getDriverName();
+
+        $query = Transaction::query();
+
+        if ($connection === 'sqlite') {
+            $query->selectRaw("CAST(strftime('%Y', date) as integer) as year")
+                ->selectRaw("CAST(strftime('%m', date) as integer) as month");
+        } else {
+            $query->selectRaw('YEAR(date) as year')
+                ->selectRaw('MONTH(date) as month');
+        }
+
+        return $query
+            ->distinct()
+            ->orderByDesc('year')
+            ->orderByDesc('month')
+            ->limit($limit)
+            ->get()
+            ->map(function ($item) {
+                $date = Carbon::createFromDate($item->year, $item->month, 1)->locale('id');
+
+                return [
+                    'month' => $item->month,
+                    'year' => $item->year,
+                    'label' => $date->translatedFormat('F Y'),
+                ];
+            });
     }
 
     /**

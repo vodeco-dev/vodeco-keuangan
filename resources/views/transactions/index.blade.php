@@ -27,34 +27,119 @@
             <div class="bg-white rounded-lg shadow-sm p-6">
                 {{-- Form Filter --}}
                 <form action="{{ route('transactions.index') }}" method="GET">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-                        <div class="flex-1">
-                            <input name="search" class="w-full pl-4 pr-4 py-2 border rounded-lg text-sm" placeholder="Cari transaksi..." type="text" value="{{ request('search') }}">
+                    <div class="flex flex-col gap-6 mb-6">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div class="flex-1">
+                                <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Cari Transaksi</label>
+                                <input id="search" name="search" class="w-full pl-4 pr-4 py-2 border rounded-lg text-sm" placeholder="Cari transaksi..." type="text" value="{{ request('search') }}">
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                                    Terapkan Filter
+                                </button>
+                                <a href="{{ route('transactions.index') }}" class="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50">
+                                    Reset
+                                </a>
+                                <a href="{{ route('transactions.create') }}" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                                    <span>Tambah Transaksi</span>
+                                </a>
+                            </div>
                         </div>
-                        <div class="flex flex-col sm:flex-row gap-4">
-                            <input name="date" class="border rounded-lg text-sm px-4 py-2" type="date" value="{{ request('date') }}">
-                            <select name="category_id" class="border rounded-lg text-sm px-4 py-2">
-                                <option value="">Semua Kategori</option>
-                                @foreach ($categories as $category)
-                                    <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
-                                        {{ $category->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <select name="type" class="border rounded-lg text-sm px-4 py-2">
-                                <option value="">Semua Tipe</option>
-                                <option value="pemasukan" {{ request('type') == 'pemasukan' ? 'selected' : '' }}>Pemasukan</option>
-                                <option value="pengeluaran" {{ request('type') == 'pengeluaran' ? 'selected' : '' }}>Pengeluaran</option>
-                            </select>
-                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
-                                Filter
-                            </button>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <label for="month" class="block text-sm font-medium text-gray-700 mb-1">Bulan</label>
+                                <select id="month" name="month" class="w-full border rounded-lg text-sm px-4 py-2">
+                                    <option value="">Semua Bulan</option>
+                                    @foreach (range(1, 12) as $monthNumber)
+                                        @php
+                                            $monthLabel = \Carbon\Carbon::createFromDate(null, $monthNumber, 1)->locale('id')->translatedFormat('F');
+                                        @endphp
+                                        <option value="{{ $monthNumber }}" {{ (string) request('month') === (string) $monthNumber ? 'selected' : '' }}>
+                                            {{ $monthLabel }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label for="year" class="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
+                                @php
+                                    $yearOptions = $availableMonths->pluck('year')->unique()->sortDesc();
+                                    if ($yearOptions->isEmpty()) {
+                                        $yearOptions = collect([now()->year]);
+                                    } elseif (!$yearOptions->contains(now()->year)) {
+                                        $yearOptions->prepend(now()->year);
+                                    }
+                                @endphp
+                                <select id="year" name="year" class="w-full border rounded-lg text-sm px-4 py-2">
+                                    <option value="">Semua Tahun</option>
+                                    @foreach ($yearOptions as $yearOption)
+                                        <option value="{{ $yearOption }}" {{ (string) request('year') === (string) $yearOption ? 'selected' : '' }}>
+                                            {{ $yearOption }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Rentang Mulai</label>
+                                <input id="start_date" name="start_date" class="w-full border rounded-lg text-sm px-4 py-2" type="date" value="{{ request('start_date') }}">
+                            </div>
+                            <div>
+                                <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">Rentang Selesai</label>
+                                <input id="end_date" name="end_date" class="w-full border rounded-lg text-sm px-4 py-2" type="date" value="{{ request('end_date') }}">
+                            </div>
                         </div>
-                        <a href="{{ route('transactions.create') }}" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
-                            <span>Tambah Transaksi</span>
-                        </a>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Tanggal Spesifik</label>
+                                <input id="date" name="date" class="w-full border rounded-lg text-sm px-4 py-2" type="date" value="{{ request('date') }}">
+                            </div>
+                            <div>
+                                <label for="category_id" class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                                <select id="category_id" name="category_id" class="w-full border rounded-lg text-sm px-4 py-2">
+                                    <option value="">Semua Kategori</option>
+                                    @foreach ($categories as $category)
+                                        <option value="{{ $category->id }}" {{ (string) request('category_id') === (string) $category->id ? 'selected' : '' }}>
+                                            {{ $category->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Tipe Transaksi</label>
+                                <select id="type" name="type" class="w-full border rounded-lg text-sm px-4 py-2">
+                                    <option value="">Semua Tipe</option>
+                                    <option value="pemasukan" {{ request('type') == 'pemasukan' ? 'selected' : '' }}>Pemasukan</option>
+                                    <option value="pengeluaran" {{ request('type') == 'pengeluaran' ? 'selected' : '' }}>Pengeluaran</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <p class="text-xs text-gray-500">Pilih bulan/tahun atau gunakan rentang tanggal untuk melihat histori tertentu.</p>
+                            </div>
+                        </div>
                     </div>
                 </form>
+
+                @if ($availableMonths->isNotEmpty())
+                    <div class="mb-6">
+                        <p class="text-sm font-medium text-gray-700 mb-2">Histori Bulan</p>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach ($availableMonths as $monthItem)
+                                @php
+                                    $isActive = (string) request('month') === (string) $monthItem['month'] && (string) request('year') === (string) $monthItem['year'];
+                                    $historyQuery = array_merge(
+                                        request()->except(['page', 'month', 'year', 'start_date', 'end_date', 'date']),
+                                        ['month' => $monthItem['month'], 'year' => $monthItem['year']]
+                                    );
+                                @endphp
+                                <a href="{{ route('transactions.index', $historyQuery) }}" class="px-3 py-1 rounded-full text-sm font-medium border {{ $isActive ? 'bg-blue-600 text-white border-blue-600' : 'text-blue-600 border-blue-200 hover:border-blue-400 hover:bg-blue-50' }}">
+                                    {{ $monthItem['label'] }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
 
                 {{-- Tabel Transaksi --}}
                 <div class="overflow-x-auto">

@@ -33,18 +33,39 @@ class TransactionController extends Controller
      */
     public function index(Request $request): View
     {
+        if ($request->filled('start_date') || $request->filled('end_date')) {
+            $request->request->remove('month');
+            $request->request->remove('year');
+        } else {
+            $now = now();
+            $defaults = [];
+
+            if (!$request->has('month')) {
+                $defaults['month'] = $now->month;
+            }
+
+            if (!$request->has('year')) {
+                $defaults['year'] = $now->year;
+            }
+
+            if (!empty($defaults)) {
+                $request->merge($defaults);
+            }
+        }
+
         // Eager loading for 'category' and 'user' relationships is handled
         // in the TransactionService::getAllTransactions() method to prevent N+1 queries.
         $transactions = $this->transactionService->getAllTransactions($request);
         $categories = Cache::rememberForever('categories', function () {
             return Category::orderBy('name')->get();
         });
-        $summary = $this->transactionService->getAllSummary();
+        $summary = $this->transactionService->getAllSummary($request);
+        $availableMonths = $this->transactionService->getAvailableMonths();
 
         return view(
             'transactions.index',
             array_merge(
-                compact('transactions', 'categories'),
+                compact('transactions', 'categories', 'availableMonths'),
                 $summary
             )
         );
