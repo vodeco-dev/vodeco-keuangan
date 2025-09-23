@@ -1,14 +1,79 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="flex justify-between items-center mb-8">
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
     <h2 class="text-3xl font-bold text-gray-800">Laporan Keuangan</h2>
-    <div class="flex items-center gap-4">
-        {{-- Form Filter Tanggal --}}
-        <form method="GET" action="{{ route('reports.index') }}" class="flex items-center gap-2">
-            <input type="date" name="start_date" value="{{ $startDate }}" class="border rounded-lg text-sm px-4 py-2">
-            <span class="text-gray-500">to</span>
-            <input type="date" name="end_date" value="{{ $endDate }}" class="border rounded-lg text-sm px-4 py-2">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+        {{-- Form Filter --}}
+        <form method="GET" action="{{ route('reports.index') }}" class="flex flex-wrap items-end gap-4" x-data="{ period: '{{ $filters['period'] }}' }">
+            <div class="flex flex-col">
+                <label class="text-xs font-semibold text-gray-500 mb-1">Jenis Rentang</label>
+                <select name="period" x-model="period" class="border rounded-lg text-sm px-3 py-2">
+                    <option value="range">Rentang Tanggal</option>
+                    <option value="daily">Harian</option>
+                    <option value="monthly">Bulanan</option>
+                    <option value="yearly">Tahunan</option>
+                </select>
+            </div>
+
+            <div class="flex items-end gap-2" x-cloak x-show="period === 'range'">
+                <div class="flex flex-col">
+                    <label class="text-xs font-semibold text-gray-500 mb-1">Mulai</label>
+                    <input type="date" name="start_date" value="{{ $startDate }}" x-bind:disabled="period !== 'range'" class="border rounded-lg text-sm px-3 py-2">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs font-semibold text-gray-500 mb-1">Sampai</label>
+                    <input type="date" name="end_date" value="{{ $endDate }}" x-bind:disabled="period !== 'range'" class="border rounded-lg text-sm px-3 py-2">
+                </div>
+            </div>
+
+            <div class="flex items-end gap-2" x-cloak x-show="period === 'daily'">
+                <div class="flex flex-col">
+                    <label class="text-xs font-semibold text-gray-500 mb-1">Tanggal</label>
+                    <input type="date" name="date" value="{{ $filters['date'] }}" x-bind:disabled="period !== 'daily'" class="border rounded-lg text-sm px-3 py-2">
+                </div>
+            </div>
+
+            <div class="flex items-end gap-2" x-cloak x-show="period === 'monthly'">
+                <div class="flex flex-col">
+                    <label class="text-xs font-semibold text-gray-500 mb-1">Bulan</label>
+                    <select name="month" x-bind:disabled="period !== 'monthly'" class="border rounded-lg text-sm px-3 py-2">
+                        @for ($m = 1; $m <= 12; $m++)
+                            <option value="{{ $m }}" @selected((int) $filters['month'] === $m)>{{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}</option>
+                        @endfor
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-end gap-2" x-cloak x-show="period === 'monthly' || period === 'yearly'">
+                <div class="flex flex-col">
+                    <label class="text-xs font-semibold text-gray-500 mb-1">Tahun</label>
+                    <input type="number" name="year" value="{{ $filters['year'] }}" x-bind:disabled="!(period === 'monthly' || period === 'yearly')" class="border rounded-lg text-sm px-3 py-2" min="1900" max="2100">
+                </div>
+            </div>
+
+            <div class="flex flex-col">
+                <label class="text-xs font-semibold text-gray-500 mb-1">Kategori</label>
+                <select name="category_id" class="border rounded-lg text-sm px-3 py-2">
+                    <option value="">Semua Kategori</option>
+                    @foreach ($categories as $category)
+                        <option value="{{ $category->id }}" @selected($filters['category_id'] == $category->id)>{{ $category->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="flex flex-col">
+                <label class="text-xs font-semibold text-gray-500 mb-1">Tipe Transaksi</label>
+                <select name="type" class="border rounded-lg text-sm px-3 py-2">
+                    <option value="">Semua Tipe</option>
+                    <option value="pemasukan" @selected($filters['type'] === 'pemasukan')>Pemasukan</option>
+                    <option value="pengeluaran" @selected($filters['type'] === 'pengeluaran')>Pengeluaran</option>
+                </select>
+            </div>
+
             <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Filter</button>
         </form>
 
@@ -23,8 +88,12 @@
                 <span>Unduh Laporan</span>
             </button>
             <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                <a href="{{ route('reports.export', ['start_date' => $startDate, 'end_date' => $endDate, 'format' => 'xlsx']) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Excel (.xlsx)</a>
-                <a href="{{ route('reports.export', ['start_date' => $startDate, 'end_date' => $endDate, 'format' => 'csv']) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">CSV (.csv)</a>
+                @php
+                    $exportXlsxParams = array_merge($exportQuery, ['format' => 'xlsx']);
+                    $exportCsvParams = array_merge($exportQuery, ['format' => 'csv']);
+                @endphp
+                <a href="{{ route('reports.export', $exportXlsxParams) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Excel (.xlsx)</a>
+                <a href="{{ route('reports.export', $exportCsvParams) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">CSV (.csv)</a>
             </div>
         </div>
     </div>
