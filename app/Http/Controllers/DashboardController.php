@@ -16,8 +16,7 @@ class DashboardController extends Controller
 
     public function index(Request $request)
     {
-        // Gunakan service untuk mendapatkan ringkasan yang aman dan efisien
-        $summary = $this->transactionService->getSummaryForUser($request->user());
+        $summary = $this->transactionService->getAllSummary($request);
 
         // Filter dan ringkasan keadaan keuangan per bulan
         $selectedMonth = $request->input('month');
@@ -34,7 +33,6 @@ class DashboardController extends Controller
         // Total pemasukan & pengeluaran bulan terpilih
         $currentTotals = Transaction::query()
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
-            ->where('transactions.user_id', $request->user()->id)
             ->whereYear('date', $year)
             ->whereMonth('date', $month)
             ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN amount ELSE 0 END) as pemasukan")
@@ -47,7 +45,6 @@ class DashboardController extends Controller
         $previous = Carbon::create($year, $month)->subMonth();
         $previousTotals = Transaction::query()
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
-            ->where('transactions.user_id', $request->user()->id)
             ->whereYear('date', $previous->year)
             ->whereMonth('date', $previous->month)
             ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN amount ELSE 0 END) as pemasukan")
@@ -68,8 +65,7 @@ class DashboardController extends Controller
             'percent_change' => $percentChange,
         ];
 
-        $recent_transactions = Transaction::with('category')
-            ->where('user_id', $request->user()->id) // Keamanan: Pastikan transaksi terbaru milik user
+        $recent_transactions = Transaction::with(['category', 'user'])
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
             ->take(5)
@@ -77,12 +73,11 @@ class DashboardController extends Controller
 
         return view('dashboard', [
             'title'               => 'Dashboard',
-            'saldo'               => $summary['saldo'],
-            'pemasukan'           => $summary['totalPemasukan'],
-            'pengeluaran'         => $summary['totalPengeluaran'],
+            'summary'             => $summary,
             'financial_overview'  => $financialOverview,
             'selected_month'      => $selectedMonth,
             'recent_transactions' => $recent_transactions,
+            'show_user_column'    => true,
         ]);
     }
 }
