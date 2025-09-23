@@ -5,7 +5,59 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
+    @php
+        $isAdmin = auth()->user()?->role === \App\Enums\Role::ADMIN;
+    @endphp
+
+    <div class="py-12" @unless($isAdmin) x-data="{
+        showReasonModal: false,
+        reason: '',
+        error: '',
+        form: null,
+        transactionDescription: '',
+        init() {
+            this.$watch('showReasonModal', value => {
+                document.body.classList.toggle('overflow-y-hidden', value);
+            });
+        },
+        open(event) {
+            this.error = '';
+            this.reason = '';
+            this.form = event.currentTarget.closest('form');
+            this.transactionDescription = event.currentTarget.dataset.description || 'Tanpa deskripsi';
+            this.showReasonModal = true;
+            this.$nextTick(() => this.$refs.reasonTextarea?.focus());
+        },
+        close() {
+            this.showReasonModal = false;
+            this.reason = '';
+            this.error = '';
+            this.transactionDescription = '';
+            this.form = null;
+        },
+        submitReason() {
+            if (!this.reason.trim()) {
+                this.error = 'Alasan penghapusan wajib diisi.';
+                this.$nextTick(() => this.$refs.reasonTextarea?.focus());
+                return;
+            }
+
+            const form = this.form;
+            if (form) {
+                const reasonInput = form.querySelector('input[name=\'reason\']');
+                if (reasonInput) {
+                    reasonInput.value = this.reason.trim();
+                }
+
+                this.showReasonModal = false;
+                this.reason = '';
+                this.form = null;
+                this.transactionDescription = '';
+                this.error = '';
+                form.submit();
+            }
+        }
+    }" @endunless>
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             {{-- Bagian Summary Cards --}}
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8">
@@ -172,11 +224,27 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-center">
                                         <div class="flex justify-center items-center gap-2">
                                             <a href="{{ route('transactions.edit', $transaction) }}" class="text-blue-600 hover:text-blue-900">Edit</a>
-                                            <form action="{{ route('transactions.destroy', $transaction) }}" method="POST" onsubmit="return confirm('Yakin hapus?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
-                                            </form>
+                                            @if ($isAdmin)
+                                                <form action="{{ route('transactions.destroy', $transaction) }}" method="POST" onsubmit="return confirm('Yakin hapus?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
+                                                </form>
+                                            @else
+                                                <form action="{{ route('transactions.destroy', $transaction) }}" method="POST">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <input type="hidden" name="reason" value="">
+                                                    <button
+                                                        type="button"
+                                                        class="text-red-600 hover:text-red-900"
+                                                        data-description="{{ $transaction->description ?: 'Tanpa Deskripsi' }}"
+                                                        @click.prevent="open($event)"
+                                                    >
+                                                        Hapus
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -197,5 +265,42 @@
                 </div>
             </div>
         </div>
+
+        @unless($isAdmin)
+            <div
+                x-show="showReasonModal"
+                x-transition.opacity
+                class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 px-4 py-6"
+                style="display: none;"
+                @keydown.escape.window="close()"
+            >
+                <div class="absolute inset-0" @click="close()"></div>
+                <div class="relative z-10 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl" @click.stop>
+                    <h3 class="text-lg font-semibold text-gray-900">Ajukan Penghapusan Transaksi</h3>
+                    <p class="mt-2 text-sm text-gray-600" x-text="transactionDescription ? 'Transaksi: ' + transactionDescription : 'Transaksi tanpa deskripsi.'"></p>
+
+                    <form class="mt-4 space-y-4" @submit.prevent="submitReason">
+                        <div>
+                            <label for="deletion-reason" class="block text-sm font-medium text-gray-700">Alasan Penghapusan</label>
+                            <textarea
+                                id="deletion-reason"
+                                rows="4"
+                                x-ref="reasonTextarea"
+                                x-model="reason"
+                                class="mt-1 w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                placeholder="Jelaskan mengapa transaksi ini perlu dihapus..."
+                                required
+                            ></textarea>
+                            <p class="mt-2 text-sm text-red-600" x-show="error" x-text="error"></p>
+                        </div>
+
+                        <div class="flex justify-end gap-3">
+                            <button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @click="close()">Batal</button>
+                            <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Kirim Permintaan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endunless
     </div>
 </x-app-layout>

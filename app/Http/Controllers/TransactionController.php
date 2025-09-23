@@ -142,10 +142,15 @@ class TransactionController extends Controller
     public function destroy(Request $request, Transaction $transaction): RedirectResponse
     {
         if ($request->user()->role !== Role::ADMIN) {
+            $validated = $request->validate([
+                'reason' => ['required', 'string', 'max:500'],
+            ]);
+
             TransactionDeletionRequest::create([
                 'transaction_id' => $transaction->id,
                 'requested_by' => $request->user()->id,
                 'status' => 'pending',
+                'deletion_reason' => $validated['reason'],
             ]);
 
             return redirect()->route('transactions.index')
