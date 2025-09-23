@@ -245,6 +245,29 @@
     const chartData = @json($chartData);
     let financialChart = null;
 
+    const canvasBackgroundPlugin = {
+        id: 'canvasBackgroundPlugin',
+        beforeDraw(chart, args, options) {
+            const { ctx, canvas } = chart;
+            const { width, height } = canvas;
+
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = options?.color || '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            ctx.restore();
+        }
+    };
+
+    const pluginAlreadyRegistered = Chart.registry &&
+        Chart.registry.plugins &&
+        typeof Chart.registry.plugins.get === 'function' &&
+        Chart.registry.plugins.get('canvasBackgroundPlugin');
+
+    if (!pluginAlreadyRegistered) {
+        Chart.register(canvasBackgroundPlugin);
+    }
+
     const disableDownload = (message = 'Unduh Grafik Tidak Tersedia') => {
         if (!downloadButton) {
             return;
@@ -300,6 +323,9 @@
                         }
                     },
                     plugins: {
+                        canvasBackgroundPlugin: {
+                            color: '#ffffff'
+                        },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
