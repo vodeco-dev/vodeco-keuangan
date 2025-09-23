@@ -61,6 +61,8 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('/settings/display', [SettingController::class, 'updateDisplay'])->name('settings.display.update');
     Route::get('/settings/notifications', [SettingController::class, 'notifications'])->name('settings.notifications');
     Route::post('/settings/notifications', [SettingController::class, 'updateNotifications'])->name('settings.notifications.update');
+    Route::get('/settings/storage', [SettingController::class, 'storage'])->name('settings.storage');
+    Route::post('/settings/storage', [SettingController::class, 'updateStorage'])->name('settings.storage.update');
     Route::get('/settings/data', [SettingController::class, 'data'])->name('settings.data');
     Route::post('/settings/export', [SettingController::class, 'export'])->name('settings.export');
 

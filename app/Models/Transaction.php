@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Transaction extends Model
 {
@@ -21,6 +22,11 @@ class Transaction extends Model
         'amount',
         'description',
         'date',
+        'proof_disk',
+        'proof_directory',
+        'proof_path',
+        'proof_filename',
+        'proof_original_name',
     ];
 
     /**
@@ -50,4 +56,41 @@ class Transaction extends Model
 
     // Method getSummary() dihapus dari sini dan dipindahkan ke TransactionService
     // untuk pemisahan tanggung jawab (separation of concerns) yang lebih baik.
+
+    public function getProofUrlAttribute(): ?string
+    {
+        if (!$this->proof_path) {
+            return null;
+        }
+
+        $fullPath = $this->proof_full_path;
+
+        if ($this->proof_disk === 'drive') {
+            $baseLink = Setting::get('transaction_proof_drive_link');
+
+            if ($baseLink && $this->proof_path) {
+                return rtrim($baseLink, '/').'/'.ltrim($this->proof_path, '/');
+            }
+
+            return null;
+        }
+
+        if ($this->proof_disk && in_array($this->proof_disk, array_keys(config('filesystems.disks', [])), true) && $fullPath) {
+            return Storage::disk($this->proof_disk)->url($fullPath);
+        }
+
+        return null;
+    }
+
+    public function getProofFullPathAttribute(): ?string
+    {
+        if (!$this->proof_path) {
+            return null;
+        }
+
+        $path = ltrim($this->proof_path, '/');
+        $directory = trim((string) $this->proof_directory, '/');
+
+        return $directory ? $directory.'/'.$path : $path;
+    }
 }

@@ -10,7 +10,7 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
 
-                    <form action="{{ route('transactions.update', $transaction) }}" method="POST">
+                    <form action="{{ route('transactions.update', $transaction) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
 
@@ -88,6 +88,45 @@
                             @enderror
                         </div>
 
+                        <div class="mb-4">
+                            <label for="proof_name" class="block text-sm font-medium text-gray-700">Nama File Bukti</label>
+                            <input
+                                type="text"
+                                name="proof_name"
+                                id="proof_name"
+                                value="{{ old('proof_name', $transaction->proof_filename ? pathinfo($transaction->proof_filename, PATHINFO_FILENAME) : '') }}"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                                placeholder="Contoh: bukti-transfer-februari"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Nama file akan digunakan tanpa ekstensi. Kosongkan untuk menggunakan nama file saat ini.</p>
+                            @error('proof_name')
+                                <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="proof" class="block text-sm font-medium text-gray-700">Upload Bukti Transaksi</label>
+                            <input
+                                type="file"
+                                name="proof"
+                                id="proof"
+                                accept="image/*"
+                                class="mt-1 block w-full text-sm text-gray-600"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Format gambar (JPG, PNG, dan sejenisnya) dengan ukuran maksimal 250KB. Kosongkan jika tidak mengganti berkas.</p>
+                            @error('proof')
+                                <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
+
+                            @if($transaction->proof_url)
+                                <p class="text-xs text-blue-600 mt-2">
+                                    <a href="{{ $transaction->proof_url }}" target="_blank" class="underline">Lihat bukti saat ini</a>
+                                </p>
+                            @elseif($transaction->proof_filename)
+                                <p class="text-xs text-gray-500 mt-2">Bukti tersimpan sebagai: {{ $transaction->proof_filename }}</p>
+                            @endif
+                        </div>
+
                         <div class="flex items-center justify-end mt-6">
                             <a href="{{ route('transactions.index') }}" class="text-gray-600 mr-4">Batal</a>
                             <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
@@ -110,6 +149,8 @@
             const selectedCategoryId = '{{ old('category_id', $transaction->category_id) }}';
             const amountInput = document.getElementById('amount');
             const amountHiddenInput = document.getElementById('amount_value');
+            const proofInput = document.getElementById('proof');
+            const proofNameInput = document.getElementById('proof_name');
 
             function populateCategories() {
                 const selectedType = typeDropdown.value;
@@ -178,6 +219,20 @@
                         amountHiddenInput.value = cleanValue(amountInput.value);
                     });
                 }
+            }
+
+            if (proofInput && proofNameInput) {
+                proofInput.addEventListener('change', () => {
+                    if (!proofInput.files.length) {
+                        return;
+                    }
+
+                    const file = proofInput.files[0];
+                    const baseName = file.name.replace(/\.[^/.]+$/, '');
+                    proofNameInput.value = proofNameInput.value
+                        ? proofNameInput.value
+                        : baseName.replace(/[^a-zA-Z0-9-_\s]/g, '').replace(/\s+/g, '-').toLowerCase();
+                });
             }
         });
     </script>

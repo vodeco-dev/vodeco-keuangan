@@ -10,9 +10,12 @@ use App\Models\Transaction;
 use App\Models\TransactionDeletionRequest;
 use App\Models\Setting;
 use App\Notifications\TransactionDeleted;
+use App\Services\TransactionProofService;
 use App\Services\TransactionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
@@ -21,7 +24,10 @@ class TransactionController extends Controller
     /**
      * Menggabungkan Service Layer dan Authorization.
      */
-    public function __construct(private TransactionService $transactionService)
+    public function __construct(
+        private TransactionService $transactionService,
+        private TransactionProofService $transactionProofService
+    )
     {
         $this->authorizeResource(Transaction::class, 'transaction', [
             'except' => ['destroy', 'index'],
@@ -112,8 +118,21 @@ class TransactionController extends Controller
     {
         $validated = $request->validated();
 
-        $transactionData = $validated;
+        $transactionData = Arr::except($validated, ['proof', 'proof_name']);
+        $category = Category::findOrFail($transactionData['category_id']);
+        $transactionDate = Carbon::parse($transactionData['date']);
+
+        $categoryType = $category->type ?? 'lainnya';
+
+        $proofData = $this->transactionProofService->prepareForStore(
+            $request->file('proof'),
+            $request->input('proof_name'),
+            $transactionDate,
+            $categoryType
+        );
+
         $transactionData['user_id'] = $request->user()->id;
+        $transactionData = array_merge($transactionData, $proofData);
 
         Transaction::create($transactionData);
         $this->transactionService->clearAllSummaryCache();
@@ -129,7 +148,23 @@ class TransactionController extends Controller
     {
         $validated = $request->validated();
 
-        $transaction->update($validated);
+        $updateData = Arr::except($validated, ['proof', 'proof_name']);
+        $category = Category::findOrFail($updateData['category_id']);
+        $transactionDate = Carbon::parse($updateData['date']);
+
+        $categoryType = $category->type ?? 'lainnya';
+
+        $proofData = $this->transactionProofService->handleUpdate(
+            $transaction,
+            $request->file('proof'),
+            $request->input('proof_name'),
+            $transactionDate,
+            $categoryType
+        );
+
+        $updateData = array_merge($updateData, $proofData);
+
+        $transaction->update($updateData);
         $this->transactionService->clearAllSummaryCache();
 
         return redirect()->route('transactions.index')
