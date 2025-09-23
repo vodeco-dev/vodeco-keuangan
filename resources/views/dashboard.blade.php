@@ -16,21 +16,21 @@
         <div class="p-6 bg-white rounded-2xl shadow-lg">
             <p class="text-sm font-medium text-gray-500">Total Saldo</p>
             <p class="mt-1 text-3xl font-bold text-gray-900">
-                Rp {{ number_format($saldo, 0, ',', '.') }}
+                Rp {{ number_format($summary['saldo'] ?? 0, 0, ',', '.') }}
             </p>
         </div>
         {{-- Kartu Pemasukan --}}
         <div class="p-6 bg-white rounded-2xl shadow-lg">
             <p class="text-sm font-medium text-gray-500">Pemasukan</p>
             <p class="mt-1 text-3xl font-bold text-green-600">
-                Rp {{ number_format($pemasukan, 0, ',', '.') }}
+                Rp {{ number_format($summary['totalPemasukan'] ?? 0, 0, ',', '.') }}
             </p>
         </div>
         {{-- Kartu Pengeluaran --}}
         <div class="p-6 bg-white rounded-2xl shadow-lg">
             <p class="text-sm font-medium text-gray-500">Pengeluaran</p>
             <p class="mt-1 text-3xl font-bold text-red-600">
-                Rp {{ number_format($pengeluaran, 0, ',', '.') }}
+                Rp {{ number_format($summary['totalPengeluaran'] ?? 0, 0, ',', '.') }}
             </p>
         </div>
     </div>
@@ -84,6 +84,9 @@
                             <th class="px-6 py-4 text-xs font-semibold tracking-wider text-gray-500 uppercase">Tanggal</th>
                             <th class="px-6 py-4 text-xs font-semibold tracking-wider text-gray-500 uppercase">Kategori</th>
                             <th class="px-6 py-4 text-xs font-semibold tracking-wider text-gray-500 uppercase">Deskripsi</th>
+                            @if (!empty($show_user_column))
+                                <th class="px-6 py-4 text-xs font-semibold tracking-wider text-gray-500 uppercase">Pengguna</th>
+                            @endif
                             <th class="px-6 py-4 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Jumlah</th>
                         </tr>
                     </thead>
@@ -101,6 +104,11 @@
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-500">{{ $transaction->description ?: '-' }}</div>
                                     </td>
+                                    @if (!empty($show_user_column))
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-500">{{ $transaction->user?->name ?? '-' }}</div>
+                                        </td>
+                                    @endif
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
                                         @if ($transaction->category->type == 'pemasukan')
                                             <span class="text-green-600 font-semibold">+ Rp {{ number_format($transaction->amount, 0, ',', '.') }}</span>
@@ -111,7 +119,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="px-6 py-4 whitespace-nowrap text-center text-gray-500">
+                                    <td colspan="{{ !empty($show_user_column) ? 5 : 4 }}" class="px-6 py-4 whitespace-nowrap text-center text-gray-500">
                                         Belum ada transaksi untuk ditampilkan.
                                     </td>
                                 </tr>
