@@ -33,7 +33,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Resource Controllers (CRUD)
-    Route::resource('transactions', TransactionController::class)->except(['edit', 'show']);
+    Route::resource('transactions', TransactionController::class)->except(['show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::resource('debts', DebtController::class);
     Route::resource('invoices', InvoiceController::class);

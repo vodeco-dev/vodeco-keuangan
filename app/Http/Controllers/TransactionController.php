@@ -66,6 +66,25 @@ class TransactionController extends Controller
     }
 
     /**
+     * Menampilkan form untuk mengubah transaksi.
+     */
+    public function edit(Transaction $transaction): View
+    {
+        $incomeCategories = Cache::rememberForever('income_categories', function () {
+            return Category::where('type', 'pemasukan')->orderBy('name')->get();
+        });
+        $expenseCategories = Cache::rememberForever('expense_categories', function () {
+            return Category::where('type', 'pengeluaran')->orderBy('name')->get();
+        });
+
+        return view('transactions.edit', [
+            'transaction' => $transaction,
+            'incomeCategories' => $incomeCategories,
+            'expenseCategories' => $expenseCategories,
+        ]);
+    }
+
+    /**
      * Menyimpan transaksi baru.
      */
     public function store(StoreTransactionRequest $request): RedirectResponse
