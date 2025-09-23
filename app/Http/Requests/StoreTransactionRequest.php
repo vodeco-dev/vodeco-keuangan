@@ -25,7 +25,7 @@ class StoreTransactionRequest extends FormRequest
             'date' => 'required|date',
             'category_id' => 'required|exists:categories,id',
             'amount' => 'required|numeric|min:0',
-            'description' => 'nullable|string|max:255',
+            'description' => 'required|string|max:255',
         ];
     }
 
@@ -44,6 +44,8 @@ class StoreTransactionRequest extends FormRequest
             'amount.required' => 'Jumlah wajib diisi.',
             'amount.numeric' => 'Jumlah harus berupa angka.',
             'amount.min' => 'Jumlah tidak boleh kurang dari 0.',
+            'description.required' => 'Deskripsi wajib diisi.',
+            'description.string' => 'Deskripsi harus berupa teks.',
             'description.max' => 'Deskripsi tidak boleh lebih dari 255 karakter.',
         ];
     }

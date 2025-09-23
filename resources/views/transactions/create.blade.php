@@ -59,8 +59,8 @@
                         </div>
 
                         <div class="mb-4">
-                            <label for="description" class="block text-sm font-medium text-gray-700">Deskripsi (Opsional)</label>
-                            <textarea name="description" id="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">{{ old('description') }}</textarea>
+                            <label for="description" class="block text-sm font-medium text-gray-700">Deskripsi</label>
+                            <textarea name="description" id="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="Masukan Nama Usaha dan Paket nya" required>{{ old('description') }}</textarea>
                             @error('description')
                                 <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
                             @enderror
