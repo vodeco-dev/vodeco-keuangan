@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Exports\FinancialReportExport;
 use App\Http\Requests\ReportRequest;
+use App\Models\Category;
 use App\Models\Debt;
 use App\Models\Transaction;
 use App\Services\TransactionService;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
@@ -20,10 +22,35 @@ class ReportController extends Controller
         $startDate = $validated['start_date'];
         $endDate = $validated['end_date'];
 
+        $filters = [
+            'category_id' => $validated['category_id'] ?? null,
+            'type' => $validated['type'] ?? null,
+            'period' => $validated['period'] ?? 'range',
+            'date' => $request->input('date'),
+            'month' => $request->input('month'),
+            'year' => $request->input('year'),
+        ];
+
+        $filters['date'] = $filters['date'] ?? $startDate;
+        $filters['month'] = $filters['month'] ?? Carbon::parse($startDate)->month;
+        $filters['year'] = $filters['year'] ?? Carbon::parse($startDate)->year;
+
         // Ambil transaksi dalam rentang tanggal
-        $transactions = Transaction::with('category')
+        $transactionQuery = Transaction::with('category')
             ->where('user_id', $request->user()->id)
-            ->whereBetween('date', [$startDate, $endDate])
+            ->whereBetween('date', [$startDate, $endDate]);
+
+        if ($filters['category_id']) {
+            $transactionQuery->where('category_id', $filters['category_id']);
+        }
+
+        if ($filters['type']) {
+            $transactionQuery->whereHas('category', function ($query) use ($filters) {
+                $query->where('type', $filters['type']);
+            });
+        }
+
+        $transactions = $transactionQuery
             ->orderBy('date', 'desc')
             ->get();
 
@@ -45,7 +72,36 @@ class ReportController extends Controller
         $sisaHutang = $totalHutang - $totalPembayaranHutang;
 
         // Siapkan data untuk chart
-        $chartData = $this->transactionService->prepareChartData($request->user(), $startDate, $endDate);
+        $chartData = $this->transactionService->prepareChartData(
+            $request->user(),
+            $startDate,
+            $endDate,
+            $filters['category_id'] ? (int) $filters['category_id'] : null,
+            $filters['type']
+        );
+
+        $categories = Category::orderBy('name')->get();
+
+        $exportQuery = array_filter(
+            [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'category_id' => $filters['category_id'],
+                'type' => $filters['type'],
+                'period' => $filters['period'],
+                'date' => $filters['date'],
+                'month' => $filters['month'],
+                'year' => $filters['year'],
+            ],
+            function ($value, $key) {
+                if (in_array($key, ['start_date', 'end_date', 'period'])) {
+                    return true;
+                }
+
+                return $value !== null && $value !== '';
+            },
+            ARRAY_FILTER_USE_BOTH
+        );
 
         return view('reports.index', [
             'title' => 'Laporan',
@@ -60,6 +116,9 @@ class ReportController extends Controller
             'startDate' => $startDate,
             'endDate' => $endDate,
             'chartData' => $chartData,
+            'categories' => $categories,
+            'filters' => $filters,
+            'exportQuery' => $exportQuery,
         ]);
     }
 
@@ -74,6 +133,15 @@ class ReportController extends Controller
 
         $fileName = 'Laporan_Keuangan_'.$startDate.'_sampai_'.$endDate.'.'.$format;
 
-        return Excel::download(new FinancialReportExport($request->user()->id, $startDate, $endDate), $fileName);
+        return Excel::download(
+            new FinancialReportExport(
+                $request->user()->id,
+                $startDate,
+                $endDate,
+                isset($validated['category_id']) ? (int) $validated['category_id'] : null,
+                $validated['type'] ?? null
+            ),
+            $fileName
+        );
     }
 }

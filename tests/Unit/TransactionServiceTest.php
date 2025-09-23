@@ -232,4 +232,35 @@ class TransactionServiceTest extends TestCase
         $this->assertEquals([0, 0, 0], $chartData['pemasukan']->toArray());
         $this->assertEquals([0, 0, 0], $chartData['pengeluaran']->toArray());
     }
+
+    public function test_prepare_chart_data_with_filters()
+    {
+        $incomeCategory = Category::factory()->create(['type' => 'pemasukan']);
+        $expenseCategory = Category::factory()->create(['type' => 'pengeluaran']);
+
+        Transaction::factory()->create([
+            'user_id' => $this->user->id,
+            'category_id' => $incomeCategory->id,
+            'amount' => 1000,
+            'date' => '2023-01-01',
+        ]);
+        Transaction::factory()->create([
+            'user_id' => $this->user->id,
+            'category_id' => $expenseCategory->id,
+            'amount' => 500,
+            'date' => '2023-01-02',
+        ]);
+
+        $incomeOnly = $this->service->prepareChartData($this->user, '2023-01-01', '2023-01-03', null, 'pemasukan');
+        $this->assertEquals([1000, 0, 0], $incomeOnly['pemasukan']->toArray());
+        $this->assertEquals([0, 0, 0], $incomeOnly['pengeluaran']->toArray());
+
+        $expenseOnly = $this->service->prepareChartData($this->user, '2023-01-01', '2023-01-03', null, 'pengeluaran');
+        $this->assertEquals([0, 0, 0], $expenseOnly['pemasukan']->toArray());
+        $this->assertEquals([0, 500, 0], $expenseOnly['pengeluaran']->toArray());
+
+        $categoryFiltered = $this->service->prepareChartData($this->user, '2023-01-01', '2023-01-03', $expenseCategory->id);
+        $this->assertEquals([0, 0, 0], $categoryFiltered['pemasukan']->toArray());
+        $this->assertEquals([0, 500, 0], $categoryFiltered['pengeluaran']->toArray());
+    }
 }
