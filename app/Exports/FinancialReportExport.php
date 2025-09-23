@@ -13,19 +13,35 @@ class FinancialReportExport implements FromView, WithTitle
     protected int $userId;
     protected string $startDate;
     protected string $endDate;
+    protected ?int $categoryId;
+    protected ?string $type;
 
-    public function __construct(int $userId, string $startDate, string $endDate)
+    public function __construct(int $userId, string $startDate, string $endDate, ?int $categoryId = null, ?string $type = null)
     {
         $this->userId = $userId;
         $this->startDate = $startDate;
         $this->endDate = $endDate;
+        $this->categoryId = $categoryId;
+        $this->type = $type;
     }
 
     public function view(): View
     {
-        $transactions = Transaction::with('category')
+        $transactionQuery = Transaction::with('category')
             ->where('user_id', $this->userId)
-            ->whereBetween('date', [$this->startDate, $this->endDate])
+            ->whereBetween('date', [$this->startDate, $this->endDate]);
+
+        if ($this->categoryId) {
+            $transactionQuery->where('category_id', $this->categoryId);
+        }
+
+        if ($this->type) {
+            $transactionQuery->whereHas('category', function ($query) {
+                $query->where('type', $this->type);
+            });
+        }
+
+        $transactions = $transactionQuery
             ->orderBy('date', 'asc')
             ->get();
 

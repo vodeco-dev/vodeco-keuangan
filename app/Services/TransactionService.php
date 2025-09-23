@@ -234,25 +234,38 @@ class TransactionService
     /**
      * Siapkan data untuk chart pemasukan dan pengeluaran.
      */
-    public function prepareChartData(User $user, $startDate, $endDate): array
+    public function prepareChartData(User $user, $startDate, $endDate, ?int $categoryId = null, ?string $type = null): array
     {
-        $pemasukanData = Transaction::where('user_id', $user->id)
-            ->whereHas('category', function ($query) {
-                $query->where('type', 'pemasukan');
-            })
-            ->whereBetween('date', [$startDate, $endDate])
-            ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
-            ->groupBy('date')
-            ->pluck('total', 'date');
+        $baseQuery = Transaction::where('user_id', $user->id)
+            ->whereBetween('date', [$startDate, $endDate]);
 
-        $pengeluaranData = Transaction::where('user_id', $user->id)
-            ->whereHas('category', function ($query) {
-                $query->where('type', 'pengeluaran');
-            })
-            ->whereBetween('date', [$startDate, $endDate])
-            ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
-            ->groupBy('date')
-            ->pluck('total', 'date');
+        if ($categoryId) {
+            $baseQuery->where('category_id', $categoryId);
+        }
+
+        $pemasukanData = collect();
+        if (!$type || $type === 'pemasukan') {
+            $pemasukanQuery = clone $baseQuery;
+            $pemasukanData = $pemasukanQuery
+                ->whereHas('category', function ($query) {
+                    $query->where('type', 'pemasukan');
+                })
+                ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
+                ->groupBy('date')
+                ->pluck('total', 'date');
+        }
+
+        $pengeluaranData = collect();
+        if (!$type || $type === 'pengeluaran') {
+            $pengeluaranQuery = clone $baseQuery;
+            $pengeluaranData = $pengeluaranQuery
+                ->whereHas('category', function ($query) {
+                    $query->where('type', 'pengeluaran');
+                })
+                ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
+                ->groupBy('date')
+                ->pluck('total', 'date');
+        }
 
         $dates = collect();
         $currentDate = Carbon::parse($startDate);
