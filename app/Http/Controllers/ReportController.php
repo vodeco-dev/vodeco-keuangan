@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Role;
 use App\Exports\FinancialReportExport;
 use App\Http\Requests\ReportRequest;
 use App\Models\Category;
@@ -22,6 +23,9 @@ class ReportController extends Controller
         $startDate = $validated['start_date'];
         $endDate = $validated['end_date'];
 
+        $currentUser = $request->user();
+        $shouldFilterByUser = $currentUser->role === Role::STAFF;
+
         $filters = [
             'category_id' => $validated['category_id'] ?? null,
             'type' => $validated['type'] ?? null,
@@ -37,7 +41,9 @@ class ReportController extends Controller
 
         // Ambil transaksi dalam rentang tanggal
         $transactionQuery = Transaction::with('category')
-            ->where('user_id', $request->user()->id)
+            ->when($shouldFilterByUser, function ($query) use ($currentUser) {
+                $query->where('user_id', $currentUser->id);
+            })
             ->whereBetween('date', [$startDate, $endDate]);
 
         if ($filters['category_id']) {
@@ -61,7 +67,9 @@ class ReportController extends Controller
 
         // Ambil data hutang dalam rentang tanggal
         $debts = Debt::with('payments')
-            ->where('user_id', $request->user()->id)
+            ->when($shouldFilterByUser, function ($query) use ($currentUser) {
+                $query->where('user_id', $currentUser->id);
+            })
             ->whereBetween('due_date', [$startDate, $endDate])
             ->orderBy('due_date', 'desc')
             ->get();
@@ -73,7 +81,7 @@ class ReportController extends Controller
 
         // Siapkan data untuk chart
         $chartData = $this->transactionService->prepareChartData(
-            $request->user(),
+            $shouldFilterByUser ? $currentUser : null,
             $startDate,
             $endDate,
             $filters['category_id'] ? (int) $filters['category_id'] : null,
@@ -130,12 +138,14 @@ class ReportController extends Controller
         $startDate = $validated['start_date'];
         $endDate = $validated['end_date'];
         $format = $validated['format'] ?? 'xlsx'; // xlsx atau csv
+        $currentUser = $request->user();
+        $shouldFilterByUser = $currentUser->role === Role::STAFF;
 
         $fileName = 'Laporan_Keuangan_'.$startDate.'_sampai_'.$endDate.'.'.$format;
 
         return Excel::download(
             new FinancialReportExport(
-                $request->user()->id,
+                $shouldFilterByUser ? $currentUser->id : null,
                 $startDate,
                 $endDate,
                 isset($validated['category_id']) ? (int) $validated['category_id'] : null,

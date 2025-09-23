@@ -10,13 +10,13 @@ use App\Models\Debt;
 
 class FinancialReportExport implements FromView, WithTitle
 {
-    protected int $userId;
+    protected ?int $userId;
     protected string $startDate;
     protected string $endDate;
     protected ?int $categoryId;
     protected ?string $type;
 
-    public function __construct(int $userId, string $startDate, string $endDate, ?int $categoryId = null, ?string $type = null)
+    public function __construct(?int $userId, string $startDate, string $endDate, ?int $categoryId = null, ?string $type = null)
     {
         $this->userId = $userId;
         $this->startDate = $startDate;
@@ -28,7 +28,9 @@ class FinancialReportExport implements FromView, WithTitle
     public function view(): View
     {
         $transactionQuery = Transaction::with('category')
-            ->where('user_id', $this->userId)
+            ->when($this->userId !== null, function ($query) {
+                $query->where('user_id', $this->userId);
+            })
             ->whereBetween('date', [$this->startDate, $this->endDate]);
 
         if ($this->categoryId) {
@@ -46,7 +48,9 @@ class FinancialReportExport implements FromView, WithTitle
             ->get();
 
         $debts = Debt::with('payments')
-            ->where('user_id', $this->userId)
+            ->when($this->userId !== null, function ($query) {
+                $query->where('user_id', $this->userId);
+            })
             ->whereBetween('due_date', [$this->startDate, $this->endDate])
             ->orderBy('due_date', 'asc')
             ->get();
