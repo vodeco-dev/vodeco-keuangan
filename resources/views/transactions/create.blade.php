@@ -51,8 +51,9 @@
 
                         <div class="mb-4">
                             <label for="amount" class="block text-sm font-medium text-gray-700">Jumlah (Rp)</label>
-                            <input type="number" name="amount" id="amount" value="{{ old('amount') }}" placeholder="Contoh: 50000" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
-                             @error('amount')
+                            <input type="text" id="amount" value="" placeholder="Contoh: 5.000" inputmode="numeric" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                            <input type="hidden" name="amount" id="amount_value" value="{{ old('amount') }}">
+                            @error('amount')
                                 <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
                             @enderror
                         </div>
@@ -85,6 +86,8 @@
             const incomeCategories = @json($incomeCategories);
             const expenseCategories = @json($expenseCategories);
             const oldCategoryId = '{{ old('category_id') }}';
+            const amountInput = document.getElementById('amount');
+            const amountHiddenInput = document.getElementById('amount_value');
 
             function populateCategories() {
                 const selectedType = typeDropdown.value;
@@ -114,6 +117,44 @@
             // Initial population if a type is already selected (e.g., from old input)
             if (typeDropdown.value) {
                 populateCategories();
+            }
+
+            if (amountInput && amountHiddenInput) {
+                const formatter = new Intl.NumberFormat('id-ID');
+
+                const formatAmount = (value) => {
+                    if (!value) {
+                        return '';
+                    }
+
+                    const numericValue = parseInt(value, 10);
+                    return Number.isNaN(numericValue) ? '' : formatter.format(numericValue);
+                };
+
+                const cleanValue = (value) => value.replace(/\D/g, '');
+
+                const syncDisplayWithHidden = () => {
+                    amountInput.value = formatAmount(amountHiddenInput.value);
+                };
+
+                syncDisplayWithHidden();
+
+                amountInput.addEventListener('input', (event) => {
+                    const cleaned = cleanValue(event.target.value);
+                    amountHiddenInput.value = cleaned;
+                    amountInput.value = formatAmount(cleaned);
+                });
+
+                amountInput.addEventListener('blur', () => {
+                    amountInput.value = formatAmount(amountHiddenInput.value);
+                });
+
+                const formElement = amountInput.closest('form');
+                if (formElement) {
+                    formElement.addEventListener('submit', () => {
+                        amountHiddenInput.value = cleanValue(amountInput.value);
+                    });
+                }
             }
         });
     </script>
