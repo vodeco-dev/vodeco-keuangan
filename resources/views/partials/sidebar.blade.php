@@ -1,9 +1,12 @@
 <aside x-data="{ sidebarOpen: true }" class="flex h-screen flex-col bg-white text-gray-700 dark:bg-gray-900 dark:text-gray-200 p-4 overflow-y-auto transition-all duration-300" :class="sidebarOpen ? 'w-64' : 'w-20'">
 
     {{-- Bagian Logo dan Nama Aplikasi --}}
-    <div class="flex items-center mb-8 text-center">
+    <div class="flex items-center mb-8 text-center self-center">
         <a href="{{ route('dashboard') }}">
-            <span class="text-2xl font-bold text-blue-900 text-center" :class="{ 'hidden': !sidebarOpen }">Manajemen Keuangan</span>
+            <div class="flex flex-col items-center justify-center w-full self-center px-8" :class="{'hidden': !sidebarOpen}">
+                <span class="text-2xl font-bold text-blue-900">Finance App</span>
+                <span class="text-xs font-medium text-gray-500">By Vodeco</span>
+            </div>
             <svg :class="{ 'hidden': sidebarOpen }" class="h-8 w-8 text-blue-900" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm0-4v-6h2v6h-2z" />
             </svg>
