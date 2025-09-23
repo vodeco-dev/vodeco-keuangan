@@ -153,6 +153,13 @@
 <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
     <h3 class="text-xl font-semibold text-gray-900 mb-4">Grafik Pemasukan vs Pengeluaran</h3>
     <div class="h-80"><canvas id="financial-chart"></canvas></div>
+    <button
+        id="download-chart"
+        type="button"
+        class="mt-4 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+        Unduh Grafik
+    </button>
 </div>
 
 
@@ -234,56 +241,113 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const ctx = document.getElementById('financial-chart');
+    const downloadButton = document.getElementById('download-chart');
     const chartData = @json($chartData);
+    let financialChart = null;
 
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: chartData.labels,
-            datasets: [{
-                label: 'Pemasukan',
-                data: chartData.pemasukan,
-                backgroundColor: 'rgba(16, 185, 129, 0.6)',
-                borderColor: 'rgba(16, 185, 129, 1)',
-                borderWidth: 1
-            }, {
-                label: 'Pengeluaran',
-                data: chartData.pengeluaran,
-                backgroundColor: 'rgba(239, 68, 68, 0.6)',
-                borderColor: 'rgba(239, 68, 68, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return 'Rp' + value.toLocaleString('id-ID');
-                        }
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += 'Rp' + context.parsed.y.toLocaleString('id-ID');
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
+    const disableDownload = (message = 'Unduh Grafik Tidak Tersedia') => {
+        if (!downloadButton) {
+            return;
         }
-    });
+
+        downloadButton.disabled = true;
+        downloadButton.setAttribute('aria-disabled', 'true');
+        if (message) {
+            downloadButton.textContent = message;
+        }
+    };
+
+    const enableDownload = () => {
+        if (!downloadButton) {
+            return;
+        }
+
+        downloadButton.disabled = false;
+        downloadButton.removeAttribute('aria-disabled');
+    };
+
+    if (ctx) {
+        try {
+            financialChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Pemasukan',
+                        data: chartData.pemasukan,
+                        backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Pengeluaran',
+                        data: chartData.pengeluaran,
+                        backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'Rp' + value.toLocaleString('id-ID');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += 'Rp' + context.parsed.y.toLocaleString('id-ID');
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            enableDownload();
+        } catch (error) {
+            console.error('Gagal merender grafik keuangan:', error);
+            disableDownload();
+        }
+    } else {
+        disableDownload();
+    }
+
+    if (downloadButton) {
+        downloadButton.addEventListener('click', () => {
+            if (!financialChart) {
+                alert('Grafik belum tersedia untuk diunduh.');
+                return;
+            }
+
+            const imageBase64 = financialChart.toBase64Image('image/png', 1);
+            if (!imageBase64) {
+                alert('Gagal menyiapkan gambar grafik.');
+                return;
+            }
+
+            const link = document.createElement('a');
+            const today = new Date();
+            const dateString = today.toISOString().split('T')[0];
+            link.href = imageBase64;
+            link.download = `grafik-pemasukan-vs-pengeluaran-${dateString}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    }
 </script>
 @endsection
