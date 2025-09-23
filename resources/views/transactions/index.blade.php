@@ -203,6 +203,7 @@
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Kategori</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Deskripsi</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Jumlah</th>
+                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Bukti</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Aksi</th>
                             </tr>
                         </thead>
@@ -221,6 +222,22 @@
                                         {{ $transaction->category?->type == 'pemasukan' ? '+' : '-' }} Rp {{ number_format($transaction->amount, 0, ',', '.') }}
                                     </td>
                                     
+                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                        @if ($transaction->proof_url)
+                                            <a href="{{ $transaction->proof_url }}" target="_blank" class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-900">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                                                    <path d="M13.5 6.75a.75.75 0 01.75-.75h3a2.25 2.25 0 012.25 2.25v10.5A2.25 2.25 0 0117.25 21h-10.5A2.25 2.25 0 014.5 18.75v-10.5A2.25 2.25 0 016.75 6h3a.75.75 0 010 1.5h-3a.75.75 0 00-.75.75v10.5c0 .414.336.75.75.75h10.5a.75.75 0 00.75-.75v-10.5a.75.75 0 00-.75-.75h-3a.75.75 0 01-.75-.75z" />
+                                                    <path d="M12 3.75a.75.75 0 01.75.75v8.69l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 011.06-1.06l2.22 2.22V4.5A.75.75 0 0112 3.75z" />
+                                                </svg>
+                                                <span>Lihat</span>
+                                            </a>
+                                        @elseif ($transaction->proof_filename)
+                                            <span class="text-sm text-gray-500">{{ $transaction->proof_filename }}</span>
+                                        @else
+                                            <span class="text-sm text-gray-400">-</span>
+                                        @endif
+                                    </td>
+
                                     <td class="px-6 py-4 whitespace-nowrap text-center">
                                         <div class="flex justify-center items-center gap-2">
                                             <a href="{{ route('transactions.edit', $transaction) }}" class="text-blue-600 hover:text-blue-900">Edit</a>
@@ -250,7 +267,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                    <td colspan="7" class="px-6 py-4 text-center text-gray-500">
                                         Belum ada transaksi.
                                     </td>
                                 </tr>

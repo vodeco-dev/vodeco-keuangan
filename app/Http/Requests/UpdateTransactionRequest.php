@@ -26,6 +26,8 @@ class UpdateTransactionRequest extends FormRequest
             'category_id' => 'required|exists:categories,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'required|string|max:255',
+            'proof' => 'nullable|image|max:250',
+            'proof_name' => 'nullable|string|max:100',
         ];
     }
 
@@ -47,6 +49,10 @@ class UpdateTransactionRequest extends FormRequest
             'description.required' => 'Deskripsi wajib diisi.',
             'description.string' => 'Deskripsi harus berupa teks.',
             'description.max' => 'Deskripsi tidak boleh lebih dari 255 karakter.',
+            'proof.image' => 'Bukti transaksi harus berupa gambar.',
+            'proof.max' => 'Ukuran bukti transaksi maksimal 250KB.',
+            'proof_name.string' => 'Nama file bukti transaksi harus berupa teks.',
+            'proof_name.max' => 'Nama file bukti transaksi tidak boleh lebih dari 100 karakter.',
         ];
     }
 }

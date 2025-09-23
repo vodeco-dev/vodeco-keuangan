@@ -36,6 +36,10 @@
                         <a href="{{ route('settings.notifications') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Atur</a>
                     </li>
                     <li class="flex items-center justify-between">
+                        <span class="text-gray-600">Penyimpanan Bukti Transaksi</span>
+                        <a href="{{ route('settings.storage') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Konfigurasi</a>
+                    </li>
+                    <li class="flex items-center justify-between">
                         <span class="text-gray-600">Saldo Awal</span>
                         <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Atur</button>
                     </li>

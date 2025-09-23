@@ -39,6 +39,17 @@ class SettingController extends Controller
         ]);
     }
 
+    public function storage(): View
+    {
+        return view('settings.storage', [
+            'title' => 'Penyimpanan Bukti Transaksi',
+            'transaction_proof_storage' => Setting::get('transaction_proof_storage', 'server'),
+            'transaction_proof_server_directory' => Setting::get('transaction_proof_server_directory', 'transaction-proofs'),
+            'transaction_proof_drive_directory' => Setting::get('transaction_proof_drive_directory'),
+            'transaction_proof_drive_link' => Setting::get('transaction_proof_drive_link'),
+        ]);
+    }
+
     /**
      * Memperbarui pengaturan aplikasi.
      */
@@ -82,6 +93,51 @@ class SettingController extends Controller
 
         return redirect()->route('settings.notifications')
             ->with('success', 'Pengingat diperbarui.');
+    }
+
+    public function updateStorage(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'transaction_proof_storage' => 'required|in:server,drive',
+            'transaction_proof_server_directory' => 'nullable|string|max:255',
+            'transaction_proof_drive_directory' => 'nullable|string|max:255',
+            'transaction_proof_drive_link' => 'nullable|url',
+        ]);
+
+        $storageTarget = $validated['transaction_proof_storage'];
+        $serverDirectory = isset($validated['transaction_proof_server_directory'])
+            ? trim($validated['transaction_proof_server_directory'])
+            : '';
+        $driveDirectory = isset($validated['transaction_proof_drive_directory'])
+            ? trim($validated['transaction_proof_drive_directory'])
+            : '';
+        $driveLink = isset($validated['transaction_proof_drive_link'])
+            ? trim($validated['transaction_proof_drive_link'])
+            : '';
+
+        Setting::updateOrCreate(['key' => 'transaction_proof_storage'], ['value' => $storageTarget]);
+        Cache::forget('setting:transaction_proof_storage');
+
+        Setting::updateOrCreate(
+            ['key' => 'transaction_proof_server_directory'],
+            ['value' => $serverDirectory]
+        );
+        Cache::forget('setting:transaction_proof_server_directory');
+
+        Setting::updateOrCreate(
+            ['key' => 'transaction_proof_drive_directory'],
+            ['value' => $driveDirectory]
+        );
+        Cache::forget('setting:transaction_proof_drive_directory');
+
+        Setting::updateOrCreate(
+            ['key' => 'transaction_proof_drive_link'],
+            ['value' => $driveLink]
+        );
+        Cache::forget('setting:transaction_proof_drive_link');
+
+        return redirect()->route('settings.storage')
+            ->with('success', 'Pengaturan penyimpanan bukti transaksi diperbarui.');
     }
 
     public function data(): View
