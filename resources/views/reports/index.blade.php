@@ -4,96 +4,102 @@
 <style>
     [x-cloak] { display: none !important; }
 </style>
-<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
-    <h2 class="text-3xl font-bold text-gray-800">Laporan Keuangan</h2>
-    <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-        {{-- Form Filter --}}
-        <form method="GET" action="{{ route('reports.index') }}" class="flex flex-wrap items-end gap-4" x-data="{ period: '{{ $filters['period'] }}' }">
-            <div class="flex flex-col">
-                <label class="text-xs font-semibold text-gray-500 mb-1">Jenis Rentang</label>
-                <select name="period" x-model="period" class="border rounded-lg text-sm px-3 py-2">
-                    <option value="range">Rentang Tanggal</option>
-                    <option value="daily">Harian</option>
-                    <option value="monthly">Bulanan</option>
-                    <option value="yearly">Tahunan</option>
-                </select>
-            </div>
+<div class="mb-10 space-y-6">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Laporan Keuangan</h2>
+            <p class="mt-1 text-sm text-gray-500">Pantau arus kas bisnis Anda dan unduh laporan sesuai kebutuhan.</p>
+        </div>
+    </div>
 
-            <div class="flex items-end gap-2" x-cloak x-show="period === 'range'">
-                <div class="flex flex-col">
-                    <label class="text-xs font-semibold text-gray-500 mb-1">Mulai</label>
-                    <input type="date" name="start_date" value="{{ $startDate }}" x-bind:disabled="period !== 'range'" class="border rounded-lg text-sm px-3 py-2">
+    <div class="rounded-2xl border border-gray-200 bg-white/80 p-6 shadow-sm backdrop-blur">
+        <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:gap-6">
+            {{-- Form Filter --}}
+            <form method="GET" action="{{ route('reports.index') }}" class="grid flex-1 grid-cols-1 items-end gap-4 md:grid-cols-2 xl:grid-cols-4" x-data="{ period: '{{ $filters['period'] }}' }">
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">Jenis Rentang</label>
+                    <select name="period" x-model="period" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="range">Rentang Tanggal</option>
+                        <option value="daily">Harian</option>
+                        <option value="monthly">Bulanan</option>
+                        <option value="yearly">Tahunan</option>
+                    </select>
                 </div>
-                <div class="flex flex-col">
-                    <label class="text-xs font-semibold text-gray-500 mb-1">Sampai</label>
-                    <input type="date" name="end_date" value="{{ $endDate }}" x-bind:disabled="period !== 'range'" class="border rounded-lg text-sm px-3 py-2">
-                </div>
-            </div>
 
-            <div class="flex items-end gap-2" x-cloak x-show="period === 'daily'">
-                <div class="flex flex-col">
-                    <label class="text-xs font-semibold text-gray-500 mb-1">Tanggal</label>
-                    <input type="date" name="date" value="{{ $filters['date'] }}" x-bind:disabled="period !== 'daily'" class="border rounded-lg text-sm px-3 py-2">
+                <div class="grid gap-4 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-4" x-cloak x-show="period === 'range'">
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">Mulai</label>
+                        <input type="date" name="start_date" value="{{ $startDate }}" x-bind:disabled="period !== 'range'" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">Sampai</label>
+                        <input type="date" name="end_date" value="{{ $endDate }}" x-bind:disabled="period !== 'range'" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    </div>
                 </div>
-            </div>
 
-            <div class="flex items-end gap-2" x-cloak x-show="period === 'monthly'">
-                <div class="flex flex-col">
-                    <label class="text-xs font-semibold text-gray-500 mb-1">Bulan</label>
-                    <select name="month" x-bind:disabled="period !== 'monthly'" class="border rounded-lg text-sm px-3 py-2">
+                <div class="md:col-span-2 xl:col-span-4" x-cloak x-show="period === 'daily'">
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">Tanggal</label>
+                        <input type="date" name="date" value="{{ $filters['date'] }}" x-bind:disabled="period !== 'daily'" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div x-cloak x-show="period === 'monthly'" class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">Bulan</label>
+                    <select name="month" x-bind:disabled="period !== 'monthly'" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                         @for ($m = 1; $m <= 12; $m++)
                             <option value="{{ $m }}" @selected((int) $filters['month'] === $m)>{{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}</option>
                         @endfor
                     </select>
                 </div>
-            </div>
 
-            <div class="flex items-end gap-2" x-cloak x-show="period === 'monthly' || period === 'yearly'">
-                <div class="flex flex-col">
-                    <label class="text-xs font-semibold text-gray-500 mb-1">Tahun</label>
-                    <input type="number" name="year" value="{{ $filters['year'] }}" x-bind:disabled="!(period === 'monthly' || period === 'yearly')" class="border rounded-lg text-sm px-3 py-2" min="1900" max="2100">
+                <div x-cloak x-show="period === 'monthly' || period === 'yearly'" class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">Tahun</label>
+                    <input type="number" name="year" value="{{ $filters['year'] }}" x-bind:disabled="!(period === 'monthly' || period === 'yearly')" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" min="1900" max="2100">
                 </div>
-            </div>
 
-            <div class="flex flex-col">
-                <label class="text-xs font-semibold text-gray-500 mb-1">Kategori</label>
-                <select name="category_id" class="border rounded-lg text-sm px-3 py-2">
-                    <option value="">Semua Kategori</option>
-                    @foreach ($categories as $category)
-                        <option value="{{ $category->id }}" @selected($filters['category_id'] == $category->id)>{{ $category->name }}</option>
-                    @endforeach
-                </select>
-            </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">Kategori</label>
+                    <select name="category_id" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="">Semua Kategori</option>
+                        @foreach ($categories as $category)
+                            <option value="{{ $category->id }}" @selected($filters['category_id'] == $category->id)>{{ $category->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
-            <div class="flex flex-col">
-                <label class="text-xs font-semibold text-gray-500 mb-1">Tipe Transaksi</label>
-                <select name="type" class="border rounded-lg text-sm px-3 py-2">
-                    <option value="">Semua Tipe</option>
-                    <option value="pemasukan" @selected($filters['type'] === 'pemasukan')>Pemasukan</option>
-                    <option value="pengeluaran" @selected($filters['type'] === 'pengeluaran')>Pengeluaran</option>
-                </select>
-            </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipe Transaksi</label>
+                    <select name="type" class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="">Semua Tipe</option>
+                        <option value="pemasukan" @selected($filters['type'] === 'pemasukan')>Pemasukan</option>
+                        <option value="pengeluaran" @selected($filters['type'] === 'pengeluaran')>Pengeluaran</option>
+                    </select>
+                </div>
 
-            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Filter</button>
-        </form>
+                <div class="md:col-span-2 xl:col-span-1">
+                    <button type="submit" class="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1">Filter</button>
+                </div>
+            </form>
 
-        {{-- Dropdown untuk Unduh Laporan --}}
-        <div class="relative" x-data="{ open: false }">
-            <button @click="open = !open" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center gap-2">
-                <svg class="h-5 w-5" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" x2="12" y1="15" y2="3"></line>
-                </svg>
-                <span>Unduh Laporan</span>
-            </button>
-            <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                @php
-                    $exportXlsxParams = array_merge($exportQuery, ['format' => 'xlsx']);
-                    $exportCsvParams = array_merge($exportQuery, ['format' => 'csv']);
-                @endphp
-                <a href="{{ route('reports.export', $exportXlsxParams) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Excel (.xlsx)</a>
-                <a href="{{ route('reports.export', $exportCsvParams) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">CSV (.csv)</a>
+            {{-- Dropdown untuk Unduh Laporan --}}
+            <div class="relative shrink-0" x-data="{ open: false }">
+                <button @click="open = !open" class="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 xl:w-48">
+                    <svg class="h-5 w-5" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" x2="12" y1="15" y2="3"></line>
+                    </svg>
+                    <span>Unduh Laporan</span>
+                </button>
+                <div x-show="open" @click.away="open = false" class="absolute right-0 top-full z-10 mt-2 w-48 overflow-hidden rounded-xl border border-gray-100 bg-white text-sm shadow-lg">
+                    @php
+                        $exportXlsxParams = array_merge($exportQuery, ['format' => 'xlsx']);
+                        $exportCsvParams = array_merge($exportQuery, ['format' => 'csv']);
+                    @endphp
+                    <a href="{{ route('reports.export', $exportXlsxParams) }}" class="block px-4 py-2 text-gray-700 transition hover:bg-gray-50">Excel (.xlsx)</a>
+                    <a href="{{ route('reports.export', $exportCsvParams) }}" class="block px-4 py-2 text-gray-700 transition hover:bg-gray-50">CSV (.csv)</a>
+                </div>
             </div>
         </div>
     </div>
