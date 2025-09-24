@@ -28,6 +28,7 @@ class Transaction extends Model
         'proof_filename',
         'proof_original_name',
         'proof_remote_id',
+        'proof_token',
     ];
 
     /**
@@ -75,6 +76,14 @@ class Transaction extends Model
 
             if ($baseLink && $this->proof_path) {
                 return rtrim($baseLink, '/').'/'.ltrim($this->proof_path, '/');
+            }
+
+            return null;
+        }
+
+        if ($this->proof_disk === 'local') {
+            if ($this->proof_token) {
+                return route('transactions.proof.show', ['transaction' => $this->proof_token]);
             }
 
             return null;
