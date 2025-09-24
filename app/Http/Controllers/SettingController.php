@@ -45,6 +45,7 @@ class SettingController extends Controller
             'title' => 'Penyimpanan Bukti Transaksi',
             'transaction_proof_storage' => Setting::get('transaction_proof_storage', 'server'),
             'transaction_proof_server_directory' => Setting::get('transaction_proof_server_directory', 'transaction-proofs'),
+            'transaction_proof_drive_folder_id' => Setting::get('transaction_proof_drive_folder_id'),
             'transaction_proof_drive_directory' => Setting::get('transaction_proof_drive_directory'),
             'transaction_proof_drive_link' => Setting::get('transaction_proof_drive_link'),
         ]);
@@ -100,6 +101,7 @@ class SettingController extends Controller
         $validated = $request->validate([
             'transaction_proof_storage' => 'required|in:server,drive',
             'transaction_proof_server_directory' => 'nullable|string|max:255',
+            'transaction_proof_drive_folder_id' => 'nullable|string|max:255',
             'transaction_proof_drive_directory' => 'nullable|string|max:255',
             'transaction_proof_drive_link' => 'nullable|url',
         ]);
@@ -107,6 +109,9 @@ class SettingController extends Controller
         $storageTarget = $validated['transaction_proof_storage'];
         $serverDirectory = isset($validated['transaction_proof_server_directory'])
             ? trim($validated['transaction_proof_server_directory'])
+            : '';
+        $driveFolderId = isset($validated['transaction_proof_drive_folder_id'])
+            ? trim($validated['transaction_proof_drive_folder_id'])
             : '';
         $driveDirectory = isset($validated['transaction_proof_drive_directory'])
             ? trim($validated['transaction_proof_drive_directory'])
@@ -123,6 +128,12 @@ class SettingController extends Controller
             ['value' => $serverDirectory]
         );
         Cache::forget('setting:transaction_proof_server_directory');
+
+        Setting::updateOrCreate(
+            ['key' => 'transaction_proof_drive_folder_id'],
+            ['value' => $driveFolderId]
+        );
+        Cache::forget('setting:transaction_proof_drive_folder_id');
 
         Setting::updateOrCreate(
             ['key' => 'transaction_proof_drive_directory'],

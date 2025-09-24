@@ -27,6 +27,7 @@ class Transaction extends Model
         'proof_path',
         'proof_filename',
         'proof_original_name',
+        'proof_remote_id',
     ];
 
     /**
@@ -66,6 +67,10 @@ class Transaction extends Model
         $fullPath = $this->proof_full_path;
 
         if ($this->proof_disk === 'drive') {
+            if ($this->proof_remote_id) {
+                return 'https://drive.google.com/file/d/'.$this->proof_remote_id.'/view?usp=drivesdk';
+            }
+
             $baseLink = Setting::get('transaction_proof_drive_link');
 
             if ($baseLink && $this->proof_path) {
