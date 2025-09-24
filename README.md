@@ -124,25 +124,36 @@ Pastikan Anda telah menginstal perangkat lunak berikut di sistem Anda:
     DB_PASSWORD=
     ```
 
-7.  **Jalankan migrasi database:**
+7.  **Aktifkan integrasi Google Drive (opsional namun direkomendasikan untuk bukti transaksi):**
+    - Buat service account khusus di Google Cloud dan unduh berkas kredensial JSON-nya.
+    - Simpan path atau isi JSON tersebut pada variabel environment berikut:
+      ```env
+      GOOGLE_DRIVE_SERVICE_ACCOUNT_CREDENTIALS=/path/to/service-account.json
+      GOOGLE_DRIVE_IMPERSONATE_USER=
+      GOOGLE_DRIVE_TEAM_DRIVE_ID=
+      ```
+    - Bagikan folder tujuan di Google Drive kepada service account dan catat ID foldernya.
+    - Buka menu **Pengaturan → Penyimpanan Bukti Transaksi**, pilih mode **Drive**, lalu isi ID folder tersebut.
+
+8.  **Jalankan migrasi database:**
     Ini akan membuat semua tabel yang diperlukan oleh aplikasi.
     ```sh
     php artisan migrate
     ```
 
-8.  **(Opsional) Jalankan <em>seeder</em> untuk mengisi data awal:**
+9.  **(Opsional) Jalankan <em>seeder</em> untuk mengisi data awal:**
     Ini akan mengisi database dengan data contoh (pengguna, kategori, dll).
     ```sh
     php artisan db:seed
     ```
 
-9.  **Compile <em>assets frontend</em>:**
+10. **Compile <em>assets frontend</em>:**
     Jalankan <em>Vite development server</em>.
     ```sh
     npm run dev
     ```
 
-10. **Jalankan <em>server development</em> lokal:**
+11. **Jalankan <em>server development</em> lokal:**
     Buka terminal baru dan jalankan perintah ini.
     ```sh
     php artisan serve

@@ -9,9 +9,15 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class TransactionProofService
 {
+    public function __construct(private GoogleDriveService $googleDriveService)
+    {
+    }
+
     public function prepareForStore(?UploadedFile $file, ?string $customName, Carbon $date, string $type): array
     {
         if (!$file) {
@@ -47,36 +53,67 @@ class TransactionProofService
             'proof_path' => $target['path'],
             'proof_filename' => $target['filename'],
             'proof_original_name' => $transaction->proof_original_name,
+            'proof_remote_id' => $transaction->proof_remote_id,
         ];
     }
 
     protected function storeFile(UploadedFile $file, ?string $customName, Carbon $date, string $type): array
     {
         $storageMode = $this->storageMode();
-        $baseDirectory = $this->baseDirectory($storageMode);
         $relativeDirectory = $this->buildRelativeDirectory($date, $type);
-        $filename = $this->generateFilename($file->getClientOriginalExtension(), $customName, $file->getClientOriginalName());
+        $filename = $this->generateFilename(
+            $file->getClientOriginalExtension(),
+            $customName,
+            $file->getClientOriginalName()
+        );
         $relativePath = ltrim($relativeDirectory.'/'.$filename, '/');
 
         if ($storageMode === 'drive') {
-            $directory = rtrim($baseDirectory, '/\\');
-            $absoluteDirectory = $this->joinPath($directory ?: storage_path('app/transaction-drive'), $relativeDirectory);
-            File::ensureDirectoryExists($absoluteDirectory);
-            $file->move($absoluteDirectory, $filename);
-            $disk = 'drive';
-        } else {
-            $disk = 'public';
-            $directory = trim($baseDirectory, '/');
-            $fullDirectory = $directory ? $directory.'/'.$relativeDirectory : $relativeDirectory;
-            Storage::disk($disk)->putFileAs($fullDirectory, $file, $filename);
+            return $this->storeFileOnDrive($file, $relativeDirectory, $filename, $relativePath);
         }
+
+        $disk = 'public';
+        $directory = trim($this->baseDirectory('server'), '/');
+        $fullDirectory = $directory ? $directory.'/'.$relativeDirectory : $relativeDirectory;
+        Storage::disk($disk)->putFileAs($fullDirectory, $file, $filename);
 
         return [
             'proof_disk' => $disk,
-            'proof_directory' => isset($directory) && $directory !== '' ? $directory : null,
+            'proof_directory' => $directory !== '' ? $directory : null,
             'proof_path' => $relativePath,
             'proof_filename' => $filename,
             'proof_original_name' => $file->getClientOriginalName(),
+            'proof_remote_id' => null,
+        ];
+    }
+
+    protected function storeFileOnDrive(UploadedFile $file, string $relativeDirectory, string $filename, string $relativePath): array
+    {
+        $folderId = $this->driveFolderId();
+
+        if (!$folderId) {
+            throw ValidationException::withMessages([
+                'proof' => 'ID folder Google Drive belum dikonfigurasi. Mohon perbarui pengaturan penyimpanan.',
+            ]);
+        }
+
+        try {
+            $result = $this->googleDriveService->upload($folderId, $relativeDirectory, $filename, $file);
+        } catch (Throwable $e) {
+            report($e);
+
+            throw ValidationException::withMessages([
+                'proof' => 'Gagal mengunggah bukti transaksi ke Google Drive. Silakan coba lagi atau hubungi administrator.',
+            ]);
+        }
+
+        return [
+            'proof_disk' => 'drive',
+            'proof_directory' => $folderId,
+            'proof_path' => $relativePath,
+            'proof_filename' => $filename,
+            'proof_original_name' => $file->getClientOriginalName(),
+            'proof_remote_id' => $result['id'] ?? null,
         ];
     }
 
@@ -86,17 +123,29 @@ class TransactionProofService
             return;
         }
 
-        $fullPath = $this->absolutePath($transaction->proof_directory, $transaction->proof_path, $transaction->proof_disk);
+        if ($transaction->proof_disk === 'drive') {
+            if ($transaction->proof_remote_id) {
+                try {
+                    $this->googleDriveService->delete($transaction->proof_remote_id);
+                } catch (Throwable $e) {
+                    report($e);
+                }
 
-        if (!$fullPath) {
+                return;
+            }
+
+            $legacyPath = $this->absolutePath($transaction->proof_directory, $transaction->proof_path, 'drive');
+
+            if ($legacyPath && File::exists($legacyPath)) {
+                File::delete($legacyPath);
+            }
+
             return;
         }
 
-        if ($transaction->proof_disk === 'drive') {
-            if (File::exists($fullPath)) {
-                File::delete($fullPath);
-            }
+        $fullPath = $this->absolutePath($transaction->proof_directory, $transaction->proof_path, $transaction->proof_disk);
 
+        if (!$fullPath) {
             return;
         }
 
@@ -113,7 +162,11 @@ class TransactionProofService
         $directory = $transaction->proof_directory;
 
         if ($transaction->proof_disk === 'drive') {
-            $directory = $directory ?: rtrim($this->baseDirectory('drive'), '/\\');
+            if ($transaction->proof_remote_id) {
+                $directory = $directory ?: $this->driveFolderId();
+            } else {
+                $directory = $directory ?: $this->legacyDriveDirectory();
+            }
         } elseif ($transaction->proof_disk === 'public' || !$transaction->proof_disk) {
             $directory = $directory ?: trim($this->baseDirectory('server'), '/');
         }
@@ -135,6 +188,35 @@ class TransactionProofService
 
     protected function moveExisting(Transaction $transaction, array $target): void
     {
+        if ($transaction->proof_disk === 'drive' && $transaction->proof_remote_id) {
+            $baseFolderId = $target['directory'] ?: $this->driveFolderId() ?: $transaction->proof_directory;
+
+            if (!$baseFolderId) {
+                throw ValidationException::withMessages([
+                    'proof' => 'ID folder Google Drive tidak tersedia. Mohon perbarui pengaturan penyimpanan.',
+                ]);
+            }
+
+            $relativeDirectory = $this->extractRelativeDirectory($target['path']);
+
+            try {
+                $this->googleDriveService->move(
+                    $transaction->proof_remote_id,
+                    $baseFolderId,
+                    $relativeDirectory,
+                    $target['filename']
+                );
+            } catch (Throwable $e) {
+                report($e);
+
+                throw ValidationException::withMessages([
+                    'proof' => 'Gagal memperbarui bukti transaksi di Google Drive. Silakan coba lagi atau hubungi administrator.',
+                ]);
+            }
+
+            return;
+        }
+
         $currentPath = $this->absolutePath($transaction->proof_directory, $transaction->proof_path, $transaction->proof_disk);
         $newPath = $this->absolutePath($target['directory'], $target['path'], $target['disk']);
 
@@ -152,12 +234,18 @@ class TransactionProofService
             return null;
         }
 
-        $relative = $this->normalisePath($directory, $relativePath);
-
         if ($disk === 'drive') {
-            $base = $directory ?: rtrim($this->baseDirectory('drive'), '/\\');
+            if ($directory && $this->looksLikeLocalPath($directory)) {
+                return $this->joinPath($directory, $relativePath);
+            }
 
-            return $this->joinPath($base ?: storage_path('app/transaction-drive'), $relativePath);
+            $legacyDirectory = $this->legacyDriveDirectory();
+
+            if ($legacyDirectory) {
+                return $this->joinPath($legacyDirectory, $relativePath);
+            }
+
+            return null;
         }
 
         $disk = $disk ?: 'public';
@@ -166,17 +254,15 @@ class TransactionProofService
             return null;
         }
 
+        $relative = $this->normalisePath($directory, $relativePath);
+
         return Storage::disk($disk)->path($relative);
     }
 
     protected function baseDirectory(string $mode): string
     {
         if ($mode === 'drive') {
-            $driveDirectory = Setting::get('transaction_proof_drive_directory');
-
-            return $driveDirectory !== null && $driveDirectory !== ''
-                ? $driveDirectory
-                : storage_path('app/transaction-drive');
+            return $this->legacyDriveDirectory() ?: storage_path('app/transaction-drive');
         }
 
         $serverDirectory = Setting::get('transaction_proof_server_directory');
@@ -186,9 +272,57 @@ class TransactionProofService
             : 'transaction-proofs';
     }
 
+    protected function driveFolderId(): ?string
+    {
+        $folderId = Setting::get('transaction_proof_drive_folder_id');
+
+        if ($folderId) {
+            return $folderId;
+        }
+
+        $legacy = Setting::get('transaction_proof_drive_directory');
+
+        if ($legacy && !$this->looksLikeLocalPath($legacy)) {
+            return $legacy;
+        }
+
+        return null;
+    }
+
+    protected function legacyDriveDirectory(): ?string
+    {
+        $legacy = Setting::get('transaction_proof_drive_directory');
+
+        if ($legacy && $this->looksLikeLocalPath($legacy)) {
+            return rtrim($legacy, '/\\');
+        }
+
+        return null;
+    }
+
     protected function storageMode(): string
     {
         return Setting::get('transaction_proof_storage', 'server') === 'drive' ? 'drive' : 'server';
+    }
+
+    protected function extractRelativeDirectory(string $relativePath): string
+    {
+        $directory = dirname($relativePath);
+
+        if ($directory === '.' || $directory === DIRECTORY_SEPARATOR) {
+            return '';
+        }
+
+        return trim($directory, '/\\');
+    }
+
+    protected function looksLikeLocalPath(?string $value): bool
+    {
+        if (!$value) {
+            return false;
+        }
+
+        return str_contains($value, '/') || str_contains($value, '\\');
     }
 
     protected function buildRelativeDirectory(Carbon $date, string $type): string

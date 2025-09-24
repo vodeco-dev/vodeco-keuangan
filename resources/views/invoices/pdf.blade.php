@@ -1,7 +1,9 @@
 @php
     $manifestPath = public_path('build/manifest.json');
-    $manifest = json_decode(file_get_contents($manifestPath), true);
-    $cssPath = public_path('build/' . $manifest['resources/css/app.css']['file']);
+    $manifest = is_file($manifestPath) ? json_decode(file_get_contents($manifestPath), true) : null;
+    $cssFile = $manifest['resources/css/app.css']['file'] ?? null;
+    $cssPath = $cssFile ? public_path('build/' . $cssFile) : null;
+    $cssContent = $cssPath && is_file($cssPath) ? file_get_contents($cssPath) : '';
     $logoPath = public_path($settings['company_logo'] ?? 'vodeco.webp');
     $logoData = base64_encode(file_get_contents($logoPath));
     $signaturePath = public_path($settings['signature_image'] ?? 'image3.png');
@@ -15,7 +17,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice {{ $invoice->number }}</title>
     <style>
-        {!! file_get_contents($cssPath) !!}
+        {!! $cssContent !!}
         body {
             font-family: 'Arial', sans-serif;
         }

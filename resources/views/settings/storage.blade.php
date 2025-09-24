@@ -37,7 +37,7 @@
                             >
                             <span>
                                 <span class="block text-sm font-medium text-gray-900">Simpan di Drive</span>
-                                <span class="block text-xs text-gray-500">Gunakan path direktori drive yang terhubung ke server (misalnya /mnt/drive/bukti-transaksi).</span>
+                                <span class="block text-xs text-gray-500">Gunakan API Google Drive melalui service account agar bukti tersimpan langsung di cloud.</span>
                             </span>
                         </label>
                     </div>
@@ -64,20 +64,36 @@
                     </div>
 
                     <div>
-                        <label for="transaction_proof_drive_directory" class="block text-sm font-medium text-gray-700">Direktori Drive</label>
+                        <label for="transaction_proof_drive_folder_id" class="block text-sm font-medium text-gray-700">ID Folder Google Drive</label>
                         <input
                             type="text"
-                            id="transaction_proof_drive_directory"
-                            name="transaction_proof_drive_directory"
-                            value="{{ old('transaction_proof_drive_directory', $transaction_proof_drive_directory) }}"
+                            id="transaction_proof_drive_folder_id"
+                            name="transaction_proof_drive_folder_id"
+                            value="{{ old('transaction_proof_drive_folder_id', $transaction_proof_drive_folder_id) }}"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            placeholder="Contoh: /mnt/drive/bukti-transaksi"
+                            placeholder="Contoh: 1AbCdEfGh123456789"
                         >
-                        <p class="mt-1 text-xs text-gray-500">Gunakan path absolut yang dapat diakses server. Struktur folder {tahun}/{bulan}/{pemasukan|pengeluaran} dibuat otomatis.</p>
-                        @error('transaction_proof_drive_directory')
+                        <p class="mt-1 text-xs text-gray-500">Masukkan ID folder yang dibagikan ke service account. Sistem akan membuat struktur {tahun}/{bulan}/{pemasukan|pengeluaran} secara otomatis.</p>
+                        @error('transaction_proof_drive_folder_id')
                             <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
                         @enderror
                     </div>
+                </div>
+
+                <div>
+                    <label for="transaction_proof_drive_directory" class="block text-sm font-medium text-gray-700">Direktori Drive (Legacy - Opsional)</label>
+                    <input
+                        type="text"
+                        id="transaction_proof_drive_directory"
+                        name="transaction_proof_drive_directory"
+                        value="{{ old('transaction_proof_drive_directory', $transaction_proof_drive_directory) }}"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="Contoh: /mnt/drive/bukti-transaksi"
+                    >
+                    <p class="mt-1 text-xs text-gray-500">Opsional untuk kompatibilitas dengan penyimpanan drive yang dimount ke server. Hanya digunakan saat membersihkan berkas lama.</p>
+                    @error('transaction_proof_drive_directory')
+                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div>

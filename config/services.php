@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'google_drive' => [
+        'credentials' => env('GOOGLE_DRIVE_SERVICE_ACCOUNT_CREDENTIALS'),
+        'impersonate' => env('GOOGLE_DRIVE_IMPERSONATE_USER'),
+        'team_drive_id' => env('GOOGLE_DRIVE_TEAM_DRIVE_ID'),
+    ],
+
 ];
