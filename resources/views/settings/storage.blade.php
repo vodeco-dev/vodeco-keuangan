@@ -9,108 +9,29 @@
                 @csrf
 
                 <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Pilih Lokasi Penyimpanan</h3>
-                    <p class="text-sm text-gray-500 mt-1">Tentukan apakah bukti transaksi akan disimpan di server aplikasi atau di direktori drive eksternal.</p>
-
-                    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <label class="flex items-start gap-3 rounded-lg border p-4 hover:border-blue-400 {{ old('transaction_proof_storage', $transaction_proof_storage) === 'server' ? 'border-blue-500 bg-blue-50' : 'border-gray-200' }}">
-                            <input
-                                type="radio"
-                                name="transaction_proof_storage"
-                                value="server"
-                                class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                {{ old('transaction_proof_storage', $transaction_proof_storage) === 'server' ? 'checked' : '' }}
-                            >
-                            <span>
-                                <span class="block text-sm font-medium text-gray-900">Simpan di Server</span>
-                                <span class="block text-xs text-gray-500">File akan disimpan di penyimpanan aplikasi (storage/app/public).</span>
-                            </span>
-                        </label>
-
-                        <label class="flex items-start gap-3 rounded-lg border p-4 hover:border-blue-400 {{ old('transaction_proof_storage', $transaction_proof_storage) === 'drive' ? 'border-blue-500 bg-blue-50' : 'border-gray-200' }}">
-                            <input
-                                type="radio"
-                                name="transaction_proof_storage"
-                                value="drive"
-                                class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
-                                {{ old('transaction_proof_storage', $transaction_proof_storage) === 'drive' ? 'checked' : '' }}
-                            >
-                            <span>
-                                <span class="block text-sm font-medium text-gray-900">Simpan di Drive</span>
-                                <span class="block text-xs text-gray-500">Gunakan API Google Drive melalui service account agar bukti tersimpan langsung di cloud.</span>
-                            </span>
-                        </label>
-                    </div>
-                    @error('transaction_proof_storage')
-                        <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <div>
-                        <label for="transaction_proof_server_directory" class="block text-sm font-medium text-gray-700">Direktori di Server</label>
-                        <input
-                            type="text"
-                            id="transaction_proof_server_directory"
-                            name="transaction_proof_server_directory"
-                            value="{{ old('transaction_proof_server_directory', $transaction_proof_server_directory) }}"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            placeholder="Contoh: transaction-proofs"
-                        >
-                        <p class="mt-1 text-xs text-gray-500">Direktori relatif dari <code>storage/app/public</code>. Sistem akan membuat struktur {tahun}/{bulan}/{pemasukan|pengeluaran} secara otomatis.</p>
-                        @error('transaction_proof_server_directory')
-                            <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div>
-                        <label for="transaction_proof_drive_folder_id" class="block text-sm font-medium text-gray-700">ID Folder Google Drive</label>
-                        <input
-                            type="text"
-                            id="transaction_proof_drive_folder_id"
-                            name="transaction_proof_drive_folder_id"
-                            value="{{ old('transaction_proof_drive_folder_id', $transaction_proof_drive_folder_id) }}"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            placeholder="Contoh: 1AbCdEfGh123456789"
-                        >
-                        <p class="mt-1 text-xs text-gray-500">Masukkan ID folder yang dibagikan ke service account. Sistem akan membuat struktur {tahun}/{bulan}/{pemasukan|pengeluaran} secara otomatis.</p>
-                        @error('transaction_proof_drive_folder_id')
-                            <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
-                        @enderror
+                    <h3 class="text-lg font-semibold text-gray-900">Lokasi Penyimpanan</h3>
+                    <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <span class="block text-sm font-medium text-gray-900">Penyimpanan Server Aktif</span>
+                        <span class="block text-xs text-gray-500">Semua bukti transaksi akan disimpan secara lokal di dalam server aplikasi. Opsi penyimpanan eksternal telah dinonaktifkan.</span>
                     </div>
                 </div>
 
                 <div>
-                    <label for="transaction_proof_drive_directory" class="block text-sm font-medium text-gray-700">Direktori Drive (Legacy - Opsional)</label>
+                    <label for="transaction_proof_server_directory" class="block text-sm font-medium text-gray-700">Direktori di Server</label>
                     <input
                         type="text"
-                        id="transaction_proof_drive_directory"
-                        name="transaction_proof_drive_directory"
-                        value="{{ old('transaction_proof_drive_directory', $transaction_proof_drive_directory) }}"
+                        id="transaction_proof_server_directory"
+                        name="transaction_proof_server_directory"
+                        value="{{ old('transaction_proof_server_directory', $transaction_proof_server_directory) }}"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        placeholder="Contoh: /mnt/drive/bukti-transaksi"
+                        placeholder="Contoh: transaction-proofs"
                     >
-                    <p class="mt-1 text-xs text-gray-500">Opsional untuk kompatibilitas dengan penyimpanan drive yang dimount ke server. Hanya digunakan saat membersihkan berkas lama.</p>
-                    @error('transaction_proof_drive_directory')
+                    <p class="mt-1 text-xs text-gray-500">Direktori relatif dari <code>storage/app/public</code>. Sistem akan membuat struktur {tahun}/{bulan}/{pemasukan|pengeluaran} secara otomatis.</p>
+                    @error('transaction_proof_server_directory')
                         <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
-                <div>
-                    <label for="transaction_proof_drive_link" class="block text-sm font-medium text-gray-700">Link Drive (Opsional)</label>
-                    <input
-                        type="url"
-                        id="transaction_proof_drive_link"
-                        name="transaction_proof_drive_link"
-                        value="{{ old('transaction_proof_drive_link', $transaction_proof_drive_link) }}"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        placeholder="https://drive.google.com/drive/folders/..."
-                    >
-                    <p class="mt-1 text-xs text-gray-500">Link akan digunakan untuk membangun URL akses ketika bukti disimpan di drive.</p>
-                    @error('transaction_proof_drive_link')
-                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
 
                 <div class="rounded-lg bg-blue-50 p-4 text-sm text-blue-700">
                     <p class="font-semibold">Struktur Folder Otomatis</p>

@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -14,10 +15,6 @@ use Throwable;
 
 class TransactionProofService
 {
-    public function __construct(private GoogleDriveService $googleDriveService)
-    {
-    }
-
     public function prepareForStore(?UploadedFile $file, ?string $customName, Carbon $date, string $type): array
     {
         if (!$file) {
@@ -98,12 +95,15 @@ class TransactionProofService
         }
 
         try {
+            Log::info('Attempting to upload proof to Google Drive.', ['folder_id' => $folderId, 'directory' => $relativeDirectory, 'filename' => $filename]);
             $result = $this->googleDriveService->upload($folderId, $relativeDirectory, $filename, $file);
+            Log::info('Successfully uploaded proof to Google Drive.', ['result' => $result]);
         } catch (Throwable $e) {
+            Log::error('Failed to upload proof to Google Drive.', ['exception' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             report($e);
 
             throw ValidationException::withMessages([
-                'proof' => 'Gagal mengunggah bukti transaksi ke Google Drive. Silakan coba lagi atau hubungi administrator.',
+                'proof' => 'Gagal mengunggah bukti transaksi ke Google Drive. Pesan error: '.$e->getMessage(),
             ]);
         }
 
@@ -302,7 +302,7 @@ class TransactionProofService
 
     protected function storageMode(): string
     {
-        return Setting::get('transaction_proof_storage', 'server') === 'drive' ? 'drive' : 'server';
+        return 'server';
     }
 
     protected function extractRelativeDirectory(string $relativePath): string

@@ -43,11 +43,7 @@ class SettingController extends Controller
     {
         return view('settings.storage', [
             'title' => 'Penyimpanan Bukti Transaksi',
-            'transaction_proof_storage' => Setting::get('transaction_proof_storage', 'server'),
             'transaction_proof_server_directory' => Setting::get('transaction_proof_server_directory', 'transaction-proofs'),
-            'transaction_proof_drive_folder_id' => Setting::get('transaction_proof_drive_folder_id'),
-            'transaction_proof_drive_directory' => Setting::get('transaction_proof_drive_directory'),
-            'transaction_proof_drive_link' => Setting::get('transaction_proof_drive_link'),
         ]);
     }
 
@@ -99,29 +95,12 @@ class SettingController extends Controller
     public function updateStorage(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'transaction_proof_storage' => 'required|in:server,drive',
             'transaction_proof_server_directory' => 'nullable|string|max:255',
-            'transaction_proof_drive_folder_id' => 'nullable|string|max:255',
-            'transaction_proof_drive_directory' => 'nullable|string|max:255',
-            'transaction_proof_drive_link' => 'nullable|url',
         ]);
 
-        $storageTarget = $validated['transaction_proof_storage'];
         $serverDirectory = isset($validated['transaction_proof_server_directory'])
             ? trim($validated['transaction_proof_server_directory'])
             : '';
-        $driveFolderId = isset($validated['transaction_proof_drive_folder_id'])
-            ? trim($validated['transaction_proof_drive_folder_id'])
-            : '';
-        $driveDirectory = isset($validated['transaction_proof_drive_directory'])
-            ? trim($validated['transaction_proof_drive_directory'])
-            : '';
-        $driveLink = isset($validated['transaction_proof_drive_link'])
-            ? trim($validated['transaction_proof_drive_link'])
-            : '';
-
-        Setting::updateOrCreate(['key' => 'transaction_proof_storage'], ['value' => $storageTarget]);
-        Cache::forget('setting:transaction_proof_storage');
 
         Setting::updateOrCreate(
             ['key' => 'transaction_proof_server_directory'],
@@ -129,23 +108,11 @@ class SettingController extends Controller
         );
         Cache::forget('setting:transaction_proof_server_directory');
 
-        Setting::updateOrCreate(
-            ['key' => 'transaction_proof_drive_folder_id'],
-            ['value' => $driveFolderId]
-        );
-        Cache::forget('setting:transaction_proof_drive_folder_id');
-
-        Setting::updateOrCreate(
-            ['key' => 'transaction_proof_drive_directory'],
-            ['value' => $driveDirectory]
-        );
-        Cache::forget('setting:transaction_proof_drive_directory');
-
-        Setting::updateOrCreate(
-            ['key' => 'transaction_proof_drive_link'],
-            ['value' => $driveLink]
-        );
-        Cache::forget('setting:transaction_proof_drive_link');
+        // Since storage is forced to server, we can optionally clean up the old setting
+        if (Setting::get('transaction_proof_storage') === 'drive') {
+            Setting::updateOrCreate(['key' => 'transaction_proof_storage'], ['value' => 'server']);
+            Cache::forget('setting:transaction_proof_storage');
+        }
 
         return redirect()->route('settings.storage')
             ->with('success', 'Pengaturan penyimpanan bukti transaksi diperbarui.');
