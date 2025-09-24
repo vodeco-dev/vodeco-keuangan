@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class TransactionController extends Controller
@@ -169,6 +170,35 @@ class TransactionController extends Controller
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil diperbarui.');
+    }
+
+    public function showProof(Transaction $transaction)
+    {
+        if (auth()->user()->id !== $transaction->user_id) {
+            abort(403, 'UNAUTHORIZED ACTION');
+        }
+
+        if (!$transaction->proof_path) {
+            abort(404);
+        }
+
+        $disk = $transaction->proof_disk ?: 'local';
+
+        if ($disk !== 'local') {
+            abort(404);
+        }
+
+        $relativePath = ltrim($transaction->proof_path, '/');
+
+        if ($transaction->proof_directory) {
+            $relativePath = trim($transaction->proof_directory, '/').'/'.$relativePath;
+        }
+
+        if (!Storage::disk($disk)->exists($relativePath)) {
+            abort(404);
+        }
+
+        return response()->file(Storage::disk($disk)->path($relativePath));
     }
 
     /**

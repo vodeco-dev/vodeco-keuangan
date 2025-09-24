@@ -69,7 +69,7 @@ class TransactionProofService
             return $this->storeFileOnDrive($file, $relativeDirectory, $filename, $relativePath);
         }
 
-        $disk = 'public';
+        $disk = 'local';
         $directory = trim($this->baseDirectory('server'), '/');
         $fullDirectory = $directory ? $directory.'/'.$relativeDirectory : $relativeDirectory;
         Storage::disk($disk)->putFileAs($fullDirectory, $file, $filename);
@@ -81,6 +81,7 @@ class TransactionProofService
             'proof_filename' => $filename,
             'proof_original_name' => $file->getClientOriginalName(),
             'proof_remote_id' => null,
+            'proof_token' => $this->generateUniqueToken(),
         ];
     }
 
@@ -114,6 +115,7 @@ class TransactionProofService
             'proof_filename' => $filename,
             'proof_original_name' => $file->getClientOriginalName(),
             'proof_remote_id' => $result['id'] ?? null,
+            'proof_token' => $this->generateUniqueToken(),
         ];
     }
 
@@ -149,7 +151,7 @@ class TransactionProofService
             return;
         }
 
-        $disk = $transaction->proof_disk ?: 'public';
+        $disk = $transaction->proof_disk ?: 'local';
 
         if (in_array($disk, array_keys(config('filesystems.disks', [])), true)) {
             Storage::disk($disk)->delete($this->normalisePath($transaction->proof_directory, $transaction->proof_path));
@@ -167,7 +169,7 @@ class TransactionProofService
             } else {
                 $directory = $directory ?: $this->legacyDriveDirectory();
             }
-        } elseif ($transaction->proof_disk === 'public' || !$transaction->proof_disk) {
+        } elseif (in_array($transaction->proof_disk, ['public', 'local', null], true)) {
             $directory = $directory ?: trim($this->baseDirectory('server'), '/');
         }
 
@@ -176,7 +178,7 @@ class TransactionProofService
         $relativeDirectory = $this->buildRelativeDirectory($date, $type);
         $relativePath = ltrim($relativeDirectory.'/'.$filename, '/');
 
-        $disk = $transaction->proof_disk ?: ($storageMode === 'drive' ? 'drive' : 'public');
+        $disk = $transaction->proof_disk ?: ($storageMode === 'drive' ? 'drive' : 'local');
 
         return [
             'disk' => $disk,
@@ -248,7 +250,7 @@ class TransactionProofService
             return null;
         }
 
-        $disk = $disk ?: 'public';
+        $disk = $disk ?: 'local';
 
         if (!in_array($disk, array_keys(config('filesystems.disks', [])), true)) {
             return null;
@@ -267,9 +269,17 @@ class TransactionProofService
 
         $serverDirectory = Setting::get('transaction_proof_server_directory');
 
-        return $serverDirectory !== null && $serverDirectory !== ''
-            ? $serverDirectory
-            : 'transaction-proofs';
+        if ($serverDirectory !== null && $serverDirectory !== '') {
+            $serverDirectory = trim($serverDirectory, '/');
+
+            if ($this->looksLikeLocalPath($serverDirectory)) {
+                return $serverDirectory;
+            }
+
+            return 'private/'.$serverDirectory;
+        }
+
+        return 'private/transaction-proofs';
     }
 
     protected function driveFolderId(): ?string
@@ -351,6 +361,15 @@ class TransactionProofService
         $extension = ltrim($extension, '.');
 
         return strtolower($name.'.'.($extension ?: 'jpg'));
+    }
+
+    protected function generateUniqueToken(): string
+    {
+        do {
+            $token = Str::random(40);
+        } while (Transaction::where('proof_token', $token)->exists());
+
+        return $token;
     }
 
     protected function normalisePath(?string $directory, string $relativePath): string

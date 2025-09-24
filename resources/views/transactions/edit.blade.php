@@ -118,7 +118,11 @@
                                 <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
                             @enderror
 
-                            @if($transaction->proof_url)
+                            @if($transaction->proof_token && $transaction->proof_disk === 'local')
+                                <p class="text-xs text-blue-600 mt-2">
+                                    <a href="{{ route('transactions.proof.show', ['transaction' => $transaction->proof_token]) }}" target="_blank" class="underline">Lihat bukti saat ini</a>
+                                </p>
+                            @elseif($transaction->proof_url)
                                 <p class="text-xs text-blue-600 mt-2">
                                     <a href="{{ $transaction->proof_url }}" target="_blank" class="underline">Lihat bukti saat ini</a>
                                 </p>
