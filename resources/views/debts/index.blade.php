@@ -6,7 +6,7 @@
 
     {{-- Header --}}
     <div class="flex justify-between items-center mb-8">
-        <h2 class="text-3xl font-bold text-gray-800">Manajemen Pass Through & Down Payment</h2>
+        <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Pass Through & Down Payment</h2>
         <button @click="addModal = true" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -83,7 +83,7 @@
                 <tbody class="divide-y">
                     @forelse ($debts as $debt)
                     <tr>
-                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ $debt->description }}</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{{ $debt->description }}</td>
                         <td class="px-4 py-3 text-sm text-gray-500">{{ $debt->related_party }}</td>
                         <td class="px-4 py-3 text-sm">
                             @if ($debt->type == 'down_payment')
@@ -119,7 +119,7 @@
                                 @endif
 
                                 {{-- Tombol Detail Riwayat --}}
-                                <button @click="detailModal = true; selectedDebt = {{ $debt }}" class="text-gray-500 hover:text-gray-800" title="Lihat Riwayat Pembayaran">
+                                <button @click="detailModal = true; selectedDebt = {{ $debt }}" class="text-gray-500 hover:text-gray-800 dark:text-white" title="Lihat Riwayat Pembayaran">
                                     <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -255,7 +255,7 @@
                             <template x-for="payment in selectedDebt.payments" :key="payment.id">
                                 <tr>
                                     <td class="px-4 py-3 text-sm text-gray-500" x-text="new Date(payment.payment_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })"></td>
-                                    <td class="px-4 py-3 text-sm font-medium text-gray-900" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(payment.amount)"></td>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(payment.amount)"></td>
                                     <td class="px-4 py-3 text-sm text-gray-500" x-text="payment.notes || '-'"></td>
                                 </tr>
                             </template>

@@ -2,11 +2,11 @@
 
 @section('content')
     <div class="max-w-2xl mx-auto">
-        <h2 class="text-3xl font-bold text-gray-800 mb-8">Manajemen Data</h2>
+        <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-8">Manajemen Data</h2>
 
         {{-- Kartu Ekspor Data --}}
         <div class="bg-white rounded-lg shadow-sm p-8">
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">Ekspor Data Transaksi</h3>
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Ekspor Data Transaksi</h3>
             <p class="text-gray-600 mb-6">Pilih rentang tanggal dan format file untuk mengekspor data transaksi Anda.</p>
 
             <form method="POST" action="{{ route('settings.export') }}">

@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
             {{ __('Invoices') }}
         </h2>
     </x-slot>
@@ -33,7 +33,7 @@
                                 <td class="px-6 py-4 text-right">Rp {{ number_format($invoice->total - $invoice->down_payment, 0, ',', '.') }}</td>
                                 <td class="px-6 py-4 text-center">
                                     <div class="flex justify-center items-center gap-2">
-                                        <a href="{{ route('invoices.pdf', $invoice) }}" class="text-gray-600 hover:text-gray-900" target="_blank">PDF</a>
+                                        <a href="{{ route('invoices.pdf', $invoice) }}" class="text-gray-600 hover:text-gray-900 dark:text-white" target="_blank">PDF</a>
                                         @if($invoice->public_token)
                                         <button type="button" class="text-purple-600 hover:text-purple-900" onclick="copyToClipboard('{{ route('invoices.public.show', ['token' => $invoice->public_token]) }}', this)">
                                             {{ __('Copy Link') }}
@@ -70,7 +70,7 @@
                     <form :action="'/invoices/' + selectedInvoice + '/pay'" method="POST">
                         @csrf
                         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
                                 Record Payment
                             </h3>
                             <div class="mt-2">

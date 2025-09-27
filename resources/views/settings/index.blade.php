@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
 @section('content')
-    <h2 class="text-3xl font-bold text-gray-800 mb-8">Pengaturan</h2>
+    <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-8">Pengaturan</h2>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {{-- Kolom 1 --}}
         <div class="space-y-6">
             {{-- Kartu Akun --}}
             <div class="bg-white rounded-lg shadow-sm p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Akun</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Akun</h3>
                 <ul class="space-y-3">
                     <li class="flex items-center justify-between">
                         <span class="text-gray-600">Ubah Profil</span>
@@ -25,7 +25,7 @@
 
             {{-- Kartu Aplikasi --}}
             <div class="bg-white rounded-lg shadow-sm p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Aplikasi</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Aplikasi</h3>
                 <ul class="space-y-3">
                     <li class="flex items-center justify-between">
                         <span class="text-gray-600">Preferensi Tampilan</span>
@@ -51,7 +51,7 @@
         <div class="space-y-6">
             {{-- Kartu Manajemen Data --}}
             <div class="bg-white rounded-lg shadow-sm p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Manajemen Data</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Manajemen Data</h3>
                 <ul class="space-y-3">
                     <li class="flex items-center justify-between">
                         <span class="text-gray-600">Ekspor Data</span>
@@ -76,7 +76,7 @@
 
             {{-- Kartu Tentang Aplikasi --}}
             <div class="bg-white rounded-lg shadow-sm p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Tentang Aplikasi</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tentang Aplikasi</h3>
                 <ul class="space-y-3">
                     <li class="flex items-center justify-between">
                         <span class="text-gray-600">Versi Aplikasi</span>
@@ -97,7 +97,7 @@
         {{-- Kolom 3 --}}
         <div class="lg:col-span-1 md:col-span-2">
             <div class="bg-white rounded-lg shadow-sm p-6 h-full">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Bantuan & Dukungan</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Bantuan & Dukungan</h3>
                 <ul class="space-y-3">
                     <li class="flex items-center justify-between">
                         <span class="text-gray-600">Pusat Bantuan</span>

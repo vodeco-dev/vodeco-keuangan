@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
             {{ __('Buat Invoice Baru') }}
         </h2>
     </x-slot>
@@ -12,7 +12,7 @@
                     @csrf
 
                     {{-- Informasi Klien --}}
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Informasi Klien</h3>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Informasi Klien</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>
                             <label for="client_name" class="block text-sm font-medium text-gray-700">Nama Klien</label>
@@ -29,7 +29,7 @@
                     </div>
 
                     {{-- Informasi Invoice --}}
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Detail Invoice</h3>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Detail Invoice</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>
                             <label for="due_date" class="block text-sm font-medium text-gray-700">Tanggal Jatuh Tempo</label>
@@ -38,7 +38,7 @@
                     </div>
 
                     {{-- Item Invoice --}}
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Item</h3>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Item</h3>
                     <div id="invoice-items" class="space-y-4">
                         <div class="grid grid-cols-12 gap-4 invoice-item">
                             <div class="col-span-5">
@@ -66,7 +66,7 @@
                     {{-- Total --}}
                     <div class="mt-6 pt-6 border-t border-gray-200 flex justify-end">
                         <div class="text-right">
-                            <p class="text-lg font-medium text-gray-900">Total: <span id="total-amount">Rp 0</span></p>
+                            <p class="text-lg font-medium text-gray-900 dark:text-white">Total: <span id="total-amount">Rp 0</span></p>
                         </div>
                     </div>
 
