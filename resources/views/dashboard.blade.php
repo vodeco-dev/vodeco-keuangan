@@ -76,7 +76,7 @@
 
         {{-- Transaksi Terbaru --}}
         <div>
-            <h3 class="text-xl font-bold text-gray-900  mb-4">Transaksi Terbaru</h3>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Transaksi Terbaru</h3>
             <div class="overflow-x-auto bg-white rounded-2xl shadow-lg">
                 <table class="w-full text-left">
                     <thead class="border-b border-gray-200">

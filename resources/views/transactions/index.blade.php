@@ -71,7 +71,7 @@
                 </div>
                 <div class="p-6 bg-white rounded-lg shadow-sm">
                     <p class="text-sm font-medium text-gray-500">Saldo</p>
-                    <p class="mt-1 text-3xl font-bold text-gray-800 dark:text-white">Rp {{ number_format($saldo, 0, ',', '.') }}</p>
+                    <p class="mt-1 text-3xl font-bold text-gray-800 ">Rp {{ number_format($saldo, 0, ',', '.') }}</p>
                 </div>
             </div>
 
@@ -301,7 +301,7 @@
             >
                 <div class="absolute inset-0" @click="close()"></div>
                 <div class="relative z-10 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl" @click.stop>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Ajukan Penghapusan Transaksi</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 ">Ajukan Penghapusan Transaksi</h3>
                     <p class="mt-2 text-sm text-gray-600" x-text="transactionDescription ? 'Transaksi: ' + transactionDescription : 'Transaksi tanpa deskripsi.'"></p>
 
                     <form class="mt-4 space-y-4" @submit.prevent="submitReason">
