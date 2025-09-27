@@ -138,7 +138,7 @@ class ReportController extends Controller
         $validated = $request->validated();
         $startDate = $validated['start_date'];
         $endDate = $validated['end_date'];
-        $format = $validated['format'] ?? 'xlsx'; // xlsx atau csv
+        $format = $validated['format'] ?? 'xlsx';
         $currentUser = $request->user();
         $shouldFilterByUser = ! in_array($currentUser->role, [Role::ADMIN, Role::ACCOUNTANT]);
 

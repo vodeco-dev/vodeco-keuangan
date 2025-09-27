@@ -95,10 +95,8 @@
                 <div x-show="open" @click.away="open = false" class="absolute right-0 top-full z-10 mt-2 w-48 overflow-hidden rounded-xl border border-gray-100 bg-white text-sm shadow-lg">
                     @php
                         $exportXlsxParams = array_merge($exportQuery, ['format' => 'xlsx']);
-                        $exportCsvParams = array_merge($exportQuery, ['format' => 'csv']);
                     @endphp
                     <a href="{{ route('reports.export', $exportXlsxParams) }}" class="block px-4 py-2 text-gray-700 transition hover:bg-gray-50">Excel (.xlsx)</a>
-                    <a href="{{ route('reports.export', $exportCsvParams) }}" class="block px-4 py-2 text-gray-700 transition hover:bg-gray-50">CSV (.csv)</a>
                 </div>
             </div>
         </div>
