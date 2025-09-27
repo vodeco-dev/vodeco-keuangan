@@ -50,6 +50,35 @@ class ReportTest extends TestCase
         });
     }
 
+    public function test_admin_report_accepts_empty_optional_filters()
+    {
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
+        $category = Category::factory()->create();
+        $now = now();
+
+        $transaction = Transaction::factory()->create([
+            'category_id' => $category->id,
+            'date' => $now->toDateString(),
+        ]);
+
+        $start = $now->copy()->startOfMonth()->toDateString();
+        $end = $now->copy()->endOfMonth()->toDateString();
+
+        $query = http_build_query([
+            'start_date' => $start,
+            'end_date' => $end,
+            'category_id' => '',
+            'type' => '',
+        ]);
+
+        $response = $this->actingAs($admin)->get("/reports?{$query}");
+
+        $response->assertStatus(200);
+        $response->assertViewHas('transactions', function ($transactions) use ($transaction) {
+            return $transactions->contains('id', $transaction->id);
+        });
+    }
+
     public function test_admin_report_shows_all_debts()
     {
         $admin = User::factory()->create(['role' => Role::ADMIN]);
