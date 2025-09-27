@@ -7,7 +7,7 @@
         {{-- Kartu Ekspor Data --}}
         <div class="bg-white rounded-lg shadow-sm p-8">
             <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Ekspor Data Transaksi</h3>
-            <p class="text-gray-600 mb-6">Pilih rentang tanggal dan format file untuk mengekspor data transaksi Anda.</p>
+            <p class="text-gray-600 mb-6">Pilih rentang tanggal untuk mengekspor data transaksi Anda dalam format Excel.</p>
 
             <form method="POST" action="{{ route('settings.export') }}">
                 @csrf
@@ -30,7 +30,6 @@
                     <label for="format" class="block text-sm font-medium text-gray-700 mb-1">Format File</label>
                     <select name="format" id="format" class="w-full border rounded-lg text-sm px-4 py-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="xlsx">Excel (.xlsx)</option>
-                        <option value="csv">CSV (.csv)</option>
                     </select>
                 </div>
 
