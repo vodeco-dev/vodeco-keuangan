@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
             {{ __('Kelola Kategori') }}
         </h2>
     </x-slot>
@@ -10,7 +10,7 @@
             
             {{-- Form Tambah Kategori --}}
             <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">Tambah Kategori Baru</h3>
+                <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Tambah Kategori Baru</h3>
                 <form action="{{ route('categories.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                     @csrf
                     <div class="md:col-span-1">
@@ -62,7 +62,7 @@
                             <tbody class="divide-y">
                                 @forelse ($pemasukan as $category)
                                     <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $category->name }}</td>
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{{ $category->name }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                                             <div class="flex justify-center items-center gap-4">
                                                 <button @click="editModalOpen = true; editCategory = {{ $category->toJson() }}" class="text-blue-600 hover:text-blue-900">Edit</button>
@@ -96,7 +96,7 @@
                             <tbody class="divide-y">
                                 @forelse ($pengeluaran as $category)
                                      <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $category->name }}</td>
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{{ $category->name }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                                             <div class="flex justify-center items-center gap-4">
                                                 <button @click="editModalOpen = true; editCategory = {{ $category->toJson() }}" class="text-blue-600 hover:text-blue-900">Edit</button>
@@ -137,7 +137,7 @@
                         </select>
                     </div>
                     <div class="flex justify-end gap-4 mt-6">
-                        <button type="button" @click="editModalOpen = false" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Batal</button>
+                        <button type="button" @click="editModalOpen = false" class="px-4 py-2 bg-gray-200 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300">Batal</button>
                         <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Simpan Perubahan</button>
                     </div>
                 </form>

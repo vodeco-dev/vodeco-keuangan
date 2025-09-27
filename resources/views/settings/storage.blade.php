@@ -2,16 +2,16 @@
 
 @section('content')
     <div class="max-w-3xl mx-auto space-y-6">
-        <h2 class="text-3xl font-bold text-gray-800">Penyimpanan Bukti Transaksi</h2>
+        <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Penyimpanan Bukti Transaksi</h2>
 
         <div class="bg-white rounded-lg shadow-sm p-8">
             <form method="POST" action="{{ route('settings.storage.update') }}" class="space-y-6">
                 @csrf
 
                 <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Lokasi Penyimpanan</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Lokasi Penyimpanan</h3>
                     <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                        <span class="block text-sm font-medium text-gray-900">Penyimpanan Server Aktif</span>
+                        <span class="block text-sm font-medium text-gray-900 dark:text-white">Penyimpanan Server Aktif</span>
                         <span class="block text-xs text-gray-500">Semua bukti transaksi akan disimpan secara lokal di dalam server aplikasi. Opsi penyimpanan eksternal telah dinonaktifkan.</span>
                     </div>
                 </div>

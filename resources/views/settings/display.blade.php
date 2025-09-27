@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <h2 class="text-3xl font-bold text-gray-800 mb-8">Preferensi Tampilan</h2>
+    <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-8">Preferensi Tampilan</h2>
 
     @if (session('success'))
         <div class="mb-4 p-4 bg-green-100 text-green-800 rounded">
