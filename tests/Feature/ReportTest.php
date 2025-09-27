@@ -139,6 +139,25 @@ class ReportTest extends TestCase
         });
     }
 
+    public function test_accountant_can_access_reports_and_exports()
+    {
+        $accountant = User::factory()->create(['role' => Role::ACCOUNTANT]);
+        $now = now();
+
+        $start = $now->copy()->startOfMonth()->toDateString();
+        $end = $now->copy()->endOfMonth()->toDateString();
+
+        $response = $this->actingAs($accountant)->get("/reports?start_date={$start}&end_date={$end}");
+
+        $response->assertStatus(200);
+
+        Excel::fake();
+
+        $exportResponse = $this->actingAs($accountant)->get("/reports/export?start_date={$start}&end_date={$end}&format=xlsx");
+
+        $exportResponse->assertStatus(200);
+    }
+
     public function test_staff_cannot_access_reports()
     {
         $staff = User::factory()->create(['role' => Role::STAFF]);
