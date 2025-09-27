@@ -15,7 +15,7 @@
         {{-- Kartu Total Saldo --}}
         <div class="p-6 bg-white rounded-2xl shadow-lg">
             <p class="text-sm font-medium text-gray-500">Total Saldo</p>
-            <p class="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
+            <p class="mt-1 text-3xl font-bold text-gray-900 ">
                 Rp {{ number_format($summary['saldo'] ?? 0, 0, ',', '.') }}
             </p>
         </div>
@@ -40,7 +40,7 @@
         {{-- Keadaan Keuangan --}}
         <div class="bg-white rounded-2xl shadow-lg p-6">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Keadaan Keuangan</h3>
+                <h3 class="text-xl font-bold text-gray-900 ">Keadaan Keuangan</h3>
                 <form action="{{ route('dashboard') }}" method="GET" class="flex items-center gap-2 mt-4 sm:mt-0">
                     <input type="month" name="month" class="border rounded-lg text-sm px-4 py-2" value="{{ $selected_month }}">
                     <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500">Filter</button>
@@ -76,7 +76,7 @@
 
         {{-- Transaksi Terbaru --}}
         <div>
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Transaksi Terbaru</h3>
+            <h3 class="text-xl font-bold text-gray-900  mb-4">Transaksi Terbaru</h3>
             <div class="overflow-x-auto bg-white rounded-2xl shadow-lg">
                 <table class="w-full text-left">
                     <thead class="border-b border-gray-200">
@@ -98,7 +98,7 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $transaction->category->name }}</div>
+                                            <div class="text-sm font-medium text-gray-900 ">{{ $transaction->category->name }}</div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">

@@ -114,7 +114,7 @@
         </div>
         <div>
             <p class="text-sm text-gray-500">Total Pemasukan</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">Rp{{ number_format($totalPemasukan, 0, ',', '.') }}</p>
+            <p class="text-2xl font-semibold text-gray-900 ">Rp{{ number_format($totalPemasukan, 0, ',', '.') }}</p>
         </div>
     </div>
     {{-- Total Pengeluaran --}}
@@ -124,7 +124,7 @@
         </div>
         <div>
             <p class="text-sm text-gray-500">Total Pengeluaran</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">Rp{{ number_format($totalPengeluaran, 0, ',', '.') }}</p>
+            <p class="text-2xl font-semibold text-gray-900 ">Rp{{ number_format($totalPengeluaran, 0, ',', '.') }}</p>
         </div>
     </div>
     {{-- Total Hutang --}}
@@ -134,7 +134,7 @@
         </div>
         <div>
             <p class="text-sm text-gray-500">Total Hutang</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">Rp{{ number_format($totalHutang, 0, ',', '.') }}</p>
+            <p class="text-2xl font-semibold text-gray-900 ">Rp{{ number_format($totalHutang, 0, ',', '.') }}</p>
         </div>
     </div>
     {{-- Total Pembayaran Hutang --}}
@@ -144,14 +144,14 @@
         </div>
         <div>
             <p class="text-sm text-gray-500">Pembayaran Hutang</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">Rp{{ number_format($totalPembayaranHutang, 0, ',', '.') }}</p>
+            <p class="text-2xl font-semibold text-gray-900 ">Rp{{ number_format($totalPembayaranHutang, 0, ',', '.') }}</p>
         </div>
     </div>
 </div>
 
 {{-- Grafik --}}
 <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
-    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Grafik Pemasukan vs Pengeluaran</h3>
+    <h3 class="text-xl font-semibold text-gray-900  mb-4">Grafik Pemasukan vs Pengeluaran</h3>
     <div class="h-80"><canvas id="financial-chart"></canvas></div>
     <button
         id="download-chart"
@@ -165,7 +165,7 @@
 
 {{-- Tabel Rincian Transaksi --}}
 <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
-    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Rincian Transaksi</h3>
+    <h3 class="text-xl font-semibold text-gray-900  mb-4">Rincian Transaksi</h3>
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead class="border-b">
@@ -179,7 +179,7 @@
             <tbody class="divide-y">
                 @forelse($transactions as $transaction)
                 <tr>
-                    <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMM YYYY') }}</td>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900  whitespace-nowrap">{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMM YYYY') }}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->category->name }}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->description }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right {{ $transaction->category->type == 'pemasukan' ? 'text-green-600' : 'text-red-600' }}">
@@ -198,7 +198,7 @@
 
 {{-- Tabel Rincian Hutang --}}
 <div class="bg-white rounded-lg shadow-sm p-6">
-    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Rincian Hutang</h3>
+    <h3 class="text-xl font-semibold text-gray-900  mb-4">Rincian Hutang</h3>
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead class="border-b">
@@ -220,7 +220,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">Rp{{ number_format($debt->amount, 0, ',', '.') }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-green-600">Rp{{ number_format($debt->paid_amount, 0, ',', '.') }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-red-600">Rp{{ number_format($debt->remaining_amount, 0, ',', '.') }}</td>
-                    <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{{ \Carbon\Carbon::parse($debt->due_date)->isoFormat('D MMM YYYY') }}</td>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900  whitespace-nowrap">{{ \Carbon\Carbon::parse($debt->due_date)->isoFormat('D MMM YYYY') }}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $debt->status == 'lunas' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                             {{ ucfirst($debt->status) }}
