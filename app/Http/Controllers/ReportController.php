@@ -10,6 +10,7 @@ use App\Models\Debt;
 use App\Models\Transaction;
 use App\Services\TransactionService;
 use Carbon\Carbon;
+
 use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
@@ -19,12 +20,10 @@ class ReportController extends Controller
     public function index(ReportRequest $request)
     {
         $validated = $request->validated();
-        // Tentukan rentang tanggal.
         $startDate = $validated['start_date'];
         $endDate = $validated['end_date'];
-
         $currentUser = $request->user();
-        $shouldFilterByUser = $currentUser->role === Role::STAFF;
+        $shouldFilterByUser = ! in_array($currentUser->role, [Role::ADMIN, Role::ACCOUNTANT]);
 
         $filters = [
             'category_id' => $validated['category_id'] ?? null,
@@ -60,12 +59,14 @@ class ReportController extends Controller
             ->orderBy('date', 'desc')
             ->get();
 
+
+
         // Hitung total pemasukan dan pengeluaran
         $totalPemasukan = $transactions->where('category.type', 'pemasukan')->sum('amount');
         $totalPengeluaran = $transactions->where('category.type', 'pengeluaran')->sum('amount');
         $selisih = $totalPemasukan - $totalPengeluaran;
 
-        // Ambil data hutang dalam rentang tanggal
+        // Ambil hutang dalam rentang tanggal
         $debts = Debt::with('payments')
             ->when($shouldFilterByUser, function ($query) use ($currentUser) {
                 $query->where('user_id', $currentUser->id);
@@ -139,7 +140,7 @@ class ReportController extends Controller
         $endDate = $validated['end_date'];
         $format = $validated['format'] ?? 'xlsx'; // xlsx atau csv
         $currentUser = $request->user();
-        $shouldFilterByUser = $currentUser->role === Role::STAFF;
+        $shouldFilterByUser = ! in_array($currentUser->role, [Role::ADMIN, Role::ACCOUNTANT]);
 
         $fileName = 'Laporan_Keuangan_'.$startDate.'_sampai_'.$endDate.'.'.$format;
 
@@ -154,4 +155,5 @@ class ReportController extends Controller
             $fileName
         );
     }
+
 }
