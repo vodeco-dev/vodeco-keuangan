@@ -52,10 +52,10 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
 
     // Laporan
     Route::get('/reports', [ReportController::class, 'index'])
-        ->middleware('role:admin, accountant')
+        ->middleware('role:admin,accountant')
         ->name('reports.index');
     Route::get('/reports/export', [ReportController::class, 'export'])
-        ->middleware('role:admin, accountant')
+        ->middleware('role:admin,accountant')
         ->name('reports.export');
 
     // Pengaturan
