@@ -107,7 +107,7 @@ class ReportRequest extends FormRequest
             case 'range':
             default:
                 $startDate = $startDate ?? Carbon::now()->startOfMonth()->toDateString();
-                $endDate = $endDate ?? Carbon::now()->toDateString();
+                $endDate = $endDate ?? Carbon::now()->endOfMonth()->toDateString();
                 break;
         }
 
