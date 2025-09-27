@@ -40,14 +40,38 @@ class ReportRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $period = $this->input('period', 'range');
+        $fieldsToNormalize = [
+            'category_id',
+            'type',
+            'period',
+            'date',
+            'month',
+            'year',
+            'format',
+            'start_date',
+            'end_date',
+        ];
+
+        $normalized = [];
+
+        foreach ($fieldsToNormalize as $field) {
+            if ($this->has($field) && $this->input($field) === '') {
+                $normalized[$field] = null;
+            }
+        }
+
+        if (! empty($normalized)) {
+            $this->merge($normalized);
+        }
+
+        $period = $this->input('period') ?: 'range';
 
         $startDate = $this->input('start_date');
         $endDate = $this->input('end_date');
 
         switch ($period) {
             case 'daily':
-                $date = $this->input('date', Carbon::now()->toDateString());
+                $date = $this->input('date') ?: Carbon::now()->toDateString();
                 try {
                     $parsed = Carbon::parse($date);
                 } catch (\Exception $e) {
@@ -57,8 +81,11 @@ class ReportRequest extends FormRequest
                 $endDate = $parsed->copy()->endOfDay()->toDateString();
                 break;
             case 'monthly':
-                $month = (int) $this->input('month', Carbon::now()->month);
-                $year = (int) $this->input('year', Carbon::now()->year);
+                $monthInput = $this->input('month');
+                $month = is_null($monthInput) ? Carbon::now()->month : (int) $monthInput;
+
+                $yearInput = $this->input('year');
+                $year = is_null($yearInput) ? Carbon::now()->year : (int) $yearInput;
                 if ($month < 1 || $month > 12) {
                     $month = Carbon::now()->month;
                 }
@@ -69,7 +96,8 @@ class ReportRequest extends FormRequest
                 $endDate = Carbon::create($year, $month, 1)->endOfMonth()->toDateString();
                 break;
             case 'yearly':
-                $year = (int) $this->input('year', Carbon::now()->year);
+                $yearInput = $this->input('year');
+                $year = is_null($yearInput) ? Carbon::now()->year : (int) $yearInput;
                 if ($year < 1900 || $year > 2100) {
                     $year = Carbon::now()->year;
                 }
