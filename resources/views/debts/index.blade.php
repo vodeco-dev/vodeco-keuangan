@@ -9,6 +9,10 @@
             ? ($defaultIncomeCategoryId ?? null)
             : ($defaultExpenseCategoryId ?? null);
     }
+
+    $oldAmount = old('amount');
+    $rawOldAmount = $oldAmount !== null ? preg_replace('/\D/', '', (string) $oldAmount) : '';
+    $formattedOldAmount = $rawOldAmount !== '' ? number_format((int) $rawOldAmount, 0, ',', '.') : '';
 @endphp
 {{-- Tambahkan 'detailModal' ke dalam x-data untuk mengontrol modal baru --}}
 <div x-data="{
@@ -24,6 +28,8 @@
         selectedCategoryId: '{{ $initialCategoryId ?? '' }}',
         defaultIncomeCategoryId: '{{ $defaultIncomeCategoryId ?? '' }}',
         defaultExpenseCategoryId: '{{ $defaultExpenseCategoryId ?? '' }}',
+        formattedAmount: @js($formattedOldAmount),
+        rawAmount: @js($rawOldAmount),
         openPaymentModal(debt) {
             this.selectedDebt = debt;
             const categories = debt.type === '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}'
@@ -51,6 +57,11 @@
                 this.selectedCategoryId = categories.length ? categories[0].id : '';
             }
         },
+        formatCurrencyInput(value) {
+            const digits = (value || '').replace(/\D/g, '');
+            this.rawAmount = digits;
+            this.formattedAmount = digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+        },
         paymentCategories() {
             if (!this.selectedDebt.type) {
                 return [];
@@ -62,6 +73,9 @@
         },
         init() {
             this.ensureAddFormCategory();
+            if (this.rawAmount || this.formattedAmount) {
+                this.formatCurrencyInput(this.rawAmount || this.formattedAmount);
+            }
         }
     }" x-init="init()">
 
@@ -314,7 +328,8 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Total Nilai</label>
-                        <input type="number" name="amount" step="any" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        <input type="text" x-model="formattedAmount" @input="formatCurrencyInput($event.target.value)" inputmode="numeric" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" autocomplete="off" required>
+                        <input type="hidden" name="amount" :value="rawAmount">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Jatuh Tempo (Opsional)</label>
