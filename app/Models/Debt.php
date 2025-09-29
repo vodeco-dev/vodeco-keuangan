@@ -22,6 +22,7 @@ class Debt extends Model
         'amount',
         'due_date',
         'status',
+        'category_id',
         'user_id',
     ];
 
@@ -51,5 +52,10 @@ class Debt extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 }

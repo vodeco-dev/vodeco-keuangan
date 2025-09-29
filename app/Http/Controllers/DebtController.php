@@ -4,13 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreDebtRequest;
 use App\Http\Requests\StoreDebtPaymentRequest;
+use App\Models\Category;
 use App\Models\Debt;
+use App\Models\Setting;
 use App\Models\Transaction;
 use App\Services\DebtService;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB; // Diambil dari branch 'main'
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class DebtController extends Controller
@@ -35,14 +41,33 @@ class DebtController extends Controller
      */
     public function index(Request $request): View
     {
-        $debts = $this->debtService->getDebts($request, $request->user());
+        $user = $request->user();
+
+        $debts = $this->debtService->getDebts($request, $user);
         $debts->appends($request->query());
 
-        $summary = $this->debtService->getSummary($request->user());
+        $summary = $this->debtService->getSummary($user);
+
+        $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
+        $expenseCategories = Category::where('type', 'pengeluaran')->orderBy('name')->get();
+
+        $allowedIncomeCategoryIds = $this->getAllowedCategoryIds($user->id, 'income');
+        $allowedExpenseCategoryIds = $this->getAllowedCategoryIds($user->id, 'expense');
+
+        $selectableIncomeCategories = $this->filterCategoriesByAllowed($incomeCategories, $allowedIncomeCategoryIds);
+        $selectableExpenseCategories = $this->filterCategoriesByAllowed($expenseCategories, $allowedExpenseCategoryIds);
 
         return view('debts.index', array_merge([
             'title' => 'Hutang & Piutang',
             'debts' => $debts,
+            'incomeCategories' => $incomeCategories,
+            'expenseCategories' => $expenseCategories,
+            'allowedIncomeCategoryIds' => $allowedIncomeCategoryIds,
+            'allowedExpenseCategoryIds' => $allowedExpenseCategoryIds,
+            'selectableIncomeCategories' => $selectableIncomeCategories,
+            'selectableExpenseCategories' => $selectableExpenseCategories,
+            'defaultIncomeCategoryId' => optional($selectableIncomeCategories->first())->id,
+            'defaultExpenseCategoryId' => optional($selectableExpenseCategories->first())->id,
         ], $summary));
     }
 
@@ -52,6 +77,8 @@ class DebtController extends Controller
     public function store(StoreDebtRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+
+        $this->ensureCategorySelectionIsAllowed($request->user()->id, $validated['type'], (int) $validated['category_id']);
 
         Debt::create(array_merge($validated, [
             'status' => Debt::STATUS_BELUM_LUNAS,
@@ -71,32 +98,43 @@ class DebtController extends Controller
         $this->authorize('update', $debt);
 
         $validated = $request->validated();
+        $categoryId = $validated['category_id'] ?? null;
+
+        if ($categoryId) {
+            $this->ensureCategorySelectionIsAllowed($request->user()->id, $debt->type, (int) $categoryId);
+        }
 
         try {
             // Keandalan: Pastikan semua operasi database berhasil atau tidak sama sekali
-            DB::transaction(function () use ($validated, $request, $debt) {
+            DB::transaction(function () use ($validated, $request, $debt, $categoryId) {
                 $debt->payments()->create([
                     'amount' => $validated['payment_amount'],
                     'payment_date' => $validated['payment_date'] ?? now(),
                     'notes' => $validated['notes'] ?? null,
                 ]);
 
+                if ($categoryId) {
+                    $category = $this->resolveCategoryForDebt($debt, (int) $categoryId);
+                    $debt->category()->associate($category);
+                    $debt->save();
+                }
+
                 // Reload relasi untuk mendapatkan paid_amount yang ter-update
                 $debt->load('payments');
 
                 // Cek jika sudah lunas
                 if ($debt->paid_amount >= $debt->amount) {
+                    if (!$debt->category_id) {
+                        throw ValidationException::withMessages([
+                            'category_id' => 'Kategori wajib dipilih untuk mencatat pelunasan.',
+                        ]);
+                    }
+
                     $debt->update(['status' => Debt::STATUS_LUNAS]);
 
-                    $categoryType = $debt->type == Debt::TYPE_DOWN_PAYMENT ? 'pemasukan' : 'pengeluaran';
-                    $category = \App\Models\Category::firstOrCreate(
-                        ['name' => 'Pelunasan ' . ucwords(str_replace('_', ' ', $debt->type))],
-                        ['type' => $categoryType]
-                    );
-
                     Transaction::create([
-                        'category_id' => $category->id,
-                        'date' => now(),
+                        'category_id' => $debt->category_id,
+                        'date' => $validated['payment_date'] ?? now(),
                         'amount' => $debt->amount,
                         'description' => 'Pelunasan: ' . $debt->description,
                         'user_id' => $request->user()->id, // Keamanan: Pastikan transaksi memiliki pemilik
@@ -107,10 +145,35 @@ class DebtController extends Controller
             });
 
             return redirect()->route('debts.index')->with('success', 'Pembayaran berhasil dicatat.');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             // Jika terjadi error, tampilkan pesan kesalahan
             return back()->withErrors('Terjadi kesalahan saat menyimpan pembayaran.');
         }
+    }
+
+    public function updateCategoryPreferences(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'allowed_income_categories' => ['nullable', 'array'],
+            'allowed_income_categories.*' => [
+                'integer',
+                Rule::exists('categories', 'id')->where('type', 'pemasukan'),
+            ],
+            'allowed_expense_categories' => ['nullable', 'array'],
+            'allowed_expense_categories.*' => [
+                'integer',
+                Rule::exists('categories', 'id')->where('type', 'pengeluaran'),
+            ],
+        ]);
+
+        $this->storeCategoryPreference($user->id, 'income', $validated['allowed_income_categories'] ?? []);
+        $this->storeCategoryPreference($user->id, 'expense', $validated['allowed_expense_categories'] ?? []);
+
+        return redirect()->route('debts.index')->with('success', 'Pengaturan kategori berhasil diperbarui.');
     }
 
     /**
@@ -121,5 +184,94 @@ class DebtController extends Controller
         // Keamanan: Otorisasi sudah ditangani oleh __construct()
         $debt->delete();
         return redirect()->route('debts.index')->with('success', 'Catatan berhasil dihapus.');
+    }
+
+    private function getAllowedCategoryIds(int $userId, string $type): Collection
+    {
+        $key = $this->getCategoryPreferenceKey($userId, $type);
+        $raw = Setting::get($key, '[]');
+        $decoded = json_decode($raw, true);
+
+        if (!is_array($decoded)) {
+            return collect();
+        }
+
+        return collect($decoded)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+    }
+
+    private function filterCategoriesByAllowed(Collection $categories, Collection $allowedIds): Collection
+    {
+        if ($allowedIds->isEmpty()) {
+            return $categories;
+        }
+
+        return $categories
+            ->filter(fn ($category) => $allowedIds->contains($category->id))
+            ->values();
+    }
+
+    private function storeCategoryPreference(int $userId, string $type, array $categoryIds): void
+    {
+        $key = $this->getCategoryPreferenceKey($userId, $type);
+        $normalized = collect($categoryIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        Setting::updateOrCreate(
+            ['key' => $key],
+            ['value' => json_encode($normalized->all())]
+        );
+
+        Cache::forget('setting:' . $key);
+    }
+
+    private function getCategoryPreferenceKey(int $userId, string $type): string
+    {
+        return match ($type) {
+            'income' => 'debt_allowed_income_categories_user_' . $userId,
+            'expense' => 'debt_allowed_expense_categories_user_' . $userId,
+            default => throw new \InvalidArgumentException('Tipe kategori tidak valid.'),
+        };
+    }
+
+    private function getExpectedCategoryType(string $debtType): string
+    {
+        return $debtType === Debt::TYPE_DOWN_PAYMENT ? 'pemasukan' : 'pengeluaran';
+    }
+
+    private function ensureCategorySelectionIsAllowed(int $userId, string $debtType, int $categoryId): void
+    {
+        $allowedIds = $debtType === Debt::TYPE_DOWN_PAYMENT
+            ? $this->getAllowedCategoryIds($userId, 'income')
+            : $this->getAllowedCategoryIds($userId, 'expense');
+
+        if ($allowedIds->isNotEmpty() && !$allowedIds->contains($categoryId)) {
+            throw ValidationException::withMessages([
+                'category_id' => 'Kategori yang dipilih tidak tersedia pada pengaturan.',
+            ]);
+        }
+    }
+
+    private function resolveCategoryForDebt(Debt $debt, int $categoryId): Category
+    {
+        $expectedType = $this->getExpectedCategoryType($debt->type);
+
+        $category = Category::whereKey($categoryId)
+            ->where('type', $expectedType)
+            ->first();
+
+        if (!$category) {
+            throw ValidationException::withMessages([
+                'category_id' => 'Kategori tidak sesuai dengan tipe catatan.',
+            ]);
+        }
+
+        return $category;
     }
 }

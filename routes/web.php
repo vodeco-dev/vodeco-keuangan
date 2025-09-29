@@ -39,6 +39,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
         ->name('transactions.proof.show');
     Route::resource('transactions', TransactionController::class)->except(['show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
+    Route::post('debts/category-preferences', [DebtController::class, 'updateCategoryPreferences'])->name('debts.category-preferences.update');
     Route::resource('debts', DebtController::class);
     Route::resource('invoices', InvoiceController::class);
 
