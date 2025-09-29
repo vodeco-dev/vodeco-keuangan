@@ -25,7 +25,7 @@ class ReportRequest extends FormRequest
         return [
             'start_date' => ['required', 'date', 'before_or_equal:end_date'],
             'end_date' => ['required', 'date'],
-            'format' => ['nullable', 'in:xlsx'],
+            'format' => ['nullable', 'in:xlsx,pdf'],
             'category_id' => ['nullable', 'exists:categories,id'],
             'type' => ['nullable', 'in:pemasukan,pengeluaran'],
             'period' => ['nullable', 'in:range,daily,monthly,yearly'],
@@ -131,7 +131,7 @@ class ReportRequest extends FormRequest
             'start_date.before_or_equal' => 'Tanggal mulai tidak boleh lebih besar dari tanggal akhir.',
             'end_date.required' => 'Tanggal akhir wajib diisi.',
             'end_date.date' => 'Tanggal akhir tidak valid.',
-            'format.in' => 'Format harus berupa file Excel (.xlsx).',
+            'format.in' => 'Format harus berupa file Excel (.xlsx) atau PDF (.pdf).',
             'category_id.exists' => 'Kategori yang dipilih tidak ditemukan.',
             'type.in' => 'Tipe transaksi tidak valid.',
             'period.in' => 'Jenis rentang waktu tidak valid.',

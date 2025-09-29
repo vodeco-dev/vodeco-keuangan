@@ -92,11 +92,13 @@
                     </svg>
                     <span>Unduh Laporan</span>
                 </button>
-                <div x-show="open" @click.away="open = false" class="absolute right-0 top-full z-10 mt-2 w-48 overflow-hidden rounded-xl border border-gray-100 bg-white text-sm shadow-lg">
+                <div x-show="open" @click.away="open = false" class="absolute right-0 top-full z-10 mt-2 w-56 overflow-hidden rounded-xl border border-gray-100 bg-white text-sm shadow-lg">
                     @php
                         $exportXlsxParams = array_merge($exportQuery, ['format' => 'xlsx']);
+                        $exportPdfParams = array_merge($exportQuery, ['format' => 'pdf']);
                     @endphp
                     <a href="{{ route('reports.export', $exportXlsxParams) }}" class="block px-4 py-2 text-gray-700 transition hover:bg-gray-50">Excel (.xlsx)</a>
+                    <a href="{{ route('reports.export', $exportPdfParams) }}" class="block border-t border-gray-100 px-4 py-2 text-gray-700 transition hover:bg-gray-50">PDF Landscape (.pdf)</a>
                 </div>
             </div>
         </div>
@@ -161,77 +163,186 @@
 </div>
 
 
-{{-- Tabel Rincian Transaksi --}}
-<div class="bg-white rounded-lg shadow-sm p-6 mb-8">
-    <h3 class="text-xl font-semibold text-gray-900  mb-4">Rincian Transaksi</h3>
-    <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="border-b">
-                <tr>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Tanggal</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Kategori</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Deskripsi</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Jumlah</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y">
-                @forelse($transactions as $transaction)
-                <tr>
-                    <td class="px-6 py-4 text-sm font-medium text-gray-900  whitespace-nowrap">{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMM YYYY') }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->category->name }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $transaction->description }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right {{ $transaction->category->type == 'pemasukan' ? 'text-green-600' : 'text-red-600' }}">
-                        {{ $transaction->category->type == 'pemasukan' ? '+' : '-' }} Rp{{ number_format($transaction->amount, 0, ',', '.') }}
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="4" class="text-center py-8 text-gray-500">Tidak ada transaksi pada rentang tanggal ini.</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-</div>
+@php
+    $formatCurrency = fn ($value) => 'Rp' . number_format($value, 0, ',', '.');
+@endphp
 
-{{-- Tabel Rincian Hutang --}}
-<div class="bg-white rounded-lg shadow-sm p-6">
-    <h3 class="text-xl font-semibold text-gray-900  mb-4">Rincian Hutang</h3>
-    <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="border-b">
-                <tr>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Pihak Terkait</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Deskripsi</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Jumlah</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Terbayar</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase text-right">Sisa</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Jatuh Tempo</th>
-                    <th class="px-6 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Status</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y">
-                @forelse($debts as $debt)
-                <tr>
-                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $debt->related_party }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ $debt->description }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">Rp{{ number_format($debt->amount, 0, ',', '.') }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-green-600">Rp{{ number_format($debt->paid_amount, 0, ',', '.') }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-red-600">Rp{{ number_format($debt->remaining_amount, 0, ',', '.') }}</td>
-                    <td class="px-6 py-4 text-sm font-medium text-gray-900  whitespace-nowrap">{{ \Carbon\Carbon::parse($debt->due_date)->isoFormat('D MMM YYYY') }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $debt->status == 'lunas' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                            {{ ucfirst($debt->status) }}
-                        </span>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="7" class="text-center py-8 text-gray-500">Tidak ada data hutang pada rentang tanggal ini.</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+{{-- Detail Laporan --}}
+<div class="mb-10 rounded-2xl bg-white/80 p-6 shadow-sm backdrop-blur" x-data="{ tab: 'cashflow' }">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+            <h3 class="text-xl font-semibold text-gray-900 ">Detail Laporan</h3>
+            <p class="text-sm text-gray-500">Pilih jenis laporan untuk melihat rincian data keuangan pada periode ini.</p>
+        </div>
+        <div class="inline-flex rounded-full bg-slate-100 p-1">
+            <button
+                type="button"
+                @click="tab = 'cashflow'"
+                :class="tab === 'cashflow' ? 'bg-[#000080] text-white shadow-sm' : 'text-slate-600'"
+                class="rounded-full px-4 py-2 text-sm font-semibold transition"
+            >
+                Pemasukan &amp; Pengeluaran
+            </button>
+            <button
+                type="button"
+                @click="tab = 'debt'"
+                :class="tab === 'debt' ? 'bg-[#000080] text-white shadow-sm' : 'text-slate-600'"
+                class="rounded-full px-4 py-2 text-sm font-semibold transition"
+            >
+                Laporan Hutang
+            </button>
+        </div>
+    </div>
+
+    <div class="mt-6 space-y-6" x-cloak>
+        <div x-show="tab === 'cashflow'" x-transition>
+            <div class="grid gap-6 lg:grid-cols-2">
+                <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-[#000080]/20 bg-white/70 shadow-sm">
+                    <div class="flex items-start justify-between border-b border-[#000080]/10 px-6 py-4">
+                        <div>
+                            <h4 class="text-lg font-semibold text-gray-900 ">Daftar Pemasukan</h4>
+                            <p class="text-xs text-gray-500">Transaksi pemasukan selama rentang tanggal yang dipilih.</p>
+                        </div>
+                        <span class="rounded-full bg-[#000080]/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-[#000080]">Total: {{ $formatCurrency($totalPemasukan) }}</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-[#000080]/15 text-sm">
+                            <thead class="bg-[#000080] text-white">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide">Tanggal</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide">Kategori</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide">Deskripsi</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide">Jumlah</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#000080]/10">
+                                @forelse($incomeTransactions as $transaction)
+                                    <tr class="bg-white/70">
+                                        <td class="px-6 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMM YYYY') }}</td>
+                                        <td class="px-6 py-3 text-sm text-gray-600 whitespace-nowrap">{{ $transaction->category?->name }}</td>
+                                        <td class="px-6 py-3 text-sm text-gray-500">{{ $transaction->description }}</td>
+                                        <td class="px-6 py-3 text-right text-sm font-semibold text-emerald-600">{{ $formatCurrency($transaction->amount) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-6 text-center text-sm text-gray-500">Tidak ada pemasukan pada periode ini.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                            <tfoot class="bg-[#000080]/5">
+                                <tr>
+                                    <td colspan="3" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[#000080]">Total Pemasukan</td>
+                                    <td class="px-6 py-3 text-right text-sm font-semibold text-[#000080]">{{ $formatCurrency($totalPemasukan) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-[#000080]/20 bg-white/70 shadow-sm">
+                    <div class="flex items-start justify-between border-b border-[#000080]/10 px-6 py-4">
+                        <div>
+                            <h4 class="text-lg font-semibold text-gray-900 ">Daftar Pengeluaran</h4>
+                            <p class="text-xs text-gray-500">Transaksi pengeluaran selama rentang tanggal yang dipilih.</p>
+                        </div>
+                        <span class="rounded-full bg-[#000080]/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-[#000080]">Total: {{ $formatCurrency($totalPengeluaran) }}</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-[#000080]/15 text-sm">
+                            <thead class="bg-[#000080] text-white">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide">Tanggal</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide">Kategori</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide">Deskripsi</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide">Jumlah</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#000080]/10">
+                                @forelse($expenseTransactions as $transaction)
+                                    <tr class="bg-white/70">
+                                        <td class="px-6 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMM YYYY') }}</td>
+                                        <td class="px-6 py-3 text-sm text-gray-600 whitespace-nowrap">{{ $transaction->category?->name }}</td>
+                                        <td class="px-6 py-3 text-sm text-gray-500">{{ $transaction->description }}</td>
+                                        <td class="px-6 py-3 text-right text-sm font-semibold text-rose-600">{{ $formatCurrency($transaction->amount) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-6 text-center text-sm text-gray-500">Tidak ada pengeluaran pada periode ini.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                            <tfoot class="bg-[#000080]/5">
+                                <tr>
+                                    <td colspan="3" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[#000080]">Total Pengeluaran</td>
+                                    <td class="px-6 py-3 text-right text-sm font-semibold text-[#000080]">{{ $formatCurrency($totalPengeluaran) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="tab === 'debt'" x-transition>
+            <div class="flex flex-col overflow-hidden rounded-2xl border border-[#000080]/20 bg-white/70 shadow-sm">
+                <div class="flex flex-col gap-3 border-b border-[#000080]/10 px-6 py-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-900 ">Rincian Hutang</h4>
+                        <p class="text-xs text-gray-500">Pantau posisi hutang serta progres pembayarannya.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="rounded-full bg-[#000080]/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-[#000080]">Total: {{ $formatCurrency($totalHutang) }}</span>
+                        <span class="rounded-full bg-emerald-100 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">Terbayar: {{ $formatCurrency($totalPembayaranHutang) }}</span>
+                        <span class="rounded-full bg-rose-100 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-rose-700">Sisa: {{ $formatCurrency($sisaHutang) }}</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-[#000080]/15 text-sm">
+                        <thead class="bg-[#000080] text-white">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide">Pihak Terkait</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide">Deskripsi</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide">Jumlah</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide">Terbayar</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide">Sisa</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide">Jatuh Tempo</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[#000080]/10">
+                            @forelse($debts as $debt)
+                                <tr class="bg-white/70">
+                                    <td class="px-6 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{{ $debt->related_party }}</td>
+                                    <td class="px-6 py-3 text-sm text-gray-600">{{ $debt->description }}</td>
+                                    <td class="px-6 py-3 text-right text-sm font-semibold text-[#000080]">{{ $formatCurrency($debt->amount) }}</td>
+                                    <td class="px-6 py-3 text-right text-sm font-semibold text-emerald-600">{{ $formatCurrency($debt->paid_amount) }}</td>
+                                    <td class="px-6 py-3 text-right text-sm font-semibold text-rose-600">{{ $formatCurrency($debt->remaining_amount) }}</td>
+                                    <td class="px-6 py-3 text-sm text-gray-600 whitespace-nowrap">{{ \Carbon\Carbon::parse($debt->due_date)->isoFormat('D MMM YYYY') }}</td>
+                                    <td class="px-6 py-3 text-sm font-semibold">
+                                        <span class="inline-flex rounded-full px-3 py-1 text-xs uppercase tracking-wide {{ $debt->status === 'lunas' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }}">
+                                            {{ ucfirst($debt->status) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="px-6 py-6 text-center text-sm text-gray-500">Tidak ada data hutang pada periode ini.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                        <tfoot class="bg-[#000080]/5">
+                            <tr>
+                                <td colspan="2" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[#000080]">Ringkasan</td>
+                                <td class="px-6 py-3 text-right text-sm font-semibold text-[#000080]">{{ $formatCurrency($totalHutang) }}</td>
+                                <td class="px-6 py-3 text-right text-sm font-semibold text-[#000080]">{{ $formatCurrency($totalPembayaranHutang) }}</td>
+                                <td class="px-6 py-3 text-right text-sm font-semibold text-[#000080]">{{ $formatCurrency($sisaHutang) }}</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
