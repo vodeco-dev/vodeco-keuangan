@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <title>Laporan Keuangan</title>
     @include('exports.partials.financial_report_styles')
+    <style>
+        body {
+            padding: 32px 40px;
+        }
+
+        .report-wrapper {
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
     <div class="report-wrapper">
