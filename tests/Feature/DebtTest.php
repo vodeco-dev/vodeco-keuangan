@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Models\Category;
 use App\Models\Debt;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,6 +17,10 @@ class DebtTest extends TestCase
     public function test_user_can_add_pass_through_debt()
     {
         $user = User::factory()->create();
+        $category = Category::create([
+            'name' => 'Operasional',
+            'type' => 'pengeluaran',
+        ]);
 
         $response = $this->actingAs($user)->post('/debts', [
             'description' => 'Pass Through Expense',
@@ -23,6 +28,7 @@ class DebtTest extends TestCase
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
             'due_date' => now()->addMonth()->toDateString(),
+            'category_id' => $category->id,
         ]);
 
         $response->assertRedirect('/debts');
@@ -33,6 +39,7 @@ class DebtTest extends TestCase
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
             'status' => Debt::STATUS_BELUM_LUNAS,
+            'category_id' => $category->id,
         ]);
     }
 
@@ -40,6 +47,11 @@ class DebtTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user);
+
+        $category = Category::create([
+            'name' => 'Pembayaran Hutang',
+            'type' => 'pengeluaran',
+        ]);
 
         // FIX: Kembali menggunakan create() dan pastikan user_id ada.
         $debt = Debt::create([
@@ -50,11 +62,13 @@ class DebtTest extends TestCase
             'amount' => 1000,
             'status' => Debt::STATUS_BELUM_LUNAS,
             'due_date' => now()->addWeek(),
+            'category_id' => $category->id,
         ]);
 
         // ... sisa kode tes tidak perlu diubah
         $response = $this->post(route('debts.pay', $debt), [
             'payment_amount' => 1000,
+            'category_id' => $category->id,
         ]);
 
         $response->assertRedirect(route('debts.index'));

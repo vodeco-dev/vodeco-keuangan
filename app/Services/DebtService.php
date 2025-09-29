@@ -14,7 +14,7 @@ class DebtService
      */
     public function getDebts(Request $request, User $user): LengthAwarePaginator
     {
-        $query = Debt::with('payments')
+        $query = Debt::with(['payments', 'category'])
             ->where('user_id', $user->id)
             ->latest();
 

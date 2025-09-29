@@ -1,19 +1,103 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $initialType = old('type', \App\Models\Debt::TYPE_DOWN_PAYMENT);
+    $initialCategoryId = old('category_id');
+    if ($initialCategoryId === null) {
+        $initialCategoryId = $initialType === \App\Models\Debt::TYPE_DOWN_PAYMENT
+            ? ($defaultIncomeCategoryId ?? null)
+            : ($defaultExpenseCategoryId ?? null);
+    }
+@endphp
 {{-- Tambahkan 'detailModal' ke dalam x-data untuk mengontrol modal baru --}}
-<div x-data="{ addModal: false, paymentModal: false, detailModal: false, selectedDebt: {} }">
+<div x-data="{
+        addModal: false,
+        paymentModal: false,
+        detailModal: false,
+        categoryModal: false,
+        selectedDebt: {},
+        paymentCategoryId: null,
+        selectableIncomeCategories: @js($selectableIncomeCategories->map(fn ($category) => ['id' => $category->id, 'name' => $category->name])->values()),
+        selectableExpenseCategories: @js($selectableExpenseCategories->map(fn ($category) => ['id' => $category->id, 'name' => $category->name])->values()),
+        selectedType: '{{ $initialType }}',
+        selectedCategoryId: '{{ $initialCategoryId ?? '' }}',
+        defaultIncomeCategoryId: '{{ $defaultIncomeCategoryId ?? '' }}',
+        defaultExpenseCategoryId: '{{ $defaultExpenseCategoryId ?? '' }}',
+        openPaymentModal(debt) {
+            this.selectedDebt = debt;
+            const categories = debt.type === '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}'
+                ? this.selectableIncomeCategories
+                : this.selectableExpenseCategories;
+
+            if (debt.category_id) {
+                this.paymentCategoryId = debt.category_id;
+            } else if (categories.length > 0) {
+                this.paymentCategoryId = categories[0].id;
+            } else {
+                this.paymentCategoryId = null;
+            }
+
+            this.paymentModal = true;
+        },
+        addFormCategories() {
+            return this.selectedType === '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}'
+                ? this.selectableIncomeCategories
+                : this.selectableExpenseCategories;
+        },
+        ensureAddFormCategory() {
+            const categories = this.addFormCategories();
+            if (!categories.some(category => String(category.id) === String(this.selectedCategoryId))) {
+                this.selectedCategoryId = categories.length ? categories[0].id : '';
+            }
+        },
+        paymentCategories() {
+            if (!this.selectedDebt.type) {
+                return [];
+            }
+
+            return this.selectedDebt.type === '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}'
+                ? this.selectableIncomeCategories
+                : this.selectableExpenseCategories;
+        },
+        init() {
+            this.ensureAddFormCategory();
+        }
+    }" x-init="init()">
 
     {{-- Header --}}
     <div class="flex justify-between items-center mb-8">
         <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Pass Through & Down Payment</h2>
-        <button @click="addModal = true" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            <span>Tambah Catatan Baru</span>
-        </button>
+        <div class="flex items-center gap-3">
+            <button @click="addModal = true" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                <span>Tambah Catatan Baru</span>
+            </button>
+            <button @click="categoryModal = true" type="button" class="p-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100" title="Pengaturan pilihan kategori">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.983 5.5a1.5 1.5 0 102.828-1.06l.53-.53a9.04 9.04 0 012.75 1.59l-.53.53a1.5 1.5 0 101.06 2.828l.53.53a9.04 9.04 0 011.59 2.75l-.53.53a1.5 1.5 0 10-1.06 2.828l.53.53a9.04 9.04 0 01-1.59 2.75l-.53-.53a1.5 1.5 0 10-2.828 1.06l-.53.53a9.04 9.04 0 01-2.75-1.59l.53-.53a1.5 1.5 0 10-1.06-2.828l-.53-.53a9.04 9.04 0 01-1.59-2.75l.53-.53a1.5 1.5 0 101.06-2.828l-.53-.53a9.04 9.04 0 011.59-2.75l.53.53z"></path>
+                </svg>
+            </button>
+        </div>
     </div>
+
+    @if (session('success'))
+        <div class="mb-6 px-4 py-3 text-sm text-green-700 bg-green-100 border border-green-200 rounded-lg">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="mb-6 px-4 py-3 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg">
+            <ul class="list-disc list-inside space-y-1">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     {{-- Summary Cards --}}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -111,7 +195,7 @@
                         <td class="px-4 py-3 text-sm text-center">
                             <div class="flex items-center justify-center gap-2">
                                 @if ($debt->status == \App\Models\Debt::STATUS_BELUM_LUNAS)
-                                <button @click="paymentModal = true; selectedDebt = {{ $debt }}" class="text-blue-600 hover:text-blue-900" title="Tambah Pembayaran">
+                                <button @click='openPaymentModal({{ $debt }})' class="text-blue-600 hover:text-blue-900" title="Tambah Pembayaran">
                                     <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                     </svg>
@@ -151,6 +235,47 @@
         </div>
     </div>
 
+    {{-- Modal Pengaturan Kategori --}}
+    <div x-show="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div @click.away="categoryModal = false" class="bg-white rounded-lg p-8 w-full max-w-2xl">
+            <h3 class="text-2xl font-bold mb-2">Pengaturan Pilihan Kategori</h3>
+            <p class="text-sm text-gray-600 mb-6">Pilih kategori yang ingin ditampilkan ketika membuat atau melunasi catatan. Biarkan semua checkbox kosong untuk menampilkan seluruh kategori.</p>
+            <form method="POST" action="{{ route('debts.category-preferences.update') }}" class="space-y-6">
+                @csrf
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Kategori Pemasukan</h4>
+                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        @forelse ($incomeCategories as $category)
+                            <label class="flex items-start gap-2 text-sm text-gray-700">
+                                <input type="checkbox" name="allowed_income_categories[]" value="{{ $category->id }}" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {{ $allowedIncomeCategoryIds->contains($category->id) ? 'checked' : '' }}>
+                                <span>{{ $category->name }}</span>
+                            </label>
+                        @empty
+                            <p class="text-sm text-gray-500">Belum ada kategori pemasukan.</p>
+                        @endforelse
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Kategori Pengeluaran</h4>
+                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        @forelse ($expenseCategories as $category)
+                            <label class="flex items-start gap-2 text-sm text-gray-700">
+                                <input type="checkbox" name="allowed_expense_categories[]" value="{{ $category->id }}" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {{ $allowedExpenseCategoryIds->contains($category->id) ? 'checked' : '' }}>
+                                <span>{{ $category->name }}</span>
+                            </label>
+                        @empty
+                            <p class="text-sm text-gray-500">Belum ada kategori pengeluaran.</p>
+                        @endforelse
+                    </div>
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="button" @click="categoryModal = false" class="px-4 py-2 bg-gray-200 rounded-lg">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     {{-- Modal Tambah Catatan Baru --}}
     <div x-show="addModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
         <div @click.away="addModal = false" class="bg-white rounded-lg p-8 w-full max-w-md">
@@ -168,10 +293,23 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Tipe</label>
-                        <select name="type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        <select name="type" x-model="selectedType" @change="ensureAddFormCategory()" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                             <option value="down_payment">Down Payment (Orang lain berhutang ke saya)</option>
                             <option value="pass_through">Pass Through (Saya berhutang ke orang lain)</option>
                         </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Kategori</label>
+                        <select name="category_id" x-model="selectedCategoryId" :disabled="addFormCategories().length === 0" :required="addFormCategories().length > 0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            <option value="" disabled x-show="addFormCategories().length === 0">Tidak ada kategori tersedia</option>
+                            <template x-for="category in addFormCategories()" :key="'add-' + category.id">
+                                <option :value="category.id" x-text="category.name"></option>
+                            </template>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Kategori akan digunakan saat pelunasan dicatat.</p>
+                        @error('category_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Total Nilai</label>
@@ -201,6 +339,19 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Jumlah Pembayaran</label>
                         <input type="number" name="payment_amount" step="any" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Kategori Pelunasan</label>
+                        <select name="category_id" x-model="paymentCategoryId" :disabled="paymentCategories().length === 0" :required="paymentCategories().length > 0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            <option value="" disabled x-show="paymentCategories().length === 0">Tidak ada kategori tersedia</option>
+                            <template x-for="category in paymentCategories()" :key="'payment-' + category.id">
+                                <option :value="category.id" x-text="category.name"></option>
+                            </template>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Kategori mengikuti tipe catatan yang dipilih.</p>
+                        @if ($errors->has('category_id'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->first('category_id') }}</p>
+                        @endif
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Tanggal Pembayaran</label>

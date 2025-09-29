@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Debt;
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreDebtRequest extends FormRequest
@@ -28,6 +29,16 @@ class StoreDebtRequest extends FormRequest
             'type' => 'required|in:' . Debt::TYPE_PASS_THROUGH . ',' . Debt::TYPE_DOWN_PAYMENT,
             'amount' => 'required|numeric|min:0',
             'due_date' => 'nullable|date',
+            'category_id' => [
+                'required',
+                'integer',
+                Rule::exists('categories', 'id')->where(function ($query) {
+                    $type = $this->input('type');
+                    $expectedCategoryType = $type === Debt::TYPE_DOWN_PAYMENT ? 'pemasukan' : 'pengeluaran';
+
+                    $query->where('type', $expectedCategoryType);
+                }),
+            ],
         ];
     }
 
@@ -49,6 +60,9 @@ class StoreDebtRequest extends FormRequest
             'amount.numeric' => 'Jumlah harus berupa angka.',
             'amount.min' => 'Jumlah tidak boleh kurang dari 0.',
             'due_date.date' => 'Format tanggal tidak valid.',
+            'category_id.required' => 'Kategori wajib dipilih.',
+            'category_id.integer' => 'Kategori tidak valid.',
+            'category_id.exists' => 'Kategori tidak ditemukan atau tidak sesuai dengan tipe.',
         ];
     }
 }
