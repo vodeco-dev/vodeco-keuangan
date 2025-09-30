@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\Debt;
 use App\Models\User;
 
@@ -24,6 +25,10 @@ class DebtPolicy
 
     public function update(User $user, Debt $debt): bool
     {
+        if ($user->role === Role::ADMIN) {
+            return true;
+        }
+
         return $debt->user_id === $user->id;
     }
 
