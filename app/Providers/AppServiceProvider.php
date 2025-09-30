@@ -33,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::policy(Transaction::class, TransactionPolicy::class);
         Gate::policy(Debt::class, DebtPolicy::class);
+        Schema::defaultStringLength(191);
     }
 }
 
