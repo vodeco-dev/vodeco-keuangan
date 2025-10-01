@@ -11,7 +11,7 @@ use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Setting;
-use Spatie\LaravelPdf\Facades\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -140,15 +140,12 @@ class InvoiceController extends Controller
                 ->header('Content-Disposition', 'inline; filename="'.$invoice->number.'.pdf"');
         }
 
-        // Buat PDF menggunakan Spatie/laravel-pdf
-        $pdf = Pdf::view('invoices.pdf', [
+        return Pdf::loadView('invoices.pdf', [
             'invoice' => $invoice,
             'settings' => $settings,
         ])
-            ->format('a4')
-            ->name($invoice->number . '.pdf');
-
-        return $pdf;
+            ->setPaper('a4')
+            ->download($invoice->number . '.pdf');
     }
 
     public function showPublic(string $token)
@@ -168,15 +165,12 @@ class InvoiceController extends Controller
                 ->header('Content-Disposition', 'inline; filename="'.$invoice->number.'.pdf"');
         }
 
-        // Buat PDF menggunakan Spatie/laravel-pdf
-        $pdf = Pdf::view('invoices.pdf', [
+        return Pdf::loadView('invoices.pdf', [
             'invoice' => $invoice,
             'settings' => $settings,
         ])
-            ->format('a4')
-            ->name($invoice->number . '.pdf');
-
-        return $pdf;
+            ->setPaper('a4')
+            ->download($invoice->number . '.pdf');
     }
 
     public function show(Invoice $invoice)
