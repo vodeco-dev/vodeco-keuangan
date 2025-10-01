@@ -8,6 +8,23 @@
     $logoData = base64_encode(file_get_contents($logoPath));
     $signaturePath = public_path($settings['signature_image'] ?? 'image3.png');
     $signatureData = base64_encode(file_get_contents($signaturePath));
+
+    $determineMime = function ($path) {
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        if ($extension === 'jpg') {
+            $extension = 'jpeg';
+        }
+
+        return $extension ?: 'png';
+    };
+
+    $bank1LogoPath = public_path($settings['bank_1_logo'] ?? 'image2.png');
+    $bank1LogoData = is_file($bank1LogoPath) ? base64_encode(file_get_contents($bank1LogoPath)) : null;
+    $bank1LogoMime = $bank1LogoData ? $determineMime($bank1LogoPath) : null;
+
+    $bank2LogoPath = public_path($settings['bank_2_logo'] ?? 'image3.png');
+    $bank2LogoData = is_file($bank2LogoPath) ? base64_encode(file_get_contents($bank2LogoPath)) : null;
+    $bank2LogoMime = $bank2LogoData ? $determineMime($bank2LogoPath) : null;
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -92,27 +109,40 @@
         <!-- Footer -->
         <footer class="mt-8">
             <p class="text-sm">Terima kasih telah memberikan kepercayaan kepada kami untuk mendesain dan mengelola jasa website Anda sebagai sarana digital marketing di media online.</p>
-            <div class="flex justify-between mt-8">
+            <div class="mt-8 grid grid-cols-2 gap-6">
                 <!-- Payment Info -->
-                <div class="w-1/2">
-                    <p class="font-bold italic">Pembayaran melalui transfer :</p>
-                    <div class="mt-4">
-                        <p class="font-bold">{{ $settings['bank_1_name'] ?? 'BCA' }}</p>
-                        <p>{{ $settings['bank_1_account_number'] ?? '3624 500500' }} an. {{ $settings['bank_1_account_name'] ?? 'Vodeco Digital Mediatama' }}</p>
+                <div class="rounded-lg border border-gray-200 p-3 text-xs space-y-3">
+                    <p class="font-semibold italic text-sm">Pembayaran melalui transfer :</p>
+
+                    <div class="flex items-start gap-3">
+                        @if($bank1LogoData)
+                            <img src="data:image/{{ $bank1LogoMime }};base64,{{ $bank1LogoData }}" alt="{{ $settings['bank_1_name'] ?? 'Bank' }} Logo" class="h-10 w-10 object-contain">
+                        @endif
+                        <div class="space-y-1">
+                            <p class="font-semibold text-sm tracking-wide uppercase">{{ $settings['bank_1_name'] ?? 'BCA' }}</p>
+                            <p class="text-[11px] leading-relaxed">{{ $settings['bank_1_account_number'] ?? '3624 500500' }} an. {{ $settings['bank_1_account_name'] ?? 'Vodeco Digital Mediatama' }}</p>
+                        </div>
                     </div>
-                    <div class="mt-4">
-                        <p class="font-bold">{{ $settings['bank_2_name'] ?? 'MANDIRI' }}</p>
-                        <p>{{ $settings['bank_2_account_number'] ?? '1390001188113' }} an. {{ $settings['bank_2_account_name'] ?? 'Vodeco Digital Mediatama' }}</p>
+
+                    <div class="flex items-start gap-3">
+                        @if($bank2LogoData)
+                            <img src="data:image/{{ $bank2LogoMime }};base64,{{ $bank2LogoData }}" alt="{{ $settings['bank_2_name'] ?? 'Bank' }} Logo" class="h-10 w-10 object-contain">
+                        @endif
+                        <div class="space-y-1">
+                            <p class="font-semibold text-sm tracking-wide uppercase">{{ $settings['bank_2_name'] ?? 'MANDIRI' }}</p>
+                            <p class="text-[11px] leading-relaxed">{{ $settings['bank_2_account_number'] ?? '1390001188113' }} an. {{ $settings['bank_2_account_name'] ?? 'Vodeco Digital Mediatama' }}</p>
+                        </div>
                     </div>
                 </div>
+
                 <!-- Signature -->
-                <div class="w-1/2 text-center">
-                    <p>{{ $settings['company_city'] ?? 'Bandung' }}, {{ $invoice->issue_date->translatedFormat('d F Y') }}</p>
-                    <p class="font-bold">Pimpinan</p>
-                    <div class="h-20 w-32 mx-auto my-2">
+                <div class="rounded-lg border border-gray-200 p-3 text-xs text-right flex flex-col items-end space-y-2">
+                    <p class="text-sm">{{ $settings['company_city'] ?? 'Bandung' }}, {{ $invoice->issue_date->translatedFormat('d F Y') }}</p>
+                    <p class="font-semibold text-sm">Pimpinan</p>
+                    <div class="h-20 w-32">
                         <img src="data:image/png;base64,{{ $signatureData }}" alt="Signature" class="h-full w-full object-contain">
                     </div>
-                    <p class="font-bold">{{ $settings['signature_name'] ?? 'Gibranio Zelmy' }}</p>
+                    <p class="font-semibold text-sm">{{ $settings['signature_name'] ?? 'Gibranio Zelmy' }}</p>
                 </div>
             </div>
 
