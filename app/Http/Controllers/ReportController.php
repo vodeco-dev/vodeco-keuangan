@@ -11,7 +11,7 @@ use App\Services\TransactionService;
 use Carbon\Carbon;
 
 use Maatwebsite\Excel\Facades\Excel;
-use Spatie\LaravelPdf\Facades\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
@@ -141,15 +141,14 @@ class ReportController extends Controller
                     ]);
             }
 
-            return Pdf::view('exports.financial_report_pdf', [
+            return Pdf::loadView('exports.financial_report_pdf', [
                 ...$reportData,
                 'period' => [
                     'start' => $startDate,
                     'end' => $endDate,
                 ],
             ])
-                ->format('a4')
-                ->landscape()
+                ->setPaper('a4', 'landscape')
                 ->download($fileName);
         }
 
