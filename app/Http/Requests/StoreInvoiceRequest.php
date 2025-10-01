@@ -22,6 +22,7 @@ class StoreInvoiceRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'customer_service_id' => ['nullable', 'exists:customer_services,id'],
             'client_name' => ['required', 'string', 'max:255'],
             'client_email' => ['required', 'email', 'max:255'],
             'client_address' => ['required', 'string'],
@@ -47,6 +48,7 @@ class StoreInvoiceRequest extends FormRequest
             'client_address.required' => 'Alamat klien wajib diisi.',
             'issue_date.date' => 'Format tanggal terbit tidak valid.',
             'due_date.date' => 'Format tanggal jatuh tempo tidak valid.',
+            'customer_service_id.exists' => 'Customer service yang dipilih tidak valid.',
             'items.*.description.required' => 'Deskripsi item wajib diisi.',
             'items.*.description.string' => 'Deskripsi item harus berupa teks.',
             'items.*.quantity.required' => 'Kuantitas item wajib diisi.',

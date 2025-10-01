@@ -11,6 +11,27 @@
                 <form action="{{ route('invoices.store') }}" method="POST" class="p-6">
                     @csrf
 
+                    {{-- Customer Service --}}
+                    <div class="mb-6">
+                        <label for="customer_service_id" class="block text-sm font-medium text-gray-700">Customer Service</label>
+                        <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <select name="customer_service_id" id="customer_service_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="">Pilih customer service</option>
+                                @foreach($customerServices as $customerService)
+                                    <option value="{{ $customerService->id }}" @selected(old('customer_service_id') == $customerService->id)>
+                                        {{ $customerService->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <a href="{{ route('customer-services.create') }}" class="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+                                Tambah Customer Service
+                            </a>
+                        </div>
+                        @error('customer_service_id')
+                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     {{-- Informasi Klien --}}
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Informasi Klien</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

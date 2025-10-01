@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\Role;
 use Illuminate\Validation\Rule;
 
 class PublicStoreInvoiceRequest extends StoreInvoiceRequest
@@ -18,13 +17,8 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
             'customer_service_name' => [
                 'required',
                 'string',
-                Rule::exists('users', 'name')->where(function ($query) {
-                    $query->whereIn('role', [
-                        Role::ADMIN->value,
-                        Role::ACCOUNTANT->value,
-                        Role::STAFF->value,
-                    ]);
-                }),
+                'max:255',
+                Rule::exists('customer_services', 'name'),
             ],
         ]);
     }
