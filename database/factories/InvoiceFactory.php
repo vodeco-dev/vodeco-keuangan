@@ -20,7 +20,7 @@ class InvoiceFactory extends Factory
             'client_address' => $this->faker->address,
             'issue_date' => now(),
             'due_date' => $this->faker->dateTimeBetween('+1 week', '+1 month'),
-            'status' => 'Draft',
+            'status' => 'belum bayar',
             'total' => $this->faker->randomFloat(2, 100, 1000),
         ];
     }

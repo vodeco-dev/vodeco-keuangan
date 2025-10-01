@@ -54,15 +54,17 @@
                             </div>
                             <div class="space-y-4">
                                 <div>
-                                    <label for="customer_service_id" class="block text-sm font-medium text-gray-700">Customer Service</label>
-                                    <select name="customer_service_id" id="customer_service_id" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
-                                        <option value="">Pilih Customer Service</option>
+                                    <label for="customer_service_name" class="block text-sm font-medium text-gray-700">Customer Service</label>
+                                    <input type="text" name="customer_service_name" id="customer_service_name" list="customer-service-options"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        placeholder="Ketik nama customer service"
+                                        value="{{ old('customer_service_name') }}"
+                                        required>
+                                    <datalist id="customer-service-options">
                                         @foreach ($customerServices as $customerService)
-                                            <option value="{{ $customerService->id }}" @selected(old('customer_service_id') == $customerService->id)>
-                                                {{ $customerService->name }} ({{ ucfirst($customerService->role->value) }})
-                                            </option>
+                                            <option value="{{ $customerService->name }}">{{ $customerService->name }} ({{ ucfirst($customerService->role->value) }})</option>
                                         @endforeach
-                                    </select>
+                                    </datalist>
                                 </div>
                                 <div>
                                     <label for="client_address" class="block text-sm font-medium text-gray-700">Alamat Klien</label>

@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('number')->unique();
             $table->date('issue_date')->nullable();
             $table->date('due_date')->nullable();
-            $table->enum('status', ['Draft', 'Sent', 'Paid', 'Overdue'])->default('Draft');
+            $table->enum('status', ['belum bayar', 'belum lunas', 'lunas'])->default('belum bayar');
             $table->decimal('total', 15, 2)->default(0);
             $table->timestamps();
         });

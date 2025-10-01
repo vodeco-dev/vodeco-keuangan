@@ -13,7 +13,7 @@ class SendInvoiceReminder extends Command
 
     public function handle(): int
     {
-        $invoices = Invoice::where('status', 'Proses')
+        $invoices = Invoice::whereIn('status', ['belum bayar', 'belum lunas'])
             ->whereDate('due_date', '<=', now()->toDateString())
             ->get();
 

@@ -108,7 +108,7 @@
                             <div class="flex flex-col items-end text-right text-red-600 space-y-1">
                                 <p><strong>Sub Total:</strong> <span class="ml-2">Rp. {{ number_format($invoice->total, 2, ',', '.') }}</span></p>
                                 <p><strong>Down Payment:</strong> <span class="ml-2">Rp. {{ number_format($invoice->down_payment, 2, ',', '.') }}</span></p>
-                                <p><strong>Keterangan:</strong> <span class="ml-2">{{ $invoice->status ?? 'Menunggu Pembayaran' }}</span></p>
+                                <p><strong>Keterangan:</strong> <span class="ml-2">{{ $invoice->status ? ucwords($invoice->status) : 'Menunggu Pembayaran' }}</span></p>
                             </div>
                         </td>
                     </tr>
