@@ -31,12 +31,12 @@
 <body class="bg-gray-100 text-sm">
     <div class="mx-auto max-w-[210mm] bg-white px-10 py-8">
         <!-- Header -->
-        <header class="flex justify-between items-start">
-            <div class="w-1/2">
+        <header class="grid grid-cols-2 gap-6 items-start">
+            <div>
                 <img src="data:image/webp;base64,{{ $logoData }}" alt="Vodeco Logo" class="w-48">
             </div>
-            <div class="w-1/2 text-right text-xs">
-                <h1 class="font-bold text-base mb-2">&copy; {{ $settings['company_name'] ?? 'CV. Vodeco Digital Mediatama' }}</h1>
+            <div class="bg-gray-100 rounded-lg p-4 text-right text-xs space-y-1">
+                <h1 class="font-bold text-base">&copy; {{ $settings['company_name'] ?? 'CV. Vodeco Digital Mediatama' }}</h1>
                 <p>{{ $settings['company_address'] ?? 'Jl. Cibiru Tonggoh Bandung (40615)' }}</p>
                 <p>Telp/WA : {{ $settings['company_phone'] ?? '+62 878-7046-1427' }}</p>
                 <p>Email Perusahaan. <a href="mailto:{{ $settings['company_email'] ?? 'hello@vodeco.co.id' }}" class="text-blue-600">{{ $settings['company_email'] ?? 'hello@vodeco.co.id' }}</a></p>
@@ -45,16 +45,11 @@
         </header>
 
         <!-- Invoice Details -->
-        <section class="mt-10">
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <p><span class="font-bold">Inv No :</span> {{ $invoice->number }}</p>
-                    <p><span class="font-bold">Inv Date :</span> {{ $invoice->issue_date->format('d/m/Y') }}</p>
-                </div>
-                <div></div>
-            </div>
-            <div class="mt-4">
-                <p><span class="font-bold">Kepada :</span> {{ $invoice->client_name }}</p>
+        <section class="mt-6 text-xs">
+            <div class="space-y-1">
+                <p><span class="font-semibold">Inv No :</span> {{ $invoice->number }}</p>
+                <p><span class="font-semibold">Inv Date :</span> {{ $invoice->issue_date->format('d/m/Y') }}</p>
+                <p><span class="font-semibold">Kepada :</span> {{ $invoice->client_name }}</p>
             </div>
         </section>
 
