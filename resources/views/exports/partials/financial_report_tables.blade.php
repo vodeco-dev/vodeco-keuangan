@@ -1,102 +1,106 @@
 @php
     $formatCurrency = fn ($value) => 'Rp' . number_format($value, 0, ',', '.');
+
+    $summaryItems = [
+        ['label' => 'Total Pemasukan', 'value' => $formatCurrency($totals['pemasukan'] ?? 0)],
+        ['label' => 'Total Pengeluaran', 'value' => $formatCurrency($totals['pengeluaran'] ?? 0)],
+        ['label' => 'Saldo Bersih', 'value' => $formatCurrency($totals['selisih'] ?? 0)],
+        ['label' => 'Total Hutang', 'value' => $formatCurrency($totals['hutang'] ?? 0)],
+        ['label' => 'Pembayaran Hutang', 'value' => $formatCurrency($totals['pembayaranHutang'] ?? 0)],
+        ['label' => 'Sisa Hutang', 'value' => $formatCurrency($totals['sisaHutang'] ?? 0)],
+    ];
 @endphp
 
-<div class="summary-grid">
-    <div class="summary-card">
-        <div class="summary-label">Total Pemasukan</div>
-        <div class="summary-value">{{ $formatCurrency($totals['pemasukan'] ?? 0) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">Total Pengeluaran</div>
-        <div class="summary-value">{{ $formatCurrency($totals['pengeluaran'] ?? 0) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">Saldo Bersih</div>
-        <div class="summary-value">{{ $formatCurrency($totals['selisih'] ?? 0) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">Total Hutang</div>
-        <div class="summary-value">{{ $formatCurrency($totals['hutang'] ?? 0) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">Pembayaran Hutang</div>
-        <div class="summary-value">{{ $formatCurrency($totals['pembayaranHutang'] ?? 0) }}</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-label">Sisa Hutang</div>
-        <div class="summary-value">{{ $formatCurrency($totals['sisaHutang'] ?? 0) }}</div>
-    </div>
-</div>
+<table class="summary-table">
+    <tbody>
+        @foreach(array_chunk($summaryItems, 3) as $row)
+            <tr>
+                @foreach($row as $item)
+                    <td>
+                        <div class="summary-label">{{ $item['label'] }}</div>
+                        <div class="summary-value">{{ $item['value'] }}</div>
+                    </td>
+                @endforeach
+                @for($i = count($row); $i < 3; $i++)
+                    <td class="summary-placeholder">&nbsp;</td>
+                @endfor
+            </tr>
+        @endforeach
+    </tbody>
+</table>
 
 <div class="table-section">
     <span class="section-title">Pemasukan &amp; Pengeluaran</span>
-    <div class="dual-table">
-        <div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Tanggal</th>
-                        <th>Kategori</th>
-                        <th>Deskripsi</th>
-                        <th class="text-right">Jumlah</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($incomeTransactions as $transaction)
-                        <tr>
-                            <td>{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMMM YYYY') }}</td>
-                            <td>{{ $transaction->category?->name }}</td>
-                            <td>{{ $transaction->description }}</td>
-                            <td class="text-right">{{ $formatCurrency($transaction->amount) }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="empty-state">Tidak ada pemasukan pada periode ini.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3">Total Pemasukan</td>
-                        <td class="text-right">{{ $formatCurrency($totals['pemasukan'] ?? 0) }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        <div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Tanggal</th>
-                        <th>Kategori</th>
-                        <th>Deskripsi</th>
-                        <th class="text-right">Jumlah</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($expenseTransactions as $transaction)
-                        <tr>
-                            <td>{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMMM YYYY') }}</td>
-                            <td>{{ $transaction->category?->name }}</td>
-                            <td>{{ $transaction->description }}</td>
-                            <td class="text-right">{{ $formatCurrency($transaction->amount) }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="empty-state">Tidak ada pengeluaran pada periode ini.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3">Total Pengeluaran</td>
-                        <td class="text-right">{{ $formatCurrency($totals['pengeluaran'] ?? 0) }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
+    <table class="dual-table">
+        <tbody>
+            <tr>
+                <td>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Kategori</th>
+                                <th>Deskripsi</th>
+                                <th class="text-right">Jumlah</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($incomeTransactions as $transaction)
+                                <tr>
+                                    <td>{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMMM YYYY') }}</td>
+                                    <td>{{ $transaction->category?->name }}</td>
+                                    <td>{{ $transaction->description }}</td>
+                                    <td class="text-right">{{ $formatCurrency($transaction->amount) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="empty-state">Tidak ada pemasukan pada periode ini.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3">Total Pemasukan</td>
+                                <td class="text-right">{{ $formatCurrency($totals['pemasukan'] ?? 0) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </td>
+                <td>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Kategori</th>
+                                <th>Deskripsi</th>
+                                <th class="text-right">Jumlah</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($expenseTransactions as $transaction)
+                                <tr>
+                                    <td>{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMMM YYYY') }}</td>
+                                    <td>{{ $transaction->category?->name }}</td>
+                                    <td>{{ $transaction->description }}</td>
+                                    <td class="text-right">{{ $formatCurrency($transaction->amount) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="empty-state">Tidak ada pengeluaran pada periode ini.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3">Total Pengeluaran</td>
+                                <td class="text-right">{{ $formatCurrency($totals['pengeluaran'] ?? 0) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </div>
 
 <div class="table-section">
