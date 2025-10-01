@@ -46,7 +46,7 @@ class Invoice extends Model
 
     /**
      * The "booted" method of the model.
-     * Secara otomatis membuat transaksi pemasukan ketika status invoice diubah menjadi 'Paid'.
+     * Penetapan token publik dilakukan ketika invoice dibuat.
      */
     protected static function booted()
     {
@@ -54,25 +54,7 @@ class Invoice extends Model
             $invoice->public_token = Str::uuid();
         });
 
-        static::updated(function (Invoice $invoice) {
-            // Cek jika status berubah menjadi 'Paid' dan sebelumnya bukan 'Paid'
-            if ($invoice->isDirty('status') && $invoice->status === 'Paid') {
-                // Cari kategori default untuk pemasukan invoice, misal 'Penjualan Jasa'
-                // Fallback ke kategori pertama jika tidak ditemukan
-                $category = Category::where('name', 'Penjualan Jasa')->orWhere('type', 'pemasukan')->first();
-
-                // Pastikan ada kategori sebelum membuat transaksi
-                if ($category) {
-                    Transaction::create([
-                        'category_id' => $category->id,
-                        'user_id' => auth()->id(), // Gunakan user yang sedang login
-                        'amount' => $invoice->total,
-                        'description' => 'Pembayaran untuk Invoice #' . $invoice->number,
-                        'date' => now(),
-                    ]);
-                }
-            }
-        });
+        // Pencatatan transaksi dipindahkan ke proses pembayaran agar lebih fleksibel
     }
 
     /**

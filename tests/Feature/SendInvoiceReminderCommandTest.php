@@ -18,25 +18,25 @@ class SendInvoiceReminderCommandTest extends TestCase
         $due = Invoice::factory()->create([
             'user_id' => $user->id,
             'due_date' => now()->subDay(),
-            'status' => 'Proses',
+            'status' => 'belum bayar',
         ]);
 
         $future = Invoice::factory()->create([
             'user_id' => $user->id,
             'due_date' => now()->addDay(),
-            'status' => 'Proses',
+            'status' => 'belum bayar',
         ]);
 
-        $draft = Invoice::factory()->create([
+        $paid = Invoice::factory()->create([
             'user_id' => $user->id,
             'due_date' => now(),
-            'status' => 'Draft',
+            'status' => 'lunas',
         ]);
 
         $this->artisan('invoices:reminder')
             ->expectsOutput("Reminder sent for invoice {$due->number}")
             ->doesntExpectOutput("Reminder sent for invoice {$future->number}")
-            ->doesntExpectOutput("Reminder sent for invoice {$draft->number}")
+            ->doesntExpectOutput("Reminder sent for invoice {$paid->number}")
             ->assertExitCode(0);
     }
 }

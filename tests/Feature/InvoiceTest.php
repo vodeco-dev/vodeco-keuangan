@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\User;
@@ -66,16 +67,19 @@ class InvoiceTest extends TestCase
         $this->actingAs($user)->post(route('invoices.send', $invoice));
         $this->assertDatabaseHas('invoices', [
             'id' => $invoice->id,
-            'status' => 'Proses',
+            'status' => 'belum bayar',
         ]);
+
+        $category = Category::factory()->create(['type' => 'pemasukan']);
 
         $this->actingAs($user)->post(route('invoices.pay', $invoice), [
             'payment_amount' => $invoice->total,
             'payment_date' => now()->toDateString(),
+            'category_id' => $category->id,
         ]);
         $this->assertDatabaseHas('invoices', [
             'id' => $invoice->id,
-            'status' => 'Terbayar',
+            'status' => 'lunas',
         ]);
     }
 

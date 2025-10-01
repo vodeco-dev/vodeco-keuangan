@@ -33,7 +33,12 @@ class InvoiceController extends Controller
                 ->latest()
                 ->paginate();
         }
-        return view('invoices.index', compact('invoices'));
+
+        $incomeCategories = Category::where('type', 'pemasukan')
+            ->orderBy('name')
+            ->get();
+
+        return view('invoices.index', compact('invoices', 'incomeCategories'));
     }
 
     public function create(): View
@@ -63,7 +68,17 @@ class InvoiceController extends Controller
     {
         $data = $request->validated();
 
-        $invoice = $this->persistInvoice($data, $data['customer_service_id']);
+        $customerService = User::whereIn('role', [Role::ADMIN, Role::ACCOUNTANT, Role::STAFF])
+            ->where('name', $data['customer_service_name'])
+            ->first();
+
+        if (! $customerService) {
+            return back()
+                ->withErrors(['customer_service_name' => 'Customer service yang dimaksud tidak ditemukan.'])
+                ->withInput();
+        }
+
+        $invoice = $this->persistInvoice($data, $customerService->id);
 
         $settings = Setting::pluck('value', 'key')->all();
 
@@ -79,7 +94,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('send', $invoice);
 
-        $invoice->update(['status' => 'Proses']);
+        $invoice->update(['status' => 'belum bayar']);
         // Logic pengiriman email dapat ditambahkan di sini
         return redirect()->route('invoices.index');
     }
@@ -89,38 +104,72 @@ class InvoiceController extends Controller
         $this->authorize('storePayment', $invoice);
 
         $request->validate([
-            'payment_amount' => 'required|numeric|min:0.01|max:' . ($invoice->total - $invoice->down_payment),
+            'payment_amount' => 'required|numeric|min:0.01',
             'payment_date' => 'required|date',
+            'category_id' => 'nullable|exists:categories,id',
         ]);
 
-        $paymentAmount = $request->input('payment_amount');
+        $paymentAmount = round((float) $request->input('payment_amount'), 2);
         $paymentDate = $request->input('payment_date');
+        $categoryId = $request->input('category_id');
+        $currentDownPayment = round((float) $invoice->down_payment, 2);
+        $invoiceTotal = round((float) $invoice->total, 2);
+        $remainingBalance = max($invoiceTotal - $currentDownPayment, 0);
+        $willBePaidOff = $invoiceTotal > 0 && round($currentDownPayment + $paymentAmount, 2) >= $invoiceTotal;
 
-        DB::transaction(function () use ($invoice, $paymentAmount, $paymentDate) {
-            $invoice->down_payment += $paymentAmount;
+        if ($willBePaidOff && empty($categoryId)) {
+            return back()
+                ->withErrors(['category_id' => 'Pilih kategori pemasukan untuk pembayaran lunas.'])
+                ->withInput();
+        }
+
+        if ($paymentAmount > $remainingBalance) {
+            return back()
+                ->withErrors(['payment_amount' => 'Nominal pembayaran melebihi sisa tagihan.'])
+                ->withInput();
+        }
+
+        $categoryId = $categoryId ? (int) $categoryId : null;
+
+        DB::transaction(function () use ($invoice, $paymentAmount, $paymentDate, $categoryId, $willBePaidOff) {
+            $invoice->down_payment = round($invoice->down_payment + $paymentAmount, 2);
             $invoice->payment_date = $paymentDate;
 
-            if ($invoice->down_payment >= $invoice->total) {
-                $invoice->status = 'Terbayar';
+            $downPaymentTotal = round((float) $invoice->down_payment, 2);
+            $totalAmount = round((float) $invoice->total, 2);
+
+            if ($downPaymentTotal >= $totalAmount) {
+                $invoice->status = 'lunas';
+            } elseif ($downPaymentTotal > 0) {
+                $invoice->status = 'belum lunas';
             } else {
-                $invoice->status = 'Terbayar Sebagian';
+                $invoice->status = 'belum bayar';
             }
 
             $invoice->save();
 
-            // Create a transaction for the down payment
-            $category = Category::firstOrCreate(
-                ['name' => 'Down Payment'],
-                ['type' => 'pemasukan']
-            );
+            if ($willBePaidOff) {
+                Transaction::create([
+                    'category_id' => $categoryId,
+                    'user_id' => auth()->id(),
+                    'amount' => $paymentAmount,
+                    'description' => 'Pembayaran lunas Invoice #' . $invoice->number,
+                    'date' => $paymentDate,
+                ]);
+            } else {
+                $category = Category::firstOrCreate(
+                    ['name' => 'Down Payment'],
+                    ['type' => 'pemasukan']
+                );
 
-            Transaction::create([
-                'category_id' => $category->id,
-                'user_id' => auth()->id(),
-                'amount' => $paymentAmount,
-                'description' => 'Down payment for Invoice #' . $invoice->number,
-                'date' => $paymentDate,
-            ]);
+                Transaction::create([
+                    'category_id' => $category->id,
+                    'user_id' => auth()->id(),
+                    'amount' => $paymentAmount,
+                    'description' => 'Down payment untuk Invoice #' . $invoice->number,
+                    'date' => $paymentDate,
+                ]);
+            }
         });
 
         return redirect()->route('invoices.index')->with('success', 'Payment recorded successfully.');
@@ -250,7 +299,7 @@ class InvoiceController extends Controller
                 'number' => $invoiceNumber,
                 'issue_date' => $data['issue_date'] ?? now(),
                 'due_date' => $data['due_date'] ?? null,
-                'status' => 'Draft',
+                'status' => 'belum bayar',
                 'total' => collect($data['items'])->sum(fn ($item) => $item['quantity'] * $item['price']),
             ]);
 

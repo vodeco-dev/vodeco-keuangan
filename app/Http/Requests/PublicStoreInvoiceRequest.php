@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Role;
+use Illuminate\Validation\Rule;
+
 class PublicStoreInvoiceRequest extends StoreInvoiceRequest
 {
     /**
@@ -12,7 +15,17 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
     public function rules(): array
     {
         return array_merge(parent::rules(), [
-            'customer_service_id' => ['required', 'exists:users,id'],
+            'customer_service_name' => [
+                'required',
+                'string',
+                Rule::exists('users', 'name')->where(function ($query) {
+                    $query->whereIn('role', [
+                        Role::ADMIN->value,
+                        Role::ACCOUNTANT->value,
+                        Role::STAFF->value,
+                    ]);
+                }),
+            ],
         ]);
     }
 
@@ -24,8 +37,8 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
     public function messages(): array
     {
         return array_merge(parent::messages(), [
-            'customer_service_id.required' => 'Pilih customer service yang akan menangani invoice ini.',
-            'customer_service_id.exists' => 'Customer service yang dipilih tidak ditemukan.',
+            'customer_service_name.required' => 'Masukkan nama customer service yang akan menangani invoice ini.',
+            'customer_service_name.exists' => 'Nama customer service tidak ditemukan.',
         ]);
     }
 }
