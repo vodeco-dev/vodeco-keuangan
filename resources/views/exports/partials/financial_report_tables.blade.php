@@ -18,7 +18,7 @@
                 @foreach($row as $item)
                     <td>
                         <div class="summary-label">{{ $item['label'] }}</div>
-                        <div class="summary-value">{{ $item['value'] }}</div>
+                        <div class="summary-value-amount"><strong>{{ $item['value'] }}</strong></div>
                     </td>
                 @endforeach
                 @for($i = count($row); $i < 3; $i++)
@@ -30,7 +30,7 @@
 </table>
 
 <div class="table-section">
-    <span class="section-title">Pemasukan &amp; Pengeluaran</span>
+    <span class="section-title"><strong>Pemasukan &amp; Pengeluaran</strong></span>
     <table class="dual-table">
         <tbody>
             <tr>
@@ -60,8 +60,8 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="3">Total Pemasukan</td>
-                                <td class="text-right">{{ $formatCurrency($totals['pemasukan'] ?? 0) }}</td>
+                                <td colspan="3"><strong>Total Pemasukan</strong></td>
+                                <td class="text-right"><strong>{{ $formatCurrency($totals['pemasukan'] ?? 0) }}</strong></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -92,8 +92,8 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="3">Total Pengeluaran</td>
-                                <td class="text-right">{{ $formatCurrency($totals['pengeluaran'] ?? 0) }}</td>
+                                <td colspan="3"><strong>Total Pengeluaran</strong></td>
+                                <td class="text-right"><strong>{{ $formatCurrency($totals['pengeluaran'] ?? 0) }}</strong></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -104,7 +104,7 @@
 </div>
 
 <div class="table-section">
-    <span class="section-title">Laporan Hutang</span>
+    <span class="section-title"><strong>Laporan Hutang</strong></span>
     <table>
         <thead>
             <tr>
@@ -140,10 +140,10 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="2">Total</td>
-                <td class="text-right">{{ $formatCurrency($totals['hutang'] ?? 0) }}</td>
-                <td class="text-right">{{ $formatCurrency($totals['pembayaranHutang'] ?? 0) }}</td>
-                <td class="text-right">{{ $formatCurrency($totals['sisaHutang'] ?? 0) }}</td>
+                <td colspan="2"><strong>Total</strong></td>
+                <td class="text-right"><strong>{{ $formatCurrency($totals['hutang'] ?? 0) }}</strong></td>
+                <td class="text-right"><strong>{{ $formatCurrency($totals['pembayaranHutang'] ?? 0) }}</strong></td>
+                <td class="text-right"><strong>{{ $formatCurrency($totals['sisaHutang'] ?? 0) }}</strong></td>
                 <td colspan="2"></td>
             </tr>
         </tfoot>

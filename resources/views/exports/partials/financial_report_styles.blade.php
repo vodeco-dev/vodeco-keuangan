@@ -12,7 +12,7 @@
         color: #1f2937;
         background-color: #f8fafc;
         margin: 0;
-        padding: 24px;
+        padding: 12px;
     }
 
     .report-wrapper {
@@ -24,6 +24,7 @@
         margin-bottom: 4px;
         font-size: 28px;
         color: #000080;
+        font-family: 'Segoe UI', Arial, sans-serif;
     }
 
     .report-period {
@@ -61,10 +62,13 @@
         margin-bottom: 6px;
     }
 
-    .summary-value {
+    .summary-value-amount {
         font-size: 20px;
-        font-weight: 700;
         color: #000080;
+    }
+
+    strong {
+        font-weight: 700;
     }
 
     .table-section {
@@ -83,7 +87,6 @@
         padding: 10px 18px;
         border-radius: 999px;
         font-size: 16px;
-        font-weight: 600;
         letter-spacing: 0.03em;
         text-transform: uppercase;
     }
@@ -114,6 +117,7 @@
         text-align: left;
         letter-spacing: 0.05em;
         text-transform: uppercase;
+        font-family: 'Segoe UI', Arial, sans-serif;
     }
 
     tbody td {
@@ -126,7 +130,6 @@
 
     tfoot td {
         padding: 12px 14px;
-        font-weight: 700;
         color: #000080;
         background: rgba(0, 0, 128, 0.05);
         border-top: 1px solid rgba(0, 0, 128, 0.15);
