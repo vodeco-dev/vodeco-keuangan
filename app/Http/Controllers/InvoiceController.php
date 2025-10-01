@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Role;
+use App\Http\Requests\PublicStoreInvoiceRequest;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -14,6 +15,7 @@ use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use App\Models\User;
 
 class InvoiceController extends Controller
 {
@@ -24,9 +26,12 @@ class InvoiceController extends Controller
     public function index(): View
     {
         if (auth()->user()->role === Role::ADMIN) {
-            $invoices = Invoice::latest()->paginate();
+            $invoices = Invoice::with('customerService')->latest()->paginate();
         } else {
-            $invoices = Invoice::where('user_id', auth()->id())->latest()->paginate();
+            $invoices = Invoice::with('customerService')
+                ->where('user_id', auth()->id())
+                ->latest()
+                ->paginate();
         }
         return view('invoices.index', compact('invoices'));
     }
@@ -36,40 +41,38 @@ class InvoiceController extends Controller
         return view('invoices.create');
     }
 
+    public function createPublic(): View
+    {
+        $customerServices = User::whereIn('role', [Role::ADMIN, Role::ACCOUNTANT, Role::STAFF])
+            ->orderBy('name')
+            ->get();
+
+        return view('invoices.public-create', compact('customerServices'));
+    }
+
     public function store(StoreInvoiceRequest $request): RedirectResponse
     {
         $data = $request->validated();
 
-        DB::transaction(function () use ($data) {
-            // Generate Invoice Number
-            $date = now()->format('Ymd');
-            $count = Invoice::whereDate('created_at', today())->count();
-            $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-            $invoiceNumber = "{$date}-{$sequence}";
-
-            $invoice = Invoice::create([
-                'user_id' => auth()->id(),
-                'client_name' => $data['client_name'],
-                'client_email' => $data['client_email'],
-                'client_address' => $data['client_address'],
-                'number' => $invoiceNumber,
-                'issue_date' => $data['issue_date'] ?? now(),
-                'due_date' => $data['due_date'] ?? null,
-                'status' => 'Draft',
-                'total' => collect($data['items'])->sum(fn ($item) => $item['quantity'] * $item['price']),
-            ]);
-
-            foreach ($data['items'] as $item) {
-                InvoiceItem::create([
-                    'invoice_id' => $invoice->id,
-                    'description' => $item['description'],
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
-                ]);
-            }
-        });
+        $this->persistInvoice($data, auth()->id());
 
         return redirect()->route('invoices.index');
+    }
+
+    public function storePublic(PublicStoreInvoiceRequest $request)
+    {
+        $data = $request->validated();
+
+        $invoice = $this->persistInvoice($data, $data['customer_service_id']);
+
+        $settings = Setting::pluck('value', 'key')->all();
+
+        return Pdf::loadView('invoices.pdf', [
+            'invoice' => $invoice,
+            'settings' => $settings,
+        ])
+            ->setPaper('a4')
+            ->download($invoice->number . '.pdf');
     }
 
     public function send(Invoice $invoice): RedirectResponse
@@ -127,6 +130,8 @@ class InvoiceController extends Controller
     {
         $this->authorize('view', $invoice);
 
+        $invoice->loadMissing('items', 'customerService');
+
         // Ambil pengaturan bisnis dari database
         $settings = Setting::pluck('value', 'key')->all();
 
@@ -151,6 +156,8 @@ class InvoiceController extends Controller
     public function showPublic(string $token)
     {
         $invoice = Invoice::where('public_token', $token)->firstOrFail();
+
+        $invoice->loadMissing('items', 'customerService');
 
         // Ambil pengaturan bisnis dari database
         $settings = Setting::pluck('value', 'key')->all();
@@ -225,5 +232,38 @@ class InvoiceController extends Controller
         $invoice->delete();
 
         return redirect()->route('invoices.index');
+    }
+
+    private function persistInvoice(array $data, int $customerServiceId): Invoice
+    {
+        return DB::transaction(function () use ($data, $customerServiceId) {
+            $date = now()->format('Ymd');
+            $count = Invoice::whereDate('created_at', today())->count();
+            $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+            $invoiceNumber = "{$date}-{$sequence}";
+
+            $invoice = Invoice::create([
+                'user_id' => $customerServiceId,
+                'client_name' => $data['client_name'],
+                'client_email' => $data['client_email'],
+                'client_address' => $data['client_address'],
+                'number' => $invoiceNumber,
+                'issue_date' => $data['issue_date'] ?? now(),
+                'due_date' => $data['due_date'] ?? null,
+                'status' => 'Draft',
+                'total' => collect($data['items'])->sum(fn ($item) => $item['quantity'] * $item['price']),
+            ]);
+
+            foreach ($data['items'] as $item) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => $item['description'],
+                    'quantity' => $item['quantity'],
+                    'price' => $item['price'],
+                ]);
+            }
+
+            return $invoice->load('items', 'customerService');
+        });
     }
 }

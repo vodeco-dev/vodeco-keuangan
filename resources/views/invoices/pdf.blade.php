@@ -76,6 +76,7 @@
                 <p><strong>Inv No :</strong> {{ $invoice->number }}</p>
                 <p><strong>Inv Date :</strong> {{ $invoice->issue_date->format('d/m/Y') }}</p>
                 <p><strong>Kepada :</strong> {{ $invoice->client_name }}</p>
+                <p><strong>Customer Service :</strong> {{ $invoice->customerService?->name ?? '-' }}</p>
             </div>
         </section>
 

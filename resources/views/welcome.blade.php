@@ -23,9 +23,12 @@
                     <p class="mt-4 text-lg lg:text-2xl text-gray-300">
                         Finance App By Vodeco
                     </p>
-                    <div class="mt-8">
-                        <a href="{{ route('login') }}" class="inline-block px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">
+                    <div class="mt-8 flex flex-col sm:flex-row gap-4">
+                        <a href="{{ route('login') }}" class="inline-block px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 text-center">
                             Log in
+                        </a>
+                        <a href="{{ route('invoices.public.create') }}" class="inline-block px-8 py-3 bg-white/90 text-blue-700 font-semibold rounded-lg shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-opacity-75 text-center">
+                            Buat Invoice Tanpa Login
                         </a>
                     </div>
                 </div>
