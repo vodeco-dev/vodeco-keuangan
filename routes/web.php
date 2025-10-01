@@ -20,6 +20,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/invoices/public/create', [InvoiceController::class, 'createPublic'])->name('invoices.public.create');
+Route::post('/invoices/public', [InvoiceController::class, 'storePublic'])->name('invoices.public.store');
+
 // Route untuk melihat invoice secara publik tanpa perlu login
 Route::get('/invoices/view/{token}', [InvoiceController::class, 'showPublic'])->name('invoices.public.show');
 

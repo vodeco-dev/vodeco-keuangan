@@ -17,6 +17,7 @@
                             <tr>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{{ __('Number') }}</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{{ __('Status') }}</th>
+                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">{{ __('Customer Service') }}</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">{{ __('Total') }}</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">{{ __('Paid Amount') }}</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">{{ __('Remaining Amount') }}</th>
@@ -28,6 +29,7 @@
                             <tr>
                                 <td class="px-6 py-4">{{ $invoice->number }}</td>
                                 <td class="px-6 py-4">{{ $invoice->status }}</td>
+                                <td class="px-6 py-4">{{ $invoice->customerService?->name ?? '-' }}</td>
                                 <td class="px-6 py-4 text-right">Rp {{ number_format($invoice->total, 0, ',', '.') }}</td>
                                 <td class="px-6 py-4 text-right">Rp {{ number_format($invoice->down_payment, 0, ',', '.') }}</td>
                                 <td class="px-6 py-4 text-right">Rp {{ number_format($invoice->total - $invoice->down_payment, 0, ',', '.') }}</td>
