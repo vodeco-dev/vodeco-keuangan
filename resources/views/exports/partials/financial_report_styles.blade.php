@@ -32,19 +32,25 @@
         font-size: 14px;
     }
 
-    .summary-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
+    .summary-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 16px 12px;
         margin-bottom: 24px;
     }
 
-    .summary-card {
-        flex: 1 1 220px;
-        background: linear-gradient(135deg, rgba(0, 0, 128, 0.08), rgba(0, 0, 128, 0.18));
+    .summary-table td {
+        background: #eef2ff;
         border: 1px solid rgba(0, 0, 128, 0.25);
-        border-radius: 16px;
-        padding: 16px 20px;
+        border-radius: 12px;
+        padding: 14px 18px;
+        vertical-align: top;
+    }
+
+    .summary-placeholder {
+        background: transparent;
+        border: none;
+        padding: 0;
     }
 
     .summary-label {
@@ -71,9 +77,7 @@
     }
 
     .section-title {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
+        display: inline-block;
         background-color: #000080;
         color: #ffffff;
         padding: 10px 18px;
@@ -89,6 +93,18 @@
         border-collapse: collapse;
         margin-top: 18px;
         font-size: 13px;
+    }
+
+    .dual-table {
+        width: 100%;
+        margin-top: 18px;
+        border-collapse: separate;
+        border-spacing: 20px;
+    }
+
+    .dual-table > tbody > tr > td {
+        width: 50%;
+        vertical-align: top;
     }
 
     thead th {
@@ -125,7 +141,7 @@
     }
 
     .status-badge {
-        display: inline-flex;
+        display: inline-block;
         padding: 4px 12px;
         border-radius: 999px;
         font-size: 12px;
@@ -147,16 +163,5 @@
         text-align: center;
         color: #64748b;
         font-style: italic;
-    }
-
-    .dual-table {
-        display: grid;
-        gap: 24px;
-    }
-
-    @media (min-width: 900px) {
-        .dual-table {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
     }
 </style>
