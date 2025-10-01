@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CustomerServiceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebtController;
 use App\Http\Controllers\InvoiceController;
@@ -45,6 +46,8 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('debts/category-preferences', [DebtController::class, 'updateCategoryPreferences'])->name('debts.category-preferences.update');
     Route::resource('debts', DebtController::class);
     Route::resource('invoices', InvoiceController::class);
+    Route::get('customer-services/create', [CustomerServiceController::class, 'create'])->name('customer-services.create');
+    Route::post('customer-services', [CustomerServiceController::class, 'store'])->name('customer-services.store');
 
     // Route untuk Aksi Spesifik
     // Invoicing

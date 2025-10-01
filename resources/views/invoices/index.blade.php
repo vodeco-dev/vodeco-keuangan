@@ -14,8 +14,9 @@
     <div class="py-12" x-data="invoicePayments({ categories: @js($categoryOptions), defaultDate: '{{ now()->toDateString() }}' })">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                <div class="mb-4">
+                <div class="mb-4 flex flex-wrap gap-2">
                     <a href="{{ route('invoices.create') }}" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Buat Invoices</a>
+                    <a href="{{ route('customer-services.create') }}" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Tambah Customer Service</a>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
@@ -35,7 +36,7 @@
                             <tr>
                                 <td class="px-6 py-4">{{ $invoice->number }}</td>
                                 <td class="px-6 py-4">{{ ucwords($invoice->status) }}</td>
-                                <td class="px-6 py-4">{{ $invoice->customerService?->name ?? '-' }}</td>
+                                <td class="px-6 py-4">{{ $invoice->customer_service_name ?? $invoice->customerService?->name ?? '-' }}</td>
                                 <td class="px-6 py-4 text-right">Rp {{ number_format($invoice->total, 0, ',', '.') }}</td>
                                 <td class="px-6 py-4 text-right">Rp {{ number_format($invoice->down_payment, 0, ',', '.') }}</td>
                                 <td class="px-6 py-4 text-right">Rp {{ number_format(max($invoice->total - $invoice->down_payment, 0), 0, ',', '.') }}</td>

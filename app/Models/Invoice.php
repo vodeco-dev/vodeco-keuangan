@@ -30,6 +30,8 @@ class Invoice extends Model
         'client_address',
         'down_payment',
         'payment_date',
+        'customer_service_id',
+        'customer_service_name',
     ];
 
     /**
@@ -66,6 +68,11 @@ class Invoice extends Model
     }
 
     public function customerService(): BelongsTo
+    {
+        return $this->belongsTo(CustomerService::class);
+    }
+
+    public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }

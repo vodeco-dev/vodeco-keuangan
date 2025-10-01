@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\Role;
 use App\Http\Requests\PublicStoreInvoiceRequest;
 use App\Http\Requests\StoreInvoiceRequest;
+use App\Models\CustomerService;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Transaction;
@@ -43,14 +44,14 @@ class InvoiceController extends Controller
 
     public function create(): View
     {
-        return view('invoices.create');
+        $customerServices = CustomerService::orderBy('name')->get();
+
+        return view('invoices.create', compact('customerServices'));
     }
 
     public function createPublic(): View
     {
-        $customerServices = User::whereIn('role', [Role::ADMIN, Role::ACCOUNTANT, Role::STAFF])
-            ->orderBy('name')
-            ->get();
+        $customerServices = CustomerService::orderBy('name')->get();
 
         return view('invoices.public-create', compact('customerServices'));
     }
@@ -59,7 +60,21 @@ class InvoiceController extends Controller
     {
         $data = $request->validated();
 
-        $this->persistInvoice($data, auth()->id());
+        $customerService = null;
+
+        if (! empty($data['customer_service_id'])) {
+            $customerService = CustomerService::find($data['customer_service_id']);
+
+            if (! $customerService) {
+                return back()
+                    ->withErrors(['customer_service_id' => 'Customer service yang dipilih tidak ditemukan.'])
+                    ->withInput();
+            }
+        }
+
+        $ownerId = $customerService?->user_id ?? auth()->id();
+
+        $this->persistInvoice($data, $customerService, $ownerId);
 
         return redirect()->route('invoices.index');
     }
@@ -68,9 +83,7 @@ class InvoiceController extends Controller
     {
         $data = $request->validated();
 
-        $customerService = User::whereIn('role', [Role::ADMIN, Role::ACCOUNTANT, Role::STAFF])
-            ->where('name', $data['customer_service_name'])
-            ->first();
+        $customerService = CustomerService::where('name', $data['customer_service_name'])->first();
 
         if (! $customerService) {
             return back()
@@ -78,7 +91,16 @@ class InvoiceController extends Controller
                 ->withInput();
         }
 
-        $invoice = $this->persistInvoice($data, $customerService->id);
+        $ownerId = $customerService->user_id
+            ?? User::where('role', Role::ADMIN)->orderBy('id')->value('id');
+
+        if (! $ownerId) {
+            return back()
+                ->withErrors(['customer_service_name' => 'Customer service belum dapat digunakan saat ini.'])
+                ->withInput();
+        }
+
+        $invoice = $this->persistInvoice($data, $customerService, $ownerId);
 
         $settings = Setting::pluck('value', 'key')->all();
 
@@ -240,7 +262,9 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
-        return view('invoices.edit', compact('invoice'));
+        $customerServices = CustomerService::orderBy('name')->get();
+
+        return view('invoices.edit', compact('invoice', 'customerServices'));
     }
 
     public function update(StoreInvoiceRequest $request, Invoice $invoice)
@@ -249,8 +273,25 @@ class InvoiceController extends Controller
 
         $data = $request->validated();
 
-        DB::transaction(function () use ($invoice, $data) {
+        $customerService = null;
+
+        if (! empty($data['customer_service_id'])) {
+            $customerService = CustomerService::find($data['customer_service_id']);
+
+            if (! $customerService) {
+                return back()
+                    ->withErrors(['customer_service_id' => 'Customer service yang dipilih tidak ditemukan.'])
+                    ->withInput();
+            }
+        }
+
+        $ownerId = $customerService?->user_id ?? $invoice->user_id;
+
+        DB::transaction(function () use ($invoice, $data, $customerService, $ownerId) {
             $invoice->update([
+                'user_id' => $ownerId,
+                'customer_service_id' => $customerService?->id,
+                'customer_service_name' => $customerService?->name ?? null,
                 'client_name' => $data['client_name'],
                 'client_email' => $data['client_email'],
                 'client_address' => $data['client_address'],
@@ -283,16 +324,18 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index');
     }
 
-    private function persistInvoice(array $data, int $customerServiceId): Invoice
+    private function persistInvoice(array $data, ?CustomerService $customerService, ?int $ownerId = null): Invoice
     {
-        return DB::transaction(function () use ($data, $customerServiceId) {
+        return DB::transaction(function () use ($data, $customerService, $ownerId) {
             $date = now()->format('Ymd');
             $count = Invoice::whereDate('created_at', today())->count();
             $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
             $invoiceNumber = "{$date}-{$sequence}";
 
             $invoice = Invoice::create([
-                'user_id' => $customerServiceId,
+                'user_id' => $ownerId ?? auth()->id(),
+                'customer_service_id' => $customerService?->id,
+                'customer_service_name' => $customerService?->name ?? ($data['customer_service_name'] ?? null),
                 'client_name' => $data['client_name'],
                 'client_email' => $data['client_email'],
                 'client_address' => $data['client_address'],

@@ -6,6 +6,17 @@
         @csrf
         @method('PUT')
         <div>
+            <label for="customer_service_id">Customer Service</label>
+            <select name="customer_service_id" id="customer_service_id">
+                <option value="">Pilih customer service</option>
+                @foreach($customerServices as $customerService)
+                    <option value="{{ $customerService->id }}" @selected(old('customer_service_id', $invoice->customer_service_id) == $customerService->id)>
+                        {{ $customerService->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div>
             <label for="client_name">Client Name</label>
             <input type="text" name="client_name" id="client_name" value="{{ $invoice->client_name }}">
         </div>

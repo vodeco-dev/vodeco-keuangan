@@ -6,6 +6,7 @@
     <p>Client Name: {{ $invoice->client_name }}</p>
     <p>Client Email: {{ $invoice->client_email }}</p>
     <p>Client Address: {{ $invoice->client_address }}</p>
+    <p>Customer Service: {{ $invoice->customer_service_name ?? $invoice->customerService?->name ?? '-' }}</p>
     <p>Issue Date: {{ $invoice->issue_date->format('Y-m-d') }}</p>
     <p>Due Date: {{ $invoice->due_date->format('Y-m-d') }}</p>
     <p>Total: {{ $invoice->total }}</p>

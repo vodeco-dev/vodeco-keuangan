@@ -62,7 +62,7 @@
                                         required>
                                     <datalist id="customer-service-options">
                                         @foreach ($customerServices as $customerService)
-                                            <option value="{{ $customerService->name }}">{{ $customerService->name }} ({{ ucfirst($customerService->role->value) }})</option>
+                                            <option value="{{ $customerService->name }}">{{ $customerService->name }}</option>
                                         @endforeach
                                     </datalist>
                                 </div>
