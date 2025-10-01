@@ -55,45 +55,35 @@
 
         <!-- Items Table -->
         <main class="mt-6">
-            <table class="w-full text-left">
+            <table class="w-full text-left text-xs border border-gray-300">
                 <thead>
-                    <tr class="border-y-2 border-gray-300">
-                        <th class="py-2"></th>
-                        <th class="text-right">Total</th>
+                    <tr class="bg-gray-200 border-b border-gray-300">
+                        <th class="py-1.5 px-3">Deskripsi produk yang dipesan</th>
+                        <th class="py-1.5 px-3 text-right">Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($invoice->items as $item)
-                    <tr>
-                        <td class="py-2 pr-4">{{ $item->description }}</td>
-                        <td class="py-2 text-right">Rp. {{ number_format($item->price * $item->quantity, 2, ',', '.') }}</td>
+                    <tr class="border-b border-gray-300">
+                        <td class="px-3 py-2 align-top">{{ $item->description }}</td>
+                        <td class="px-3 py-2 text-right align-top">Rp. {{ number_format($item->price * $item->quantity, 2, ',', '.') }}</td>
                     </tr>
                     @endforeach
 
                     <!-- Spacer -->
-                    <tr><td class="py-2" colspan="2"></td></tr>
-
-                    <!-- Sub Total -->
-                    <tr class="bg-gray-100">
-                        <td class="py-1 pr-4 text-right font-bold">Sub Total</td>
-                        <td class="py-1 text-right font-bold">Rp. {{ number_format($invoice->total, 2, ',', '.') }}</td>
+                    <tr class="border-b border-gray-300">
+                        <td class="px-3 h-5" colspan="2"></td>
                     </tr>
 
-                    <!-- Empty rows -->
-                    @for($i = 0; $i < 3; $i++)
-                    <tr class="bg-gray-100 h-6"><td colspan="2"></td></tr>
-                    @endfor
-
-                    <!-- Pembayaran -->
-                    <tr class="bg-gray-100">
-                        <td class="py-1 pr-4 text-right text-red-500 font-bold">pembayaran</td>
-                        <td class="py-1 text-right text-red-500 font-bold">Rp {{ number_format($invoice->total, 2, ',', '.') }}</td>
-                    </tr>
-
-                    <!-- Keterangan -->
-                    <tr class="bg-gray-100">
-                        <td class="py-1 pr-4 text-right font-bold">Keterangan</td>
-                        <td class="py-1 text-right font-bold text-red-500">menunggu pembayaran</td>
+                    <!-- Summary Panel -->
+                    <tr class="bg-gray-100 border-t border-gray-300">
+                        <td class="px-3 py-3" colspan="2">
+                            <div class="flex flex-col items-end text-right text-red-600 space-y-1">
+                                <p class="font-semibold">Sub Total: <span class="ml-2">Rp. {{ number_format($invoice->total, 2, ',', '.') }}</span></p>
+                                <p class="font-semibold">Down Payment: <span class="ml-2">Rp. {{ number_format($invoice->down_payment, 2, ',', '.') }}</span></p>
+                                <p class="font-semibold">Keterangan: <span class="ml-2">{{ $invoice->status ?? 'Menunggu Pembayaran' }}</span></p>
+                            </div>
+                        </td>
                     </tr>
                 </tbody>
             </table>
