@@ -12,56 +12,53 @@
     </head>
     {{-- Tambahkan kelas 'animated-gradient-bg' untuk background baru --}}
     <body class="antialiased" style="background-image: url('{{ asset('background-vodeco.jpg') }}'); background-size: cover; background-position: center;">
-        <div class="relative sm:flex sm:justify-center sm:items-center min-h-screen selection:bg-red-500 selection:text-white">
-
-
-            <div class="max-w-7xl mx-auto p-6 lg:p-8">
-                <div class="flex flex-col items-start justify-center text-left">
-                    <h1 class="text-4xl lg:text-6xl font-extrabold text-white">
-                        CV VODECO DIGITAL MEDIATAMA
-                    </h1>
-                    <p class="mt-4 text-lg lg:text-2xl text-gray-300">
-                        Finance App By Vodeco
-                    </p>
-                    <div class="mt-8 flex flex-col sm:flex-row gap-4">
-                        <a href="{{ route('login') }}" class="inline-block px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 text-center">
-                            Log in
-                        </a>
-                        <a href="{{ route('invoices.public.create') }}" class="inline-block px-8 py-3 bg-white/90 text-blue-700 font-semibold rounded-lg shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-opacity-75 text-center">
-                            Buat Invoice
-                        </a>
-                        <button id="open-invoice-status" type="button" class="inline-block px-8 py-3 bg-emerald-500/90 text-white font-semibold rounded-lg shadow-md hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-opacity-75">
-                            Cek Status Invoice
-                        </button>
-                    </div>
+        <div class="relative sm:flex sm:justify-center sm:items-center min-h-screen selection:bg-red-500 selection:text-white flex items-center justify-center">
+            <div class="max-w-7xl mx-auto p-6 lg:p-8 w-full flex flex-col items-center justify-center">
+            <div class="flex flex-col items-start justify-center text-left w-full">
+                <h1 class="text-3xl sm:text-4xl lg:text-6xl font-extrabold text-white leading-tight">
+                CV VODECO DIGITAL MEDIATAMA
+                </h1>
+                <p class="mt-3 sm:mt-4 text-base sm:text-lg lg:text-2xl text-gray-300">
+                Finance App By Vodeco
+                </p>
+                <div class="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
+                <a href="{{ route('login') }}" class="w-full sm:w-auto inline-block px-6 py-3 sm:px-8 sm:py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 text-center text-base sm:text-lg">
+                    Log in
+                </a>
+                <a href="{{ route('invoices.public.create') }}" class="w-full sm:w-auto inline-block px-6 py-3 sm:px-8 sm:py-3 bg-white/90 text-blue-700 font-semibold rounded-lg shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-opacity-75 text-center text-base sm:text-lg">
+                    Buat Invoice
+                </a>
+                <button id="open-invoice-status" type="button" class="w-full sm:w-auto inline-block px-6 py-3 sm:px-8 sm:py-3 bg-emerald-500/90 text-white font-semibold rounded-lg shadow-md hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-opacity-75 text-center text-base sm:text-lg">
+                    Cek Status Invoice
+                </button>
                 </div>
+            </div>
             </div>
 
             <div id="invoice-status-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 px-4">
-                <div class="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-                    <button id="close-invoice-status" type="button" class="absolute right-3 top-3 rounded-full bg-gray-100 p-2 text-gray-600 transition hover:bg-gray-200" aria-label="Tutup dialog">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+            <div class="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+                <button id="close-invoice-status" type="button" class="absolute right-3 top-3 rounded-full bg-gray-100 p-2 text-gray-600 transition hover:bg-gray-200" aria-label="Tutup dialog">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                </button>
 
-                    <h2 class="text-2xl font-semibold text-gray-800">Cek Status Invoice</h2>
-                    <p class="mt-1 text-sm text-gray-500">Masukkan nomor invoice untuk melihat status terbaru.</p>
+                <h2 class="text-2xl font-semibold text-gray-800">Cek Status Invoice</h2>
+                <p class="mt-1 text-sm text-gray-500">Masukkan nomor invoice untuk melihat status terbaru.</p>
 
-                    <form id="invoice-status-form" class="mt-6 space-y-4">
-                        <div>
-                            <label for="invoice-number" class="block text-sm font-medium text-gray-700">Nomor Invoice</label>
-                            <input id="invoice-number" type="text" name="number" required class="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Contoh: INV-001" />
-                        </div>
-                        <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">
-                            Cek Sekarang
-                        </button>
-                    </form>
-
-                    <div id="invoice-status-result" class="mt-4 hidden rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700"></div>
+                <form id="invoice-status-form" class="mt-6 space-y-4">
+                <div>
+                    <label for="invoice-number" class="block text-sm font-medium text-gray-700">Nomor Invoice</label>
+                    <input id="invoice-number" type="text" name="number" required class="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Contoh: INV-001" />
                 </div>
-            </div>
+                <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">
+                    Cek Sekarang
+                </button>
+                </form>
 
+                <div id="invoice-status-result" class="mt-4 hidden rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700"></div>
+            </div>
+            </div>
         </div>
 
 
