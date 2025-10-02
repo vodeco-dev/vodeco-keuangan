@@ -28,7 +28,7 @@
                             Log in
                         </a>
                         <a href="{{ route('invoices.public.create') }}" class="inline-block px-8 py-3 bg-white/90 text-blue-700 font-semibold rounded-lg shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-opacity-75 text-center">
-                            Buat Invoice Tanpa Login
+                            Buat Invoice
                         </a>
                     </div>
                 </div>
