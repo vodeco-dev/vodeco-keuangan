@@ -146,17 +146,20 @@
         <form method="GET" action="{{ route('debts.index') }}">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-4">
-                    <select name="type_filter" onchange="this.form.submit()" class="border-gray-300 rounded-lg text-sm">
+                    <select name="type_filter" class="border-gray-300 rounded-lg text-sm">
                         <option value="">Tipe: Semua</option>
                         <option value="down_payment" {{ request('type_filter') == 'down_payment' ? 'selected' : '' }}>Down Payment</option>
                         <option value="pass_through" {{ request('type_filter') == 'pass_through' ? 'selected' : '' }}>Pass Through</option>
                     </select>
-                    <select name="status_filter" onchange="this.form.submit()" class="border-gray-300 rounded-lg text-sm">
+                    <select name="status_filter" class="border-gray-300 rounded-lg text-sm">
                         <option value="">Status: Semua</option>
                         <option value="{{ \App\Models\Debt::STATUS_BELUM_LUNAS }}" {{ request('status_filter') == \App\Models\Debt::STATUS_BELUM_LUNAS ? 'selected' : '' }}>Belum Lunas</option>
                         <option value="{{ \App\Models\Debt::STATUS_LUNAS }}" {{ request('status_filter') == \App\Models\Debt::STATUS_LUNAS ? 'selected' : '' }}>Lunas</option>
                         <option value="{{ \App\Models\Debt::STATUS_GAGAL }}" {{ request('status_filter') == \App\Models\Debt::STATUS_GAGAL ? 'selected' : '' }}>Gagal</option>
                     </select>
+                    <input type="date" name="due_date_from" class="border-gray-300 rounded-lg text-sm" value="{{ request('due_date_from') }}" title="Jatuh tempo dari">
+                    <input type="date" name="due_date_to" class="border-gray-300 rounded-lg text-sm" value="{{ request('due_date_to') }}" title="Jatuh tempo sampai">
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Filter</button>
                 </div>
                 <div class="relative">
                     <input name="search" class="pl-10 pr-4 py-2 border rounded-lg text-sm" placeholder="Cari..." type="text" value="{{ request('search') }}">
@@ -224,6 +227,12 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                     </svg>
                                 </button>
+
+                                <a href="{{ route('debts.edit', $debt) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit">
+                                    <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m14.3 4.8 2.9 2.9M7 7H4a1 1 0 0 0-1 1v10c0 .6.4 1 1 1h11c.6 0 1-.4 1-1v-4.5m2.4-10a2 2 0 0 1 0 3l-6.8 6.8L8 18l.7-3.6 6.9-6.8a2 2 0 0 1 2.8 0Z"/>
+                                    </svg>
+                                </a>
 
                                 <form action="{{ route('debts.fail', $debt) }}" method="POST" class="inline" onsubmit="return confirm('Tandai catatan ini sebagai gagal project?');">
                                     @csrf

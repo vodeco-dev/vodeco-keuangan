@@ -178,6 +178,14 @@ class InvoiceController extends Controller
                 ]
             );
 
+            if ($debt->wasRecentlyCreated && !$debt->category_id) {
+                $firstItem = $invoice->items()->first();
+                if ($firstItem && $firstItem->category_id) {
+                    $debt->category_id = $firstItem->category_id;
+                    $debt->save();
+                }
+            }
+
             if ($debt) {
                 $debt->payments()->create([
                     'amount' => $paymentAmount,

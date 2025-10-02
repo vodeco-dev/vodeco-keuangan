@@ -189,12 +189,40 @@ class DebtController extends Controller
         }
     }
 
+    public function edit(Debt $debt): View
+    {
+        $this->authorize('update', $debt);
+
+        return view('debts.edit', [
+            'debt' => $debt,
+        ]);
+    }
+
+    public function update(Request $request, Debt $debt): RedirectResponse
+    {
+        $this->authorize('update', $debt);
+
+        $validated = $request->validate([
+            'description' => 'required|string|max:255',
+            'related_party' => 'required|string|max:255',
+            'due_date' => 'nullable|date',
+        ]);
+
+        $debt->update($validated);
+
+        return redirect()->route('debts.index')->with('success', 'Catatan berhasil diperbarui.');
+    }
+
     public function markAsFailed(Request $request, Debt $debt): RedirectResponse
     {
         $this->authorize('update', $debt);
 
         if ($debt->status !== Debt::STATUS_BELUM_LUNAS) {
             return redirect()->route('debts.index')->with('info', 'Catatan ini tidak dapat ditandai gagal.');
+        }
+
+        if (!$debt->category_id) {
+            return redirect()->route('debts.index')->withErrors(['error' => 'Tidak dapat menandai gagal karena tidak ada kategori yang terhubung. Silakan lakukan pembayaran parsial terlebih dahulu untuk menyambungkan kategori.']);
         }
 
         $this->finalizeFailedDebt($debt, $request->user());
