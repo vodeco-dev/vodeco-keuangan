@@ -24,7 +24,9 @@ class TransactionService
             $query->where('description', 'like', '%' . $request->search . '%');
         }
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('date', [$request->start_date, $request->end_date]);
+            $start = Carbon::parse($request->start_date)->startOfDay();
+            $end = Carbon::parse($request->end_date)->endOfDay();
+            $query->whereBetween('date', [$start, $end]);
         } elseif ($request->filled('start_date')) {
             $query->whereDate('date', '>=', $request->start_date);
         } elseif ($request->filled('end_date')) {
@@ -101,7 +103,9 @@ class TransactionService
             $query->where('description', 'like', '%' . $request->search . '%');
         }
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('date', [$request->start_date, $request->end_date]);
+            $start = Carbon::parse($request->start_date)->startOfDay();
+            $end = Carbon::parse($request->end_date)->endOfDay();
+            $query->whereBetween('date', [$start, $end]);
         } elseif ($request->filled('start_date')) {
             $query->whereDate('date', '>=', $request->start_date);
         } elseif ($request->filled('end_date')) {
@@ -150,7 +154,9 @@ class TransactionService
         $useFilters = false;
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('transactions.date', [$request->start_date, $request->end_date]);
+            $start = Carbon::parse($request->start_date)->startOfDay();
+            $end = Carbon::parse($request->end_date)->endOfDay();
+            $query->whereBetween('transactions.date', [$start, $end]);
             $useFilters = true;
         } elseif ($request->filled('start_date')) {
             $query->whereDate('transactions.date', '>=', $request->start_date);
@@ -236,11 +242,14 @@ class TransactionService
      */
     public function prepareChartData(?User $user, $startDate, $endDate, ?int $categoryId = null, ?string $type = null): array
     {
+        $start = Carbon::parse($startDate)->startOfDay();
+        $end = Carbon::parse($endDate)->endOfDay();
+
         $baseQuery = Transaction::query()
             ->when($user !== null, function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
-            ->whereBetween('date', [$startDate, $endDate]);
+            ->whereBetween('date', [$start, $end]);
 
         if ($categoryId) {
             $baseQuery->where('category_id', $categoryId);
