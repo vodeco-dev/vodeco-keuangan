@@ -27,7 +27,7 @@ class Invoice extends Model
         'status',
         'total',
         'client_name',
-        'client_email',
+        'client_whatsapp',
         'client_address',
         'down_payment',
         'payment_date',
@@ -66,6 +66,25 @@ class Invoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function itemDescriptionSummary(int $maxLength = 120): string
+    {
+        $descriptions = $this->relationLoaded('items')
+            ? $this->items->pluck('description')
+            : $this->items()->pluck('description');
+
+        $summary = $descriptions
+            ->filter()
+            ->map(fn ($description) => trim((string) $description))
+            ->filter()
+            ->implode(', ');
+
+        if ($summary === '') {
+            return 'Invoice #' . $this->number;
+        }
+
+        return Str::limit($summary, $maxLength);
     }
 
     public function customerService(): BelongsTo

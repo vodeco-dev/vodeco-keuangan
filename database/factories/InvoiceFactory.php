@@ -16,7 +16,7 @@ class InvoiceFactory extends Factory
             'user_id' => User::factory(),
             'number' => $this->faker->unique()->numerify('INV-2025-#####'),
             'client_name' => $this->faker->name,
-            'client_email' => $this->faker->unique()->safeEmail,
+            'client_whatsapp' => $this->faker->unique()->numerify('08##########'),
             'client_address' => $this->faker->address,
             'issue_date' => now(),
             'due_date' => $this->faker->dateTimeBetween('+1 week', '+1 month'),

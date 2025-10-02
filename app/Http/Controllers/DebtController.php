@@ -122,6 +122,31 @@ class DebtController extends Controller
                 // Reload relasi untuk mendapatkan paid_amount yang ter-update
                 $debt->load('payments');
 
+                $invoice = $debt->invoice;
+                if ($invoice) {
+                    $invoice->loadMissing('items');
+
+                    $downPaymentTotal = $debt->payments->sum('amount');
+                    $invoice->down_payment = min($invoice->total, $downPaymentTotal);
+                    $invoice->payment_date = $validated['payment_date'] ?? now();
+
+                    if ($invoice->down_payment >= $invoice->total && $invoice->total > 0) {
+                        $invoice->status = 'lunas';
+                    } elseif ($invoice->down_payment > 0) {
+                        $invoice->status = 'belum lunas';
+                    } else {
+                        $invoice->status = 'belum bayar';
+                    }
+
+                    $invoice->save();
+
+                    $debt->description = $invoice->itemDescriptionSummary();
+                    $debt->amount = $invoice->total;
+                    $debt->due_date = $invoice->due_date;
+                    $debt->related_party = $invoice->client_name
+                        ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
+                }
+
                 // Cek jika sudah lunas
                 if ($debt->paid_amount >= $debt->amount) {
                     if (!$debt->category_id) {
@@ -130,7 +155,7 @@ class DebtController extends Controller
                         ]);
                     }
 
-                    $debt->update(['status' => Debt::STATUS_LUNAS]);
+                    $debt->status = Debt::STATUS_LUNAS;
 
                     Transaction::create([
                         'category_id' => $debt->category_id,
@@ -141,7 +166,11 @@ class DebtController extends Controller
                     ]);
 
                     $this->transactionService->clearSummaryCacheForUser($request->user());
+                } else {
+                    $debt->status = Debt::STATUS_BELUM_LUNAS;
                 }
+
+                $debt->save();
             });
 
             return redirect()->route('debts.index')->with('success', 'Pembayaran berhasil dicatat.');

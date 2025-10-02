@@ -46,15 +46,17 @@ class InvoiceController extends Controller
     public function create(): View
     {
         $customerServices = CustomerService::orderBy('name')->get();
+        $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
 
-        return view('invoices.create', compact('customerServices'));
+        return view('invoices.create', compact('customerServices', 'incomeCategories'));
     }
 
     public function createPublic(): View
     {
         $customerServices = CustomerService::orderBy('name')->get();
+        $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
 
-        return view('invoices.public-create', compact('customerServices'));
+        return view('invoices.public-create', compact('customerServices', 'incomeCategories'));
     }
 
     public function store(StoreInvoiceRequest $request): RedirectResponse
@@ -155,15 +157,45 @@ class InvoiceController extends Controller
         $categoryId = $categoryId ? (int) $categoryId : null;
 
         DB::transaction(function () use ($invoice, $paymentAmount, $paymentDate, $categoryId, $willBePaidOff) {
-            $invoice->down_payment = round($invoice->down_payment + $paymentAmount, 2);
+            $invoice->loadMissing('items', 'debt.payments');
+
+            $relatedParty = $invoice->client_name
+                ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
+            $paymentNotes = $willBePaidOff
+                ? 'Pelunasan invoice #' . $invoice->number
+                : 'Pembayaran down payment invoice #' . $invoice->number;
+
+            $debt = Debt::updateOrCreate(
+                ['invoice_id' => $invoice->id],
+                [
+                    'description' => $invoice->itemDescriptionSummary(),
+                    'related_party' => $relatedParty,
+                    'type' => Debt::TYPE_DOWN_PAYMENT,
+                    'amount' => $invoice->total,
+                    'due_date' => $invoice->due_date,
+                    'status' => $willBePaidOff ? Debt::STATUS_LUNAS : Debt::STATUS_BELUM_LUNAS,
+                    'user_id' => $invoice->user_id,
+                ]
+            );
+
+            if ($debt) {
+                $debt->payments()->create([
+                    'amount' => $paymentAmount,
+                    'payment_date' => $paymentDate,
+                    'notes' => $paymentNotes,
+                ]);
+
+                $debt->load('payments');
+            }
+
+            $downPaymentTotal = $debt?->payments->sum('amount') ?? 0;
+
+            $invoice->down_payment = min($invoice->total, $downPaymentTotal);
             $invoice->payment_date = $paymentDate;
 
-            $downPaymentTotal = round((float) $invoice->down_payment, 2);
-            $totalAmount = round((float) $invoice->total, 2);
-
-            if ($downPaymentTotal >= $totalAmount) {
+            if ($invoice->down_payment >= $invoice->total && $invoice->total > 0) {
                 $invoice->status = 'lunas';
-            } elseif ($downPaymentTotal > 0) {
+            } elseif ($invoice->down_payment > 0) {
                 $invoice->status = 'belum lunas';
             } else {
                 $invoice->status = 'belum bayar';
@@ -171,48 +203,24 @@ class InvoiceController extends Controller
 
             $invoice->save();
 
-            $relatedParty = $invoice->client_name
-                ?: ($invoice->client_email ?: 'Klien Invoice #' . $invoice->number);
-            $paymentNotes = $willBePaidOff
-                ? 'Pelunasan invoice #' . $invoice->number
-                : 'Pembayaran down payment invoice #' . $invoice->number;
-            $debt = null;
+            if ($debt) {
+                $debt->status = $invoice->status === 'lunas'
+                    ? Debt::STATUS_LUNAS
+                    : Debt::STATUS_BELUM_LUNAS;
+                $debt->description = $invoice->itemDescriptionSummary();
+                $debt->amount = $invoice->total;
+                $debt->due_date = $invoice->due_date;
+                $debt->related_party = $relatedParty;
+                $debt->save();
+            }
 
             if ($willBePaidOff) {
-                $debt = $invoice->debt;
-
-                if ($debt) {
-                    $debt->status = Debt::STATUS_LUNAS;
-                    $debt->save();
-                }
-
                 Transaction::create([
                     'category_id' => $categoryId,
                     'user_id' => auth()->id(),
                     'amount' => $paymentAmount,
                     'description' => 'Pembayaran lunas Invoice #' . $invoice->number,
                     'date' => $paymentDate,
-                ]);
-            } else {
-                $debt = Debt::updateOrCreate(
-                    ['invoice_id' => $invoice->id],
-                    [
-                        'description' => 'Down payment untuk Invoice #' . $invoice->number,
-                        'related_party' => $relatedParty,
-                        'type' => Debt::TYPE_DOWN_PAYMENT,
-                        'amount' => $invoice->total,
-                        'due_date' => $invoice->due_date,
-                        'status' => Debt::STATUS_BELUM_LUNAS,
-                        'user_id' => $invoice->user_id,
-                    ]
-                );
-            }
-
-            if ($debt) {
-                $debt->payments()->create([
-                    'amount' => $paymentAmount,
-                    'payment_date' => $paymentDate,
-                    'notes' => $paymentNotes,
                 ]);
             }
         });
@@ -286,8 +294,11 @@ class InvoiceController extends Controller
         $this->authorize('update', $invoice);
 
         $customerServices = CustomerService::orderBy('name')->get();
+        $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
 
-        return view('invoices.edit', compact('invoice', 'customerServices'));
+        $invoice->loadMissing('items');
+
+        return view('invoices.edit', compact('invoice', 'customerServices', 'incomeCategories'));
     }
 
     public function update(StoreInvoiceRequest $request, Invoice $invoice)
@@ -311,28 +322,34 @@ class InvoiceController extends Controller
         $ownerId = $customerService?->user_id ?? $invoice->user_id;
 
         DB::transaction(function () use ($invoice, $data, $customerService, $ownerId) {
+            $items = $this->mapInvoiceItems($data['items']);
+
             $invoice->update([
                 'user_id' => $ownerId,
                 'customer_service_id' => $customerService?->id,
                 'customer_service_name' => $customerService?->name ?? null,
                 'client_name' => $data['client_name'],
-                'client_email' => $data['client_email'],
+                'client_whatsapp' => $data['client_whatsapp'],
                 'client_address' => $data['client_address'],
-                'issue_date' => $data['issue_date'] ?? now(),
+                'issue_date' => $data['issue_date'] ?? $invoice->issue_date ?? now(),
                 'due_date' => $data['due_date'] ?? null,
-                'total' => collect($data['items'])->sum(fn ($item) => $item['quantity'] * $item['price']),
+                'total' => $this->calculateInvoiceTotal($items),
             ]);
 
             $invoice->items()->delete();
 
-            foreach ($data['items'] as $item) {
+            foreach ($items as $item) {
                 InvoiceItem::create([
                     'invoice_id' => $invoice->id,
+                    'category_id' => $item['category_id'],
                     'description' => $item['description'],
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
                 ]);
             }
+
+            $invoice->load('items');
+            $this->syncDebtAfterInvoiceChange($invoice);
         });
 
         return redirect()->route('invoices.index');
@@ -350,6 +367,7 @@ class InvoiceController extends Controller
     private function persistInvoice(array $data, ?CustomerService $customerService, ?int $ownerId = null): Invoice
     {
         return DB::transaction(function () use ($data, $customerService, $ownerId) {
+            $items = $this->mapInvoiceItems($data['items']);
             $date = now()->format('Ymd');
             $count = Invoice::whereDate('created_at', today())->count();
             $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
@@ -360,18 +378,19 @@ class InvoiceController extends Controller
                 'customer_service_id' => $customerService?->id,
                 'customer_service_name' => $customerService?->name ?? ($data['customer_service_name'] ?? null),
                 'client_name' => $data['client_name'],
-                'client_email' => $data['client_email'],
+                'client_whatsapp' => $data['client_whatsapp'],
                 'client_address' => $data['client_address'],
                 'number' => $invoiceNumber,
                 'issue_date' => $data['issue_date'] ?? now(),
                 'due_date' => $data['due_date'] ?? null,
                 'status' => 'belum bayar',
-                'total' => collect($data['items'])->sum(fn ($item) => $item['quantity'] * $item['price']),
+                'total' => $this->calculateInvoiceTotal($items),
             ]);
 
-            foreach ($data['items'] as $item) {
+            foreach ($items as $item) {
                 InvoiceItem::create([
                     'invoice_id' => $invoice->id,
+                    'category_id' => $item['category_id'],
                     'description' => $item['description'],
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
@@ -380,5 +399,45 @@ class InvoiceController extends Controller
 
             return $invoice->load('items', 'customerService');
         });
+    }
+
+    private function mapInvoiceItems(array $items): array
+    {
+        return collect($items)
+            ->map(function ($item) {
+                return [
+                    'description' => $item['description'],
+                    'quantity' => (int) $item['quantity'],
+                    'price' => (float) $item['price'],
+                    'category_id' => isset($item['category_id']) ? (int) $item['category_id'] : null,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function calculateInvoiceTotal(array $items): float
+    {
+        return collect($items)->sum(fn ($item) => $item['quantity'] * $item['price']);
+    }
+
+    private function syncDebtAfterInvoiceChange(Invoice $invoice): void
+    {
+        $debt = $invoice->debt;
+
+        if (! $debt) {
+            return;
+        }
+
+        $invoice->loadMissing('items');
+
+        $relatedParty = $invoice->client_name
+            ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
+
+        $debt->description = $invoice->itemDescriptionSummary();
+        $debt->amount = $invoice->total;
+        $debt->due_date = $invoice->due_date;
+        $debt->related_party = $relatedParty;
+        $debt->save();
     }
 }
