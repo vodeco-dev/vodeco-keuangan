@@ -11,11 +11,13 @@ use App\Models\InvoiceItem;
 use App\Models\Transaction;
 use App\Models\Category;
 use App\Models\Debt;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use App\Models\User;
 
@@ -113,6 +115,38 @@ class InvoiceController extends Controller
         ])
             ->setPaper('a4')
             ->download($invoice->number . '.pdf');
+    }
+
+    public function checkStatus(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'number' => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Nomor invoice wajib diisi.',
+            ], 422);
+        }
+
+        $invoice = Invoice::query()
+            ->select(['number', 'status', 'due_date', 'total', 'client_name'])
+            ->where('number', $request->input('number'))
+            ->first();
+
+        if (! $invoice) {
+            return response()->json([
+                'message' => 'Invoice tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->json([
+            'number' => $invoice->number,
+            'status' => $invoice->status ?? 'belum bayar',
+            'due_date' => optional($invoice->due_date)->format('d F Y'),
+            'total' => number_format((float) $invoice->total, 2, ',', '.'),
+            'client_name' => $invoice->client_name,
+        ]);
     }
 
     public function send(Invoice $invoice): RedirectResponse
