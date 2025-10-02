@@ -43,11 +43,6 @@
                                 <td class="px-6 py-4 text-center">
                                     <div class="flex justify-center items-center gap-2">
                                         <a href="{{ route('invoices.pdf', $invoice) }}" class="text-gray-600 hover:text-gray-900 dark:text-white" target="_blank">PDF</a>
-                                        @if($invoice->public_token)
-                                        <button type="button" class="text-purple-600 hover:text-purple-900" onclick="copyToClipboard('{{ route('invoices.public.show', ['token' => $invoice->public_token]) }}', this)">
-                                            {{ __('Copy Link') }}
-                                        </button>
-                                        @endif
                                         @if($invoice->status !== 'lunas')
                                         <button type="button"
                                             @click="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
@@ -116,41 +111,6 @@
             </div>
         </div>
     </div>
-    <script>
-        function copyToClipboard(text, el) {
-            // navigator.clipboard is available only in secure contexts (HTTPS)
-            // As a fallback, we can use a temporary textarea element.
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(text).then(function() {
-                    const originalText = el.innerText;
-                    el.innerText = 'Copied!';
-                    setTimeout(function() {
-                        el.innerText = originalText;
-                    }, 2000);
-                }, function(err) {
-                    alert('Could not copy text: ', err);
-                });
-            } else {
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                textarea.style.position = 'fixed'; // Prevent scrolling to bottom of page in MS Edge.
-                document.body.appendChild(textarea);
-                textarea.focus();
-                textarea.select();
-                try {
-                    document.execCommand('copy');
-                    const originalText = el.innerText;
-                    el.innerText = 'Copied!';
-                    setTimeout(function() {
-                        el.innerText = originalText;
-                    }, 2000);
-                } catch (err) {
-                    alert('Fallback: Oops, unable to copy', err);
-                }
-                document.body.removeChild(textarea);
-            }
-        }
-    </script>
     <script>
         function invoicePayments(config) {
             return {

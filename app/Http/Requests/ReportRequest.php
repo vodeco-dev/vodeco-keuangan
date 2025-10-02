@@ -23,8 +23,8 @@ class ReportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'start_date' => ['required', 'date', 'before_or_equal:end_date'],
-            'end_date' => ['required', 'date'],
+            'start_date' => ['required_if:period,range', 'nullable', 'date', 'before_or_equal:end_date'],
+            'end_date' => ['required_if:period,range', 'nullable', 'date'],
             'format' => ['nullable', 'in:xlsx,pdf'],
             'category_id' => ['nullable', 'exists:categories,id'],
             'type' => ['nullable', 'in:pemasukan,pengeluaran'],
