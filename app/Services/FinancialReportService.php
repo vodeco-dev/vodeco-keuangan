@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Debt;
 use App\Models\Transaction;
+use Carbon\Carbon;
 
 class FinancialReportService
 {
@@ -17,11 +18,14 @@ class FinancialReportService
         ?int $categoryId = null,
         ?string $type = null
     ): array {
+        $start = Carbon::parse($startDate)->startOfDay();
+        $end = Carbon::parse($endDate)->endOfDay();
+
         $transactionQuery = Transaction::with('category')
             ->when($userId !== null, function ($query) use ($userId) {
                 $query->where('user_id', $userId);
             })
-            ->whereBetween('date', [$startDate, $endDate]);
+            ->whereBetween('date', [$start, $end]);
 
         if ($categoryId) {
             $transactionQuery->where('category_id', $categoryId);
@@ -53,7 +57,7 @@ class FinancialReportService
             ->when($userId !== null, function ($query) use ($userId) {
                 $query->where('user_id', $userId);
             })
-            ->whereBetween('due_date', [$startDate, $endDate])
+            ->whereBetween('due_date', [$start, $end])
             ->orderBy('due_date')
             ->orderBy('id')
             ->get();

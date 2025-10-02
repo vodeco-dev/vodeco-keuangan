@@ -109,6 +109,56 @@ class ReportTest extends TestCase
         });
     }
 
+    public function test_admin_report_daily_filter_shows_transactions()
+    {
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
+        $category = Category::factory()->create();
+        $date = now()->startOfDay();
+
+        $included = Transaction::factory()->create([
+            'category_id' => $category->id,
+            'date' => $date->copy()->toDateString(),
+        ]);
+
+        $excluded = Transaction::factory()->create([
+            'category_id' => $category->id,
+            'date' => $date->copy()->subDay()->toDateString(),
+        ]);
+
+        $response = $this->actingAs($admin)->get('/reports?period=daily&date=' . $date->toDateString());
+
+        $response->assertStatus(200);
+        $response->assertViewHas('transactions', function ($transactions) use ($included, $excluded) {
+            return $transactions->contains('id', $included->id)
+                && ! $transactions->contains('id', $excluded->id);
+        });
+    }
+
+    public function test_admin_report_monthly_filter_shows_transactions()
+    {
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
+        $category = Category::factory()->create();
+        $now = now();
+
+        $included = Transaction::factory()->create([
+            'category_id' => $category->id,
+            'date' => $now->copy()->startOfMonth()->addDay()->toDateString(),
+        ]);
+
+        $excluded = Transaction::factory()->create([
+            'category_id' => $category->id,
+            'date' => $now->copy()->subMonth()->startOfMonth()->toDateString(),
+        ]);
+
+        $response = $this->actingAs($admin)->get('/reports?period=monthly&month=' . $now->month . '&year=' . $now->year);
+
+        $response->assertStatus(200);
+        $response->assertViewHas('transactions', function ($transactions) use ($included, $excluded) {
+            return $transactions->contains('id', $included->id)
+                && ! $transactions->contains('id', $excluded->id);
+        });
+    }
+
     public function test_export_generates_file_with_all_data_for_admin()
     {
         $admin = User::factory()->create(['role' => Role::ADMIN]);
