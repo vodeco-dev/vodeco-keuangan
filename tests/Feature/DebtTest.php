@@ -5,17 +5,18 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Debt;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-
-use function PHPSTORM_META\type;
 
 class DebtTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_add_pass_through_debt()
+    public function test_user_can_add_pass_through_debt(): void
     {
+        Carbon::setTestNow('2024-01-01');
+
         $user = User::factory()->create();
         $category = Category::create([
             'name' => 'Operasional',
@@ -41,9 +42,11 @@ class DebtTest extends TestCase
             'status' => Debt::STATUS_BELUM_LUNAS,
             'category_id' => $category->id,
         ]);
+
+        Carbon::setTestNow();
     }
 
-    public function test_user_can_record_payment_and_mark_down_payment_paid()
+    public function test_user_can_record_payment_and_mark_down_payment_paid(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -53,7 +56,6 @@ class DebtTest extends TestCase
             'type' => 'pengeluaran',
         ]);
 
-        // FIX: Kembali menggunakan create() dan pastikan user_id ada.
         $debt = Debt::create([
             'user_id' => $user->id,
             'description' => 'Test Debt',
@@ -65,7 +67,6 @@ class DebtTest extends TestCase
             'category_id' => $category->id,
         ]);
 
-        // ... sisa kode tes tidak perlu diubah
         $response = $this->post(route('debts.pay', $debt), [
             'payment_amount' => 1000,
             'category_id' => $category->id,
@@ -78,7 +79,7 @@ class DebtTest extends TestCase
         ]);
     }
 
-    public function test_debts_index_is_paginated()
+    public function test_debts_index_is_paginated(): void
     {
         $user = User::factory()->create();
 
@@ -89,7 +90,7 @@ class DebtTest extends TestCase
                 'related_party' => 'Budi',
                 'type' => Debt::TYPE_PASS_THROUGH,
                 'amount' => 1000,
-                'status' => 'belum lunas',
+                'status' => Debt::STATUS_BELUM_LUNAS,
             ]);
         }
 
@@ -103,5 +104,69 @@ class DebtTest extends TestCase
         $responsePage2->assertViewHas('debts', function ($debts) {
             return $debts->currentPage() == 2 && $debts->count() == 5;
         });
+    }
+
+    public function test_due_date_defaults_to_two_months_from_now_when_not_provided(): void
+    {
+        Carbon::setTestNow('2024-02-15');
+
+        $user = User::factory()->create();
+        $category = Category::create([
+            'name' => 'Operasional',
+            'type' => 'pengeluaran',
+        ]);
+
+        $this->actingAs($user)->post('/debts', [
+            'description' => 'Default Due Date Debt',
+            'related_party' => 'Ani',
+            'type' => Debt::TYPE_PASS_THROUGH,
+            'amount' => 5000,
+            'category_id' => $category->id,
+        ]);
+
+        $this->assertDatabaseHas('debts', [
+            'description' => 'Default Due Date Debt',
+            'due_date' => Carbon::now()->addMonths(2)->toDateString(),
+        ]);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_overdue_debt_is_marked_as_failed_and_transaction_created(): void
+    {
+        Carbon::setTestNow('2024-03-01');
+
+        $user = User::factory()->create();
+        $category = Category::create([
+            'name' => 'Operasional',
+            'type' => 'pengeluaran',
+        ]);
+
+        $debt = Debt::create([
+            'user_id' => $user->id,
+            'description' => 'Overdue Debt',
+            'related_party' => 'Andi',
+            'type' => Debt::TYPE_PASS_THROUGH,
+            'amount' => 1500,
+            'status' => Debt::STATUS_BELUM_LUNAS,
+            'due_date' => Carbon::now()->subDay(),
+            'category_id' => $category->id,
+        ]);
+
+        $this->actingAs($user)->get('/debts');
+
+        $this->assertDatabaseHas('debts', [
+            'id' => $debt->id,
+            'status' => Debt::STATUS_GAGAL,
+        ]);
+
+        $this->assertDatabaseHas('transactions', [
+            'description' => '[Otomatis] Gagal Project: Overdue Debt',
+            'amount' => 1500,
+            'category_id' => $category->id,
+            'user_id' => $user->id,
+        ]);
+
+        Carbon::setTestNow();
     }
 }

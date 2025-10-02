@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Debt;
 use App\Models\Setting;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\DebtService;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
@@ -43,6 +44,8 @@ class DebtController extends Controller
     {
         $user = $request->user();
 
+        $this->autoFailOverdueDebts($user);
+
         $debts = $this->debtService->getDebts($request, $user);
         $debts->appends($request->query());
 
@@ -77,6 +80,10 @@ class DebtController extends Controller
     public function store(StoreDebtRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+
+        if (empty($validated['due_date'])) {
+            $validated['due_date'] = now()->addMonths(2)->toDateString();
+        }
 
         $this->ensureCategorySelectionIsAllowed($request->user()->id, $validated['type'], (int) $validated['category_id']);
 
@@ -180,6 +187,66 @@ class DebtController extends Controller
             // Jika terjadi error, tampilkan pesan kesalahan
             return back()->withErrors('Terjadi kesalahan saat menyimpan pembayaran.');
         }
+    }
+
+    public function markAsFailed(Request $request, Debt $debt): RedirectResponse
+    {
+        $this->authorize('update', $debt);
+
+        if ($debt->status !== Debt::STATUS_BELUM_LUNAS) {
+            return redirect()->route('debts.index')->with('info', 'Catatan ini tidak dapat ditandai gagal.');
+        }
+
+        $this->finalizeFailedDebt($debt, $request->user());
+
+        return redirect()->route('debts.index')->with('success', 'Catatan ditandai sebagai gagal project.');
+    }
+
+    protected function autoFailOverdueDebts(User $user): void
+    {
+        $overdueDebts = Debt::where('user_id', $user->id)
+            ->where('status', Debt::STATUS_BELUM_LUNAS)
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', '<', now())
+            ->get();
+
+        foreach ($overdueDebts as $debt) {
+            $this->finalizeFailedDebt($debt, $user, true);
+        }
+    }
+
+    protected function finalizeFailedDebt(Debt $debt, User $user, bool $auto = false): void
+    {
+        if (!$debt->category_id) {
+            return;
+        }
+
+        DB::transaction(function () use ($debt, $user, $auto) {
+            $debt->loadMissing('payments');
+
+            if ($debt->status !== Debt::STATUS_BELUM_LUNAS) {
+                return;
+            }
+
+            $debt->status = Debt::STATUS_GAGAL;
+            $debt->save();
+
+            $remainingAmount = max(0, $debt->amount - $debt->paid_amount);
+
+            if ($remainingAmount <= 0) {
+                return;
+            }
+
+            Transaction::create([
+                'category_id' => $debt->category_id,
+                'date' => now(),
+                'amount' => $remainingAmount,
+                'description' => ($auto ? '[Otomatis] ' : '') . 'Gagal Project: ' . $debt->description,
+                'user_id' => $user->id,
+            ]);
+
+            $this->transactionService->clearSummaryCacheForUser($user);
+        });
     }
 
     public function updateCategoryPreferences(Request $request): RedirectResponse

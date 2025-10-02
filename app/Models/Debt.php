@@ -14,6 +14,7 @@ class Debt extends Model
     public const TYPE_DOWN_PAYMENT = 'down_payment';
     public const STATUS_BELUM_LUNAS = 'belum lunas';
     public const STATUS_LUNAS = 'lunas';
+    public const STATUS_GAGAL = 'gagal';
 
     protected $fillable = [
         'description',
