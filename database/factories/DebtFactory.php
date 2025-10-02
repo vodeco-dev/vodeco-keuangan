@@ -19,7 +19,11 @@ class DebtFactory extends Factory
             'type' => $this->faker->randomElement([Debt::TYPE_PASS_THROUGH, Debt::TYPE_DOWN_PAYMENT]),
             'amount' => $this->faker->numberBetween(1000, 100000),
             'due_date' => $this->faker->date(),
-            'status' => $this->faker->randomElement([Debt::STATUS_BELUM_LUNAS, Debt::STATUS_LUNAS]),
+            'status' => $this->faker->randomElement([
+                Debt::STATUS_BELUM_LUNAS,
+                Debt::STATUS_LUNAS,
+                Debt::STATUS_GAGAL,
+            ]),
         ];
     }
 }

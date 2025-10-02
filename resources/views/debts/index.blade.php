@@ -104,6 +104,12 @@
         </div>
     @endif
 
+    @if (session('info'))
+        <div class="mb-6 px-4 py-3 text-sm text-blue-700 bg-blue-100 border border-blue-200 rounded-lg">
+            {{ session('info') }}
+        </div>
+    @endif
+
     @if ($errors->any())
         <div class="mb-6 px-4 py-3 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg">
             <ul class="list-disc list-inside space-y-1">
@@ -149,6 +155,7 @@
                         <option value="">Status: Semua</option>
                         <option value="{{ \App\Models\Debt::STATUS_BELUM_LUNAS }}" {{ request('status_filter') == \App\Models\Debt::STATUS_BELUM_LUNAS ? 'selected' : '' }}>Belum Lunas</option>
                         <option value="{{ \App\Models\Debt::STATUS_LUNAS }}" {{ request('status_filter') == \App\Models\Debt::STATUS_LUNAS ? 'selected' : '' }}>Lunas</option>
+                        <option value="{{ \App\Models\Debt::STATUS_GAGAL }}" {{ request('status_filter') == \App\Models\Debt::STATUS_GAGAL ? 'selected' : '' }}>Gagal</option>
                     </select>
                 </div>
                 <div class="relative">
@@ -203,6 +210,8 @@
                         <td class="px-4 py-3 text-sm">
                             @if ($debt->status == \App\Models\Debt::STATUS_LUNAS)
                             <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Lunas</span>
+                            @elseif ($debt->status == \App\Models\Debt::STATUS_GAGAL)
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Gagal</span>
                             @else
                             <span class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">Belum Lunas</span>
                             @endif
@@ -215,6 +224,15 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                     </svg>
                                 </button>
+
+                                <form action="{{ route('debts.fail', $debt) }}" method="POST" class="inline" onsubmit="return confirm('Tandai catatan ini sebagai gagal project?');">
+                                    @csrf
+                                    <button type="submit" class="text-red-500 hover:text-red-800" title="Tandai Gagal">
+                                        <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.071 19h13.858c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.339 16c-.77 1.333.192 3 1.732 3Z"></path>
+                                        </svg>
+                                    </button>
+                                </form>
                                 @endif
 
                                 {{-- Tombol Detail Riwayat --}}

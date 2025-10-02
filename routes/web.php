@@ -56,6 +56,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'storePayment'])->name('invoices.pay');
     // Debts
     Route::post('debts/{debt}/pay', [DebtController::class, 'storePayment'])->name('debts.pay');
+    Route::post('debts/{debt}/fail', [DebtController::class, 'markAsFailed'])->name('debts.fail');
 
     // Laporan
     Route::get('/reports', [ReportController::class, 'index'])
