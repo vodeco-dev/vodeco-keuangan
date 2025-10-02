@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Invoice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -55,13 +56,15 @@ class InvoicePolicyTest extends TestCase
 
         $this->actingAs($admin);
 
+        $category = Category::factory()->create(['type' => 'pemasukan']);
+
         $response = $this->put(route('invoices.update', $invoice), [
             'client_name' => 'Jane Doe',
-            'client_email' => 'jane@doe.com',
+            'client_whatsapp' => '08123456789',
             'client_address' => '123 Main St',
             'due_date' => '2025-12-31',
             'items' => [
-                ['description' => 'New Item', 'quantity' => 1, 'price' => 100],
+                ['description' => 'New Item', 'quantity' => 1, 'price' => 100, 'category_id' => $category->id],
             ],
         ]);
 
@@ -75,13 +78,15 @@ class InvoicePolicyTest extends TestCase
 
         $this->actingAs($user);
 
+        $category = Category::factory()->create(['type' => 'pemasukan']);
+
         $response = $this->put(route('invoices.update', $invoice), [
             'client_name' => 'Jane Doe',
-            'client_email' => 'jane@doe.com',
+            'client_whatsapp' => '08123456789',
             'client_address' => '123 Main St',
             'due_date' => '2025-12-31',
             'items' => [
-                ['description' => 'New Item', 'quantity' => 1, 'price' => 100],
+                ['description' => 'New Item', 'quantity' => 1, 'price' => 100, 'category_id' => $category->id],
             ],
         ]);
 
@@ -96,13 +101,15 @@ class InvoicePolicyTest extends TestCase
 
         $this->actingAs($user1);
 
+        $category = Category::factory()->create(['type' => 'pemasukan']);
+
         $response = $this->put(route('invoices.update', $invoice), [
             'client_name' => 'Jane Doe',
-            'client_email' => 'jane@doe.com',
+            'client_whatsapp' => '08123456789',
             'client_address' => '123 Main St',
             'due_date' => '2025-12-31',
             'items' => [
-                ['description' => 'New Item', 'quantity' => 1, 'price' => 100],
+                ['description' => 'New Item', 'quantity' => 1, 'price' => 100, 'category_id' => $category->id],
             ],
         ]);
 

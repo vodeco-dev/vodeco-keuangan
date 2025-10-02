@@ -22,10 +22,11 @@ class InvoiceTest extends TestCase
     public function test_authenticated_user_can_create_invoice_with_items()
     {
         $user = User::factory()->create();
+        $category = Category::factory()->create(['type' => 'pemasukan']);
 
         $response = $this->actingAs($user)->post('/invoices', [
             'client_name' => 'Client',
-            'client_email' => 'client@example.com',
+            'client_whatsapp' => '08123456789',
             'client_address' => 'Address',
             'number' => 'INV-001',
             'issue_date' => now()->toDateString(),
@@ -35,6 +36,7 @@ class InvoiceTest extends TestCase
                     'description' => 'Service',
                     'quantity' => 1,
                     'price' => 1000,
+                    'category_id' => $category->id,
                 ],
             ],
         ]);
@@ -49,6 +51,7 @@ class InvoiceTest extends TestCase
             'description' => 'Service',
             'quantity' => 1,
             'price' => 1000,
+            'category_id' => $category->id,
         ]);
     }
 

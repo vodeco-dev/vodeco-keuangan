@@ -4,7 +4,7 @@
     <h1>Invoice Details</h1>
     <p>Invoice Number: {{ $invoice->number }}</p>
     <p>Client Name: {{ $invoice->client_name }}</p>
-    <p>Client Email: {{ $invoice->client_email }}</p>
+    <p>Nomor WhatsApp Klien: {{ $invoice->client_whatsapp }}</p>
     <p>Client Address: {{ $invoice->client_address }}</p>
     <p>Customer Service: {{ $invoice->customer_service_name ?? $invoice->customerService?->name ?? '-' }}</p>
     <p>Issue Date: {{ $invoice->issue_date->format('Y-m-d') }}</p>

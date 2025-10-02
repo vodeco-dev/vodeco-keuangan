@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreInvoiceRequest extends FormRequest
 {
@@ -24,13 +25,18 @@ class StoreInvoiceRequest extends FormRequest
         return [
             'customer_service_id' => ['nullable', 'exists:customer_services,id'],
             'client_name' => ['required', 'string', 'max:255'],
-            'client_email' => ['required', 'email', 'max:255'],
+            'client_whatsapp' => ['required', 'string', 'max:32'],
             'client_address' => ['required', 'string'],
             'issue_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date'],
             'items.*.description' => ['required', 'string'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.price' => ['required', 'numeric'],
+            'items.*.category_id' => [
+                'required',
+                'integer',
+                Rule::exists('categories', 'id')->where('type', 'pemasukan'),
+            ],
         ];
     }
 
@@ -43,8 +49,8 @@ class StoreInvoiceRequest extends FormRequest
     {
         return [
             'client_name.required' => 'Nama klien wajib diisi.',
-            'client_email.required' => 'Email klien wajib diisi.',
-            'client_email.email' => 'Format email klien tidak valid.',
+            'client_whatsapp.required' => 'Nomor WhatsApp klien wajib diisi.',
+            'client_whatsapp.max' => 'Nomor WhatsApp klien terlalu panjang.',
             'client_address.required' => 'Alamat klien wajib diisi.',
             'issue_date.date' => 'Format tanggal terbit tidak valid.',
             'due_date.date' => 'Format tanggal jatuh tempo tidak valid.',
@@ -56,6 +62,37 @@ class StoreInvoiceRequest extends FormRequest
             'items.*.quantity.min' => 'Kuantitas item minimal 1.',
             'items.*.price.required' => 'Harga item wajib diisi.',
             'items.*.price.numeric' => 'Harga item harus berupa angka.',
+            'items.*.category_id.required' => 'Kategori item wajib dipilih.',
+            'items.*.category_id.exists' => 'Kategori item tidak valid.',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $items = collect($this->input('items', []))->map(function ($item) {
+            if (isset($item['price'])) {
+                $normalizedPrice = preg_replace('/[^\d,.-]/', '', (string) $item['price']);
+                $normalizedPrice = str_replace('.', '', $normalizedPrice);
+                $normalizedPrice = str_replace(',', '.', $normalizedPrice);
+                $item['price'] = $normalizedPrice === '' ? null : $normalizedPrice;
+            }
+
+            if (isset($item['quantity']) && ! is_numeric($item['quantity'])) {
+                $digits = preg_replace('/\D/', '', (string) $item['quantity']);
+                $item['quantity'] = $digits !== '' ? (int) $digits : null;
+            }
+
+            return $item;
+        });
+
+        $whatsapp = $this->input('client_whatsapp');
+        if (is_string($whatsapp)) {
+            $whatsapp = preg_replace('/[^\d+]/', '', $whatsapp);
+        }
+
+        $this->merge([
+            'items' => $items->toArray(),
+            'client_whatsapp' => $whatsapp,
+        ]);
     }
 }
