@@ -40,6 +40,6 @@ class InvoicePolicy
 
     public function storePayment(User $user, Invoice $invoice): bool
     {
-        return $user->id === $invoice->user_id;
+        return $user->id === $invoice->user_id || in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT], true);
     }
 }
