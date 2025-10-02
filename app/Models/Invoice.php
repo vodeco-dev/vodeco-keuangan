@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class Invoice extends Model
@@ -77,4 +78,8 @@ class Invoice extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function debt(): HasOne
+    {
+        return $this->hasOne(Debt::class);
+    }
 }

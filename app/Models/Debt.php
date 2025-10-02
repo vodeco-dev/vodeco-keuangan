@@ -24,6 +24,7 @@ class Debt extends Model
         'status',
         'category_id',
         'user_id',
+        'invoice_id',
     ];
 
     public function payments()
@@ -57,5 +58,10 @@ class Debt extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class);
     }
 }

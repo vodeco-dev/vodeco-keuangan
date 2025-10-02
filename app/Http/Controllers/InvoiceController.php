@@ -10,6 +10,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Transaction;
 use App\Models\Category;
+use App\Models\Debt;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Setting;
@@ -170,7 +171,21 @@ class InvoiceController extends Controller
 
             $invoice->save();
 
+            $relatedParty = $invoice->client_name
+                ?: ($invoice->client_email ?: 'Klien Invoice #' . $invoice->number);
+            $paymentNotes = $willBePaidOff
+                ? 'Pelunasan invoice #' . $invoice->number
+                : 'Pembayaran down payment invoice #' . $invoice->number;
+            $debt = null;
+
             if ($willBePaidOff) {
+                $debt = $invoice->debt;
+
+                if ($debt) {
+                    $debt->status = Debt::STATUS_LUNAS;
+                    $debt->save();
+                }
+
                 Transaction::create([
                     'category_id' => $categoryId,
                     'user_id' => auth()->id(),
@@ -179,17 +194,25 @@ class InvoiceController extends Controller
                     'date' => $paymentDate,
                 ]);
             } else {
-                $category = Category::firstOrCreate(
-                    ['name' => 'Down Payment'],
-                    ['type' => 'pemasukan']
+                $debt = Debt::updateOrCreate(
+                    ['invoice_id' => $invoice->id],
+                    [
+                        'description' => 'Down payment untuk Invoice #' . $invoice->number,
+                        'related_party' => $relatedParty,
+                        'type' => Debt::TYPE_DOWN_PAYMENT,
+                        'amount' => $invoice->total,
+                        'due_date' => $invoice->due_date,
+                        'status' => Debt::STATUS_BELUM_LUNAS,
+                        'user_id' => $invoice->user_id,
+                    ]
                 );
+            }
 
-                Transaction::create([
-                    'category_id' => $category->id,
-                    'user_id' => auth()->id(),
+            if ($debt) {
+                $debt->payments()->create([
                     'amount' => $paymentAmount,
-                    'description' => 'Down payment untuk Invoice #' . $invoice->number,
-                    'date' => $paymentDate,
+                    'payment_date' => $paymentDate,
+                    'notes' => $paymentNotes,
                 ]);
             }
         });
