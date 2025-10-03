@@ -8,6 +8,8 @@ use App\Models\Transaction;
 use App\Models\TransactionDeletionRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class TransactionTest extends TestCase
@@ -110,6 +112,72 @@ class TransactionTest extends TestCase
         $response = $this->actingAs($admin)->delete('/transactions/' . $transaction->id);
         $response->assertRedirect('/transactions');
         $this->assertDatabaseMissing('transactions', ['id' => $transaction->id]);
+    }
+
+    public function test_admin_can_view_transaction_proof_of_another_user(): void
+    {
+        Storage::fake('local');
+
+        $admin = User::factory()->create(['role' => Role::ADMIN]);
+        $owner = User::factory()->create();
+
+        $transaction = Transaction::factory()->create([
+            'user_id' => $owner->id,
+            'proof_disk' => 'local',
+            'proof_directory' => 'proofs',
+            'proof_path' => 'receipt.pdf',
+            'proof_token' => Str::random(40),
+        ]);
+
+        Storage::disk('local')->put('proofs/receipt.pdf', 'dummy content');
+
+        $response = $this->actingAs($admin)->get(route('transactions.proof.show', ['transaction' => $transaction->proof_token]));
+
+        $response->assertOk();
+    }
+
+    public function test_accountant_can_view_transaction_proof_of_another_user(): void
+    {
+        Storage::fake('local');
+
+        $accountant = User::factory()->create(['role' => Role::ACCOUNTANT]);
+        $owner = User::factory()->create();
+
+        $transaction = Transaction::factory()->create([
+            'user_id' => $owner->id,
+            'proof_disk' => 'local',
+            'proof_directory' => 'proofs',
+            'proof_path' => 'receipt.pdf',
+            'proof_token' => Str::random(40),
+        ]);
+
+        Storage::disk('local')->put('proofs/receipt.pdf', 'dummy content');
+
+        $response = $this->actingAs($accountant)->get(route('transactions.proof.show', ['transaction' => $transaction->proof_token]));
+
+        $response->assertOk();
+    }
+
+    public function test_staff_cannot_view_transaction_proof_of_another_user(): void
+    {
+        Storage::fake('local');
+
+        $staff = User::factory()->create(['role' => Role::STAFF]);
+        $owner = User::factory()->create();
+
+        $transaction = Transaction::factory()->create([
+            'user_id' => $owner->id,
+            'proof_disk' => 'local',
+            'proof_directory' => 'proofs',
+            'proof_path' => 'receipt.pdf',
+            'proof_token' => Str::random(40),
+        ]);
+
+        Storage::disk('local')->put('proofs/receipt.pdf', 'dummy content');
+
+        $response = $this->actingAs($staff)->get(route('transactions.proof.show', ['transaction' => $transaction->proof_token]));
+
+        $response->assertStatus(403);
     }
 
     public function test_admin_can_approve_deletion_request(): void
