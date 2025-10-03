@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Invoice;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class InvoiceFactory extends Factory
@@ -22,6 +23,8 @@ class InvoiceFactory extends Factory
             'due_date' => $this->faker->dateTimeBetween('+1 week', '+1 month'),
             'status' => 'belum bayar',
             'total' => $this->faker->randomFloat(2, 100, 1000),
+            'settlement_token' => Str::random(64),
+            'settlement_token_expires_at' => now()->addDays(7),
         ];
     }
 }

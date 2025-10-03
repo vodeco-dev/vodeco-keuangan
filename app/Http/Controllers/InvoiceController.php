@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use App\Models\User;
+use App\Services\InvoiceSettlementService;
 
 class InvoiceController extends Controller
 {
@@ -291,6 +292,28 @@ class InvoiceController extends Controller
         });
 
         return redirect()->route('invoices.index')->with('success', 'Payment recorded successfully.');
+    }
+
+    public function refreshSettlementToken(Request $request, Invoice $invoice, InvoiceSettlementService $service): RedirectResponse
+    {
+        $this->authorize('update', $invoice);
+
+        $data = $request->validate([
+            'expires_at' => 'nullable|date|after:now',
+        ]);
+
+        $service->refreshToken($invoice, $data['expires_at'] ?? null);
+
+        return back()->with('status', 'Token pelunasan berhasil diperbarui.');
+    }
+
+    public function revokeSettlementToken(Invoice $invoice, InvoiceSettlementService $service): RedirectResponse
+    {
+        $this->authorize('update', $invoice);
+
+        $service->revokeToken($invoice);
+
+        return back()->with('status', 'Token pelunasan berhasil dicabut.');
     }
 
     public function pdf(Invoice $invoice)

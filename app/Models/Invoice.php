@@ -34,6 +34,8 @@ class Invoice extends Model
         'payment_date',
         'customer_service_id',
         'customer_service_name',
+        'settlement_token',
+        'settlement_token_expires_at',
     ];
 
     /**
@@ -47,6 +49,7 @@ class Invoice extends Model
         'total' => 'decimal:2',
         'down_payment' => 'decimal:2',
         'down_payment_due' => 'decimal:2',
+        'settlement_token_expires_at' => 'datetime',
     ];
 
     /**
@@ -56,7 +59,17 @@ class Invoice extends Model
     protected static function booted()
     {
         static::creating(function (Invoice $invoice) {
-            $invoice->public_token = Str::uuid();
+            if (empty($invoice->public_token)) {
+                $invoice->public_token = Str::uuid();
+            }
+
+            if (empty($invoice->settlement_token)) {
+                $invoice->settlement_token = Str::random(64);
+            }
+
+            if (empty($invoice->settlement_token_expires_at)) {
+                $invoice->settlement_token_expires_at = now()->addDays(7);
+            }
         });
 
         // Pencatatan transaksi dipindahkan ke proses pembayaran agar lebih fleksibel
@@ -102,5 +115,22 @@ class Invoice extends Model
     public function debt(): HasOne
     {
         return $this->hasOne(Debt::class);
+    }
+
+    public function hasValidSettlementToken(?string $token = null): bool
+    {
+        if (! $this->settlement_token) {
+            return false;
+        }
+
+        if ($token !== null && ! hash_equals($this->settlement_token, $token)) {
+            return false;
+        }
+
+        if ($this->settlement_token_expires_at && now()->greaterThan($this->settlement_token_expires_at)) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -5,6 +5,7 @@ use App\Http\Controllers\CustomerServiceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebtController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoiceSettlementController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 
@@ -24,6 +25,11 @@ Route::get('/', function () {
 Route::get('/invoices/public/create', [InvoiceController::class, 'createPublic'])->name('invoices.public.create');
 Route::post('/invoices/public', [InvoiceController::class, 'storePublic'])->name('invoices.public.store');
 Route::get('/invoices/public/check-status', [InvoiceController::class, 'checkStatus'])->name('invoices.public.check-status');
+Route::get('/invoices/settlement/{token}', [InvoiceSettlementController::class, 'show'])
+    ->name('invoices.settlement.show');
+Route::post('/invoices/settlement/{token}', [InvoiceSettlementController::class, 'store'])
+    ->middleware('throttle:invoice-settlement')
+    ->name('invoices.settlement.store');
 
 // Route untuk melihat invoice secara publik tanpa perlu login
 Route::get('/invoices/view/{token}', [InvoiceController::class, 'showPublic'])->name('invoices.public.show');
@@ -55,6 +61,10 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
     Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
     Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'storePayment'])->name('invoices.pay');
+    Route::post('invoices/{invoice}/settlement-token/refresh', [InvoiceController::class, 'refreshSettlementToken'])
+        ->name('invoices.settlement-token.refresh');
+    Route::delete('invoices/{invoice}/settlement-token', [InvoiceController::class, 'revokeSettlementToken'])
+        ->name('invoices.settlement-token.revoke');
     // Debts
     Route::post('debts/{debt}/pay', [DebtController::class, 'storePayment'])->name('debts.pay');
     Route::post('debts/{debt}/fail', [DebtController::class, 'markAsFailed'])->name('debts.fail');
