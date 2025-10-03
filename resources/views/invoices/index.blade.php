@@ -45,7 +45,7 @@
                                         <a href="{{ route('invoices.pdf', $invoice) }}" class="text-gray-600 hover:text-gray-900 dark:text-white" target="_blank">PDF</a>
                                         @if($invoice->status !== 'lunas')
                                         <button type="button"
-                                            @click="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
+                                            @click="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }}, {{ (float) ($invoice->down_payment_due ?? 0) }})"
                                             class="text-green-600 hover:text-green-900">Catat Pembayaran</button>
                                         @endif
                                     </div>
@@ -120,6 +120,7 @@
                 defaultDate: config.defaultDate,
                 total: 0,
                 paid: 0,
+                plannedDownPayment: 0,
                 paymentAmount: '',
                 paymentDate: config.defaultDate,
                 categoryId: '',
@@ -131,11 +132,20 @@
                     const amount = Number(this.paymentAmount || 0);
                     return this.remaining > 0 && amount >= this.remaining;
                 },
-                open(id, total, downPayment) {
+                open(id, total, downPayment, plannedDownPayment = 0) {
                     this.selectedInvoice = id;
                     this.total = Number(total || 0);
                     this.paid = Number(downPayment || 0);
-                    this.paymentAmount = this.remaining > 0 ? this.remaining : '';
+                    this.plannedDownPayment = Number(plannedDownPayment || 0);
+                    const remaining = this.remaining;
+                    if (remaining > 0) {
+                        const suggested = this.plannedDownPayment > 0
+                            ? Math.min(remaining, this.plannedDownPayment)
+                            : remaining;
+                        this.paymentAmount = suggested > 0 ? Number(suggested.toFixed(2)) : '';
+                    } else {
+                        this.paymentAmount = '';
+                    }
                     this.paymentDate = this.defaultDate;
                     this.categoryId = '';
                     this.openModal = true;
