@@ -14,7 +14,7 @@ return new class extends Migration
 
         DB::statement("
             ALTER TABLE users
-            MODIFY COLUMN role ENUM('admin','accountant','staff','customer_service','settlement_admin')
+            MODIFY COLUMN role ENUM('admin','accountant','staff')
             DEFAULT 'staff'
         ");
     }
@@ -27,7 +27,7 @@ return new class extends Migration
 
         DB::statement("
             ALTER TABLE users
-            MODIFY COLUMN role ENUM('admin','accountant','staff')
+            MODIFY COLUMN role ENUM('admin','accountant','staff','customer_service','settlement_admin')
             DEFAULT 'staff'
         ");
     }

@@ -38,17 +38,17 @@ class InvoiceController extends Controller
         $tabPermissions = [
             'down-payment' => [
                 'label' => 'Down Payment',
-                'role' => Role::CUSTOMER_SERVICE,
+                'role' => null,
                 'allowed' => Gate::allows('viewDownPaymentTab', Invoice::class),
             ],
             'pay-in-full' => [
                 'label' => 'Bayar Lunas',
-                'role' => Role::CUSTOMER_SERVICE,
+                'role' => null,
                 'allowed' => Gate::allows('viewPayInFullTab', Invoice::class),
             ],
             'settlement' => [
                 'label' => 'Pelunasan',
-                'role' => Role::SETTLEMENT_ADMIN,
+                'role' => null,
                 'allowed' => Gate::allows('viewSettlementTab', Invoice::class),
             ],
         ];
@@ -57,8 +57,19 @@ class InvoiceController extends Controller
         foreach ($tabPermissions as $key => $config) {
             $role = $config['role'];
             $allowed = $config['allowed'];
-            $unlocked = $allowed && ($user->role === Role::ADMIN || $verifiedRoles->contains($role->value));
-            $requiresCode = $allowed && $user->role === $role && ! $verifiedRoles->contains($role->value);
+            $unlocked = $allowed;
+            $requiresCode = false;
+
+            if ($role instanceof Role) {
+                $unlocked = $allowed && (
+                    $user->role === Role::ADMIN
+                    || $verifiedRoles->contains($role->value)
+                );
+
+                $requiresCode = $allowed
+                    && $user->role === $role
+                    && ! $verifiedRoles->contains($role->value);
+            }
 
             $tabStates[$key] = [
                 'label' => $config['label'],

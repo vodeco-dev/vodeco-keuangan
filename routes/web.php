@@ -56,7 +56,7 @@ Route::post('/access-codes/verify', [AccessCodeController::class, 'verify'])
     ->middleware('auth')
     ->name('access-codes.verify');
 
-Route::middleware(['auth', 'role:admin,accountant,staff,customer_service,settlement_admin'])->group(function () {
+Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
