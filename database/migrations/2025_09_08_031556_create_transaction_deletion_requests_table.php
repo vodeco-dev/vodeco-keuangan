@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId('transaction_id');
             $table->foreignId('requested_by')->constrained('users')->cascadeOnDelete();
             $table->string('status')->default('pending');
+            $table->text('reason')->nullable()->after('status');
+            $table->text('deletion_reason')->nullable()->after('reason');
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
