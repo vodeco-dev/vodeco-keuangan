@@ -29,20 +29,43 @@ class InvoiceController extends Controller
     }
     public function index(): View
     {
-        if (auth()->user()->role === Role::ADMIN) {
-            $invoices = Invoice::with('customerService')->latest()->paginate();
-        } else {
-            $invoices = Invoice::with('customerService')
-                ->where('user_id', auth()->id())
-                ->latest()
-                ->paginate();
+        $baseQuery = Invoice::query()
+            ->with('customerService')
+            ->latest();
+
+        if (auth()->user()->role !== Role::ADMIN) {
+            $baseQuery->where('user_id', auth()->id());
         }
+
+        $downPaymentInvoices = (clone $baseQuery)
+            ->whereIn('status', ['belum bayar', 'belum lunas'])
+            ->whereNotNull('down_payment_due')
+            ->whereRaw('COALESCE(down_payment, 0) < down_payment_due')
+            ->get();
+
+        $payInFullInvoices = (clone $baseQuery)
+            ->whereIn('status', ['belum bayar', 'belum lunas'])
+            ->whereRaw('COALESCE(total, 0) > COALESCE(down_payment, 0)')
+            ->where(function ($query) {
+                $query->whereNull('down_payment_due')
+                    ->orWhereRaw('COALESCE(down_payment, 0) >= down_payment_due');
+            })
+            ->get();
+
+        $settlementInvoices = (clone $baseQuery)
+            ->where('status', 'belum lunas')
+            ->get();
 
         $incomeCategories = Category::where('type', 'pemasukan')
             ->orderBy('name')
             ->get();
 
-        return view('invoices.index', compact('invoices', 'incomeCategories'));
+        return view('invoices.index', compact(
+            'downPaymentInvoices',
+            'payInFullInvoices',
+            'settlementInvoices',
+            'incomeCategories'
+        ));
     }
 
     public function create(): View
