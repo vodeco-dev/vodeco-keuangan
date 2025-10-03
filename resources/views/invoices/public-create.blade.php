@@ -23,6 +23,11 @@
 
             <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
                 <div class="px-6 py-8 md:px-10 space-y-8">
+                    @if (session('status'))
+                        <div class="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+                            {{ session('status') }}
+                        </div>
+                    @endif
                     @if (! $passphraseSession)
                         <div class="space-y-4">
                             <h2 class="text-xl font-semibold text-gray-900">Masukkan Passphrase Akses</h2>
@@ -70,10 +75,16 @@
                         @endphp
 
                         <div class="rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-indigo-800">
-                            <div class="flex flex-col gap-1">
-                                <span class="text-sm uppercase tracking-wide">Akses Terverifikasi</span>
-                                <span class="text-base font-semibold">{{ $passphraseSession['access_label'] ?? 'Portal Invoice' }}</span>
-                                <span class="text-sm text-indigo-600">{{ session('passphrase_verified') ?? 'Anda dapat membuat invoice sesuai izin yang diberikan.' }}</span>
+                            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-sm uppercase tracking-wide">Akses Terverifikasi</span>
+                                    <span class="text-base font-semibold">{{ $passphraseSession['display_label'] ?? $passphraseSession['access_label'] ?? 'Portal Invoice' }}</span>
+                                    <span class="text-sm text-indigo-600">{{ session('passphrase_verified') ?? 'Anda dapat membuat invoice sesuai izin yang diberikan.' }}</span>
+                                </div>
+                                <form method="POST" action="{{ route('invoices.public.passphrase.logout') }}" class="flex-shrink-0">
+                                    @csrf
+                                    <button type="submit" class="inline-flex items-center rounded-lg border border-indigo-200 bg-white/80 px-3 py-1.5 text-sm font-medium text-indigo-700 shadow-sm hover:bg-white">Keluar dari Sesi</button>
+                                </form>
                             </div>
                         </div>
 
@@ -134,19 +145,6 @@
                                         </div>
                                     </div>
                                     <div class="space-y-4">
-                                        <div x-show="activeTab !== 'settlement'" x-cloak>
-                                            <label for="customer_service_name" class="block text-sm font-medium text-gray-700">Customer Service</label>
-                                            <input type="text" name="customer_service_name" id="customer_service_name" list="customer-service-options" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Ketik nama customer service" value="{{ old('customer_service_name') }}" :required="activeTab !== 'settlement'" :disabled="activeTab === 'settlement'">
-                                            <datalist id="customer-service-options">
-                                                @foreach ($customerServices as $customerService)
-                                                    <option value="{{ $customerService->name }}">{{ $customerService->name }}</option>
-                                                @endforeach
-                                            </datalist>
-                                            @error('customer_service_name')
-                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-
                                         <div>
                                             <label for="client_address" class="block text-sm font-medium text-gray-700">Alamat Klien</label>
                                             <textarea name="client_address" id="client_address" rows="6" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" :required="activeTab !== 'settlement'" :disabled="activeTab === 'settlement'">{{ old('client_address') }}</textarea>
@@ -158,6 +156,7 @@
                                 </div>
 
                                 <x-invoice.transaction-tabs
+                                    id="public-invoice-tabs"
                                     form-id="invoice-form"
                                     :items="$oldItems"
                                     :category-options="$categoryOptions"
@@ -175,6 +174,7 @@
                                     :settlement-remaining-balance="old('settlement_remaining_balance')"
                                     :settlement-paid-amount="old('settlement_paid_amount')"
                                     :settlement-payment-status="old('settlement_payment_status')"
+                                    data-reference-url-template="{{ route('invoices.public.reference', ['number' => '__NUMBER__']) }}"
                                 />
 
                                 <div class="flex justify-end">

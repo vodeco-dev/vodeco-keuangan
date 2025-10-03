@@ -18,6 +18,7 @@ class InvoicePortalPassphrase extends Model
         'public_id',
         'passphrase_hash',
         'access_type',
+        'label',
         'is_active',
         'expires_at',
         'last_used_at',
@@ -96,5 +97,18 @@ class InvoicePortalPassphrase extends Model
     public function setPassphrase(string $plainPassphrase): void
     {
         $this->passphrase_hash = Hash::make($plainPassphrase);
+    }
+
+    public function displayLabel(): string
+    {
+        $name = trim((string) $this->label);
+
+        if ($name === '') {
+            return $this->access_type?->label() ?? 'Tidak diketahui';
+        }
+
+        $typeLabel = $this->access_type?->label();
+
+        return $typeLabel ? sprintf('%s (%s)', $name, $typeLabel) : $name;
     }
 }

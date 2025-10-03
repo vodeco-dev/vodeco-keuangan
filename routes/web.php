@@ -34,6 +34,12 @@ Route::post('/invoices/public', [InvoiceController::class, 'storePublic'])
 Route::post('/invoices/public/passphrase/verify', [InvoicePortalPassphraseVerificationController::class, 'store'])
     ->middleware('throttle:invoice-passphrase')
     ->name('invoices.public.passphrase.verify');
+Route::post('/invoices/public/passphrase/logout', [InvoicePortalPassphraseVerificationController::class, 'destroy'])
+    ->middleware('invoice.passphrase')
+    ->name('invoices.public.passphrase.logout');
+Route::get('/invoices/public/reference/{number}', [InvoiceController::class, 'publicReference'])
+    ->middleware('invoice.passphrase:required')
+    ->name('invoices.public.reference');
 Route::get('/invoices/public/check-status', [InvoiceController::class, 'checkStatus'])->name('invoices.public.check-status');
 Route::get('/invoices/settlement/{token}', [InvoiceSettlementController::class, 'show'])
     ->name('invoices.settlement.show');
@@ -67,6 +73,8 @@ Route::middleware(['auth', 'role:admin,accountant,staff,customer_service,settlem
     Route::post('debts/category-preferences', [DebtController::class, 'updateCategoryPreferences'])->name('debts.category-preferences.update');
     Route::resource('debts', DebtController::class);
     Route::resource('invoices', InvoiceController::class);
+    Route::get('invoices/reference/{number}', [InvoiceController::class, 'reference'])
+        ->name('invoices.reference');
     Route::get('customer-services/create', [CustomerServiceController::class, 'create'])->name('customer-services.create');
     Route::post('customer-services', [CustomerServiceController::class, 'store'])->name('customer-services.store');
 
