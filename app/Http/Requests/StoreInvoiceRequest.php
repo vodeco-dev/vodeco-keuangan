@@ -29,7 +29,6 @@ class StoreInvoiceRequest extends FormRequest
 
         return [
             'transaction_type' => ['required', Rule::in($transactionTypes)],
-            'customer_service_id' => ['nullable', 'exists:customer_services,id'],
             'client_name' => ['required_unless:transaction_type,settlement', 'nullable', 'string', 'max:255'],
             'client_whatsapp' => ['required_unless:transaction_type,settlement', 'nullable', 'string', 'max:32'],
             'client_address' => ['required_unless:transaction_type,settlement', 'nullable', 'string'],
@@ -74,7 +73,6 @@ class StoreInvoiceRequest extends FormRequest
             'due_date.date' => 'Format tanggal jatuh tempo tidak valid.',
             'down_payment_due.numeric' => 'Rencana down payment harus berupa angka.',
             'down_payment_due.min' => 'Rencana down payment minimal 0.',
-            'customer_service_id.exists' => 'Customer service yang dipilih tidak valid.',
             'items.required_unless' => 'Minimal satu item wajib ditambahkan untuk transaksi ini.',
             'items.*.description.required_unless' => 'Deskripsi item wajib diisi.',
             'items.*.description.string' => 'Deskripsi item harus berupa teks.',

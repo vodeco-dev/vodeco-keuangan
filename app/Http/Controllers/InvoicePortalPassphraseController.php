@@ -35,6 +35,7 @@ class InvoicePortalPassphraseController extends Controller
         $passphrase = new InvoicePortalPassphrase([
             'public_id' => InvoicePortalPassphrase::makePublicId(),
             'access_type' => $accessType,
+            'label' => trim((string) $validated['label']),
             'is_active' => true,
             'expires_at' => $validated['expires_at'] ?? null,
             'created_by' => $request->user()->id,
@@ -52,7 +53,7 @@ class InvoicePortalPassphraseController extends Controller
         return Redirect::route('invoice-portal.passphrases.index')
             ->with('passphrase_plain', [
                 'value' => $plainPassphrase,
-                'label' => $accessType->label(),
+                'label' => $passphrase->displayLabel(),
             ])
             ->with('status', 'Passphrase portal invoice baru berhasil dibuat.');
     }
@@ -70,6 +71,9 @@ class InvoicePortalPassphraseController extends Controller
         $plainPassphrase = $validated['passphrase'] ?: Str::password(16, symbols: false);
 
         $passphrase->setPassphrase($plainPassphrase);
+        if (array_key_exists('label', $validated) && $validated['label'] !== null) {
+            $passphrase->label = trim((string) $validated['label']);
+        }
         $passphrase->expires_at = $validated['expires_at'] ?? $passphrase->expires_at;
         $passphrase->save();
 
@@ -82,7 +86,7 @@ class InvoicePortalPassphraseController extends Controller
         return Redirect::route('invoice-portal.passphrases.index')
             ->with('passphrase_plain', [
                 'value' => $plainPassphrase,
-                'label' => $passphrase->access_type->label(),
+                'label' => $passphrase->displayLabel(),
             ])
             ->with('status', 'Passphrase berhasil diperbarui. Pastikan segera dibagikan ke pihak terkait.');
     }

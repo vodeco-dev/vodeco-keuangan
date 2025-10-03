@@ -47,6 +47,12 @@ class NavigationServiceProvider extends ServiceProvider
                 'icon' => view('components.icons.invoices')->render(),
             ],
             [
+                'name' => 'Passphrase Portal',
+                'route' => 'invoice-portal.passphrases.index',
+                'icon' => view('components.icons.passphrases')->render(),
+                'roles' => ['admin', 'accountant'],
+            ],
+            [
                 'name' => 'Laporan',
                 'route' => 'reports.index',
                 'icon' => view('components.icons.reports')->render(),

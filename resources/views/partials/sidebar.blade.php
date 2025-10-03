@@ -27,7 +27,9 @@
             $isVisible = false;
             $userRole = auth()->user()->role->value;
 
-            if (isset($item['can_not']) && $userRole != $item['can_not']) {
+            if (isset($item['roles'])) {
+            $isVisible = in_array($userRole, (array) $item['roles'], true);
+            } elseif (isset($item['can_not']) && $userRole != $item['can_not']) {
             $isVisible = true;
             } elseif (isset($item['can']) && $userRole == $item['can']) {
             $isVisible = true;

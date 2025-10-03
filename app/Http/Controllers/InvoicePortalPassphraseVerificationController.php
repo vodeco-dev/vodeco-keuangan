@@ -43,6 +43,8 @@ class InvoicePortalPassphraseVerificationController extends Controller
             'token' => Crypt::encryptString((string) $candidate->id),
             'access_type' => $candidate->access_type->value,
             'access_label' => $candidate->access_type->label(),
+            'label' => $candidate->label,
+            'display_label' => $candidate->displayLabel(),
             'verified_at' => now()->toIso8601String(),
         ];
 
@@ -51,6 +53,14 @@ class InvoicePortalPassphraseVerificationController extends Controller
         $candidate->markAsUsed($request->ip(), $request->userAgent(), 'verified');
 
         return Redirect::route('invoices.public.create')
-            ->with('passphrase_verified', 'Passphrase berhasil diverifikasi untuk akses '.$candidate->access_type->label().'.');
+            ->with('passphrase_verified', 'Passphrase berhasil diverifikasi untuk '.$candidate->displayLabel().'.');
+    }
+
+    public function destroy(Request $request): RedirectResponse
+    {
+        $request->session()->forget('invoice_portal_passphrase');
+
+        return Redirect::route('invoices.public.create')
+            ->with('status', 'Sesi passphrase telah diakhiri.');
     }
 }

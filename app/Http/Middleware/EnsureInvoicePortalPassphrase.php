@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\InvoicePortalPassphrase;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class EnsureInvoicePortalPassphrase
 {
@@ -17,6 +18,20 @@ class EnsureInvoicePortalPassphrase
     {
         $session = (array) $request->session()->get('invoice_portal_passphrase', []);
         $passphraseId = $session['id'] ?? null;
+
+        if (! empty($session['verified_at'])) {
+            try {
+                $verifiedAt = Carbon::parse($session['verified_at']);
+            } catch (\Throwable $e) {
+                $verifiedAt = null;
+            }
+
+            if ($verifiedAt && now()->greaterThan($verifiedAt->clone()->addDay())) {
+                $request->session()->forget('invoice_portal_passphrase');
+                $session = [];
+                $passphraseId = null;
+            }
+        }
 
         $passphrase = null;
         if ($passphraseId) {

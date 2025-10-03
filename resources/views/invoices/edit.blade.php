@@ -21,21 +21,6 @@
             @csrf
             @method('PUT')
 
-            <div>
-                <label for="customer_service_id" class="block text-sm font-medium text-gray-700">Customer Service</label>
-                <select name="customer_service_id" id="customer_service_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                    <option value="">Pilih customer service</option>
-                    @foreach($customerServices as $customerService)
-                        <option value="{{ $customerService->id }}" @selected(old('customer_service_id', $invoice->customer_service_id) == $customerService->id)>
-                            {{ $customerService->name }}
-                        </option>
-                    @endforeach
-                </select>
-                @error('customer_service_id')
-                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label for="client_name" class="block text-sm font-medium text-gray-700">Nama Klien</label>

@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Models\InvoicePortalPassphrase;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Validation\Rule;
 use Throwable;
 
 class PublicStoreInvoiceRequest extends StoreInvoiceRequest
@@ -19,12 +18,6 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
     public function rules(): array
     {
         return array_merge(parent::rules(), [
-            'customer_service_name' => [
-                'required_unless:transaction_type,settlement',
-                'string',
-                'max:255',
-                Rule::exists('customer_services', 'name'),
-            ],
             'passphrase_token' => ['required', 'string'],
         ]);
     }
@@ -37,8 +30,6 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
     public function messages(): array
     {
         return array_merge(parent::messages(), [
-            'customer_service_name.required_unless' => 'Masukkan nama customer service untuk transaksi selain pelunasan.',
-            'customer_service_name.exists' => 'Nama customer service tidak ditemukan.',
             'passphrase_token.required' => 'Verifikasi passphrase portal invoice sebelum mengirim formulir.',
         ]);
     }

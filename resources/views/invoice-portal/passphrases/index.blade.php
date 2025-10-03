@@ -30,8 +30,15 @@
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Buat Passphrase Baru</h3>
                     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Passphrase digunakan untuk mengizinkan akses pembuatan invoice publik dengan hak tertentu.</p>
 
-                    <form action="{{ route('invoice-portal.passphrases.store') }}" method="POST" class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <form action="{{ route('invoice-portal.passphrases.store') }}" method="POST" class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
                         @csrf
+                        <div>
+                            <label for="label" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Nama Pemilik Passphrase</label>
+                            <input type="text" name="label" id="label" value="{{ old('label') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: Ayu" required>
+                            @error('label')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
                         <div>
                             <label for="access_type" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Tipe Akses</label>
                             <select name="access_type" id="access_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
@@ -58,7 +65,7 @@
                                 <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
-                        <div class="md:col-span-3 flex justify-end">
+                        <div class="md:col-span-4 flex justify-end">
                             <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Simpan Passphrase</button>
                         </div>
                     </form>
@@ -84,6 +91,7 @@
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead class="bg-gray-50 dark:bg-gray-800">
                                 <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Pemilik</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Tipe</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Status</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Kedaluwarsa</th>
@@ -97,8 +105,11 @@
                                 @forelse ($passphrases as $passphrase)
                                     <tr>
                                         <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                                            <div class="font-semibold">{{ $passphrase->access_type->label() }}</div>
+                                            <div class="font-semibold">{{ $passphrase->displayLabel() }}</div>
                                             <div class="text-xs text-gray-500 dark:text-gray-400">ID: {{ $passphrase->public_id }}</div>
+                                        </td>
+                                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                                            {{ $passphrase->access_type->label() }}
                                         </td>
                                         <td class="px-4 py-3 text-sm">
                                             @if (! $passphrase->is_active)
@@ -125,7 +136,11 @@
                                             <div class="flex flex-col gap-2">
                                                 <form action="{{ route('invoice-portal.passphrases.rotate', $passphrase) }}" method="POST" class="space-y-2">
                                                     @csrf
-                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Nama Pemilik</label>
+                                                            <input type="text" name="label" value="{{ old('label', $passphrase->label) }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: Ayu">
+                                                        </div>
                                                         <div>
                                                             <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Kedaluwarsa baru</label>
                                                             <input type="datetime-local" name="expires_at" value="{{ old('expires_at') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\Role;
 use App\Http\Requests\PublicStoreInvoiceRequest;
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Models\CustomerService;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Transaction;
@@ -23,6 +22,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 use App\Models\User;
 use App\Services\InvoiceSettlementService;
+use Symfony\Component\HttpFoundation\Response;
 
 class InvoiceController extends Controller
 {
@@ -132,15 +132,13 @@ class InvoiceController extends Controller
 
     public function create(): View
     {
-        $customerServices = CustomerService::orderBy('name')->get();
         $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
 
-        return view('invoices.create', compact('customerServices', 'incomeCategories'));
+        return view('invoices.create', compact('incomeCategories'));
     }
 
     public function createPublic(Request $request): View
     {
-        $customerServices = CustomerService::orderBy('name')->get();
         $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
 
         /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
@@ -154,6 +152,8 @@ class InvoiceController extends Controller
                     'token' => Crypt::encryptString((string) $passphrase->id),
                     'access_type' => $passphrase->access_type->value,
                     'access_label' => $passphrase->access_type->label(),
+                    'label' => $passphrase->label,
+                    'display_label' => $passphrase->displayLabel(),
                     'verified_at' => $sessionData['verified_at'] ?? now()->toIso8601String(),
                 ];
 
@@ -167,7 +167,6 @@ class InvoiceController extends Controller
         $passphraseToken = $sessionData['token'] ?? null;
 
         return view('invoices.public-create', [
-            'customerServices' => $customerServices,
             'incomeCategories' => $incomeCategories,
             'passphraseSession' => $passphrase ? $sessionData : null,
             'allowedTransactionTypes' => $allowedTransactionTypes,
@@ -180,20 +179,7 @@ class InvoiceController extends Controller
     {
         $data = $request->validated();
         $transactionType = $data['transaction_type'] ?? 'down_payment';
-
-        $customerService = null;
-
-        if ($transactionType !== 'settlement' && ! empty($data['customer_service_id'])) {
-            $customerService = CustomerService::find($data['customer_service_id']);
-
-            if (! $customerService) {
-                return back()
-                    ->withErrors(['customer_service_id' => 'Customer service yang dipilih tidak ditemukan.'])
-                    ->withInput();
-            }
-        }
-
-        $ownerId = $customerService?->user_id ?? auth()->id();
+        $ownerId = auth()->id();
 
         if ($transactionType === 'settlement') {
             $referenceInvoice = $request->referenceInvoice()
@@ -201,7 +187,8 @@ class InvoiceController extends Controller
 
             $this->persistSettlementInvoice($data, $referenceInvoice);
         } else {
-            $this->persistInvoice($data, $customerService, $ownerId);
+            $data['customer_service_name'] = auth()->user()?->name;
+            $this->persistInvoice($data, $ownerId);
         }
 
         return redirect()->route('invoices.index');
@@ -217,22 +204,15 @@ class InvoiceController extends Controller
             abort(403, 'Passphrase portal invoice tidak valid.');
         }
 
-        $customerService = CustomerService::where('name', $data['customer_service_name'])->first();
-
-        if (! $customerService && $data['transaction_type'] !== 'settlement') {
-            return back()
-                ->withErrors(['customer_service_name' => 'Customer service yang dimaksud tidak ditemukan.'])
-                ->withInput();
-        }
-
-        $ownerId = $customerService?->user_id
-            ?? User::where('role', Role::ADMIN)->orderBy('id')->value('id');
+        $ownerId = User::where('role', Role::ADMIN)->orderBy('id')->value('id');
 
         if (! $ownerId) {
             return back()
-                ->withErrors(['customer_service_name' => 'Customer service belum dapat digunakan saat ini.'])
+                ->withErrors(['transaction_type' => 'Invoice belum dapat dibuat saat ini.'])
                 ->withInput();
         }
+
+        $data['customer_service_name'] = $passphrase->displayLabel();
 
         if ($data['transaction_type'] === 'settlement') {
             $referenceInvoice = $request->referenceInvoice()
@@ -240,7 +220,7 @@ class InvoiceController extends Controller
 
             $invoice = $this->persistSettlementInvoice($data, $referenceInvoice);
         } else {
-            $invoice = $this->persistInvoice($data, $customerService, $ownerId);
+            $invoice = $this->persistInvoice($data, $ownerId);
         }
 
         $settings = Setting::pluck('value', 'key')->all();
@@ -253,6 +233,49 @@ class InvoiceController extends Controller
         ])
             ->setPaper('a4')
             ->download($invoice->number . '.pdf');
+    }
+
+    public function publicReference(Request $request, string $number): JsonResponse
+    {
+        /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
+        $passphrase = $request->attributes->get('invoicePortalPassphrase');
+
+        if (! $passphrase || ! in_array('settlement', $passphrase->allowedTransactionTypes(), true)) {
+            return response()->json([
+                'message' => 'Passphrase tidak memiliki izin untuk melihat data invoice.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        $invoice = Invoice::query()
+            ->where('number', $number)
+            ->where('type', '!=', Invoice::TYPE_SETTLEMENT)
+            ->first();
+
+        if (! $invoice) {
+            return response()->json([
+                'message' => 'Invoice referensi tidak ditemukan.',
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        return response()->json($this->makeInvoiceReferencePayload($invoice));
+    }
+
+    public function reference(Request $request, string $number): JsonResponse
+    {
+        $invoice = Invoice::query()
+            ->where('number', $number)
+            ->where('type', '!=', Invoice::TYPE_SETTLEMENT)
+            ->first();
+
+        if (! $invoice) {
+            return response()->json([
+                'message' => 'Invoice referensi tidak ditemukan.',
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->authorize('view', $invoice);
+
+        return response()->json($this->makeInvoiceReferencePayload($invoice));
     }
 
     public function checkStatus(Request $request): JsonResponse
@@ -495,12 +518,11 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
-        $customerServices = CustomerService::orderBy('name')->get();
         $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
 
         $invoice->loadMissing('items');
 
-        return view('invoices.edit', compact('invoice', 'customerServices', 'incomeCategories'));
+        return view('invoices.edit', compact('invoice', 'incomeCategories'));
     }
 
     public function update(StoreInvoiceRequest $request, Invoice $invoice)
@@ -509,27 +531,15 @@ class InvoiceController extends Controller
 
         $data = $request->validated();
 
-        $customerService = null;
+        $ownerId = $invoice->user_id;
 
-        if (! empty($data['customer_service_id'])) {
-            $customerService = CustomerService::find($data['customer_service_id']);
-
-            if (! $customerService) {
-                return back()
-                    ->withErrors(['customer_service_id' => 'Customer service yang dipilih tidak ditemukan.'])
-                    ->withInput();
-            }
-        }
-
-        $ownerId = $customerService?->user_id ?? $invoice->user_id;
-
-        DB::transaction(function () use ($invoice, $data, $customerService, $ownerId) {
+        DB::transaction(function () use ($invoice, $data, $ownerId) {
             $items = $this->mapInvoiceItems($data['items']);
 
             $invoice->update([
                 'user_id' => $ownerId,
-                'customer_service_id' => $customerService?->id,
-                'customer_service_name' => $customerService?->name ?? null,
+                'customer_service_id' => null,
+                'customer_service_name' => $invoice->customer_service_name ?? auth()->user()?->name,
                 'client_name' => $data['client_name'],
                 'client_whatsapp' => $data['client_whatsapp'],
                 'client_address' => $data['client_address'],
@@ -569,9 +579,9 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index');
     }
 
-    private function persistInvoice(array $data, ?CustomerService $customerService, ?int $ownerId = null): Invoice
+    private function persistInvoice(array $data, ?int $ownerId = null): Invoice
     {
-        return DB::transaction(function () use ($data, $customerService, $ownerId) {
+        return DB::transaction(function () use ($data, $ownerId) {
             $transactionType = $data['transaction_type'] ?? 'down_payment';
             $items = $this->mapInvoiceItems($data['items'] ?? []);
             $invoiceNumber = $this->generateInvoiceNumber();
@@ -590,8 +600,8 @@ class InvoiceController extends Controller
             $invoice = Invoice::create([
                 'user_id' => $ownerId ?? auth()->id(),
                 'created_by' => auth()->id(),
-                'customer_service_id' => $customerService?->id,
-                'customer_service_name' => $customerService?->name ?? ($data['customer_service_name'] ?? null),
+                'customer_service_id' => null,
+                'customer_service_name' => $data['customer_service_name'] ?? auth()->user()?->name,
                 'client_name' => $data['client_name'],
                 'client_whatsapp' => $data['client_whatsapp'],
                 'client_address' => $data['client_address'],
@@ -670,6 +680,23 @@ class InvoiceController extends Controller
 
             return $invoice->load('items', 'customerService', 'referenceInvoice');
         });
+    }
+
+    private function makeInvoiceReferencePayload(Invoice $invoice): array
+    {
+        $remaining = max((float) $invoice->total - (float) $invoice->down_payment, 0);
+
+        return [
+            'number' => $invoice->number,
+            'client_name' => $invoice->client_name,
+            'client_whatsapp' => $invoice->client_whatsapp,
+            'client_address' => $invoice->client_address,
+            'due_date' => $invoice->due_date?->format('Y-m-d'),
+            'total' => (float) $invoice->total,
+            'down_payment' => (float) $invoice->down_payment,
+            'remaining_balance' => $remaining,
+            'status' => $invoice->status,
+        ];
     }
 
     private function generateInvoiceNumber(): string

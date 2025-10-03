@@ -36,9 +36,31 @@ $settlementRemainingBalance = $settlementRemainingBalance ?? '';
 $settlementPaidAmount = $settlementPaidAmount ?? '';
 $settlementPaymentStatus = $settlementPaymentStatus ?? null;
 $currencyPlaceholder = $currencyPlaceholder ?? 'Contoh: 1.500.000';
+$forwardedAttributes = $attributes->except([
+    'id',
+    'form-id',
+    'items',
+    'category-options',
+    'allowed-transactions',
+    'default-transaction',
+    'variant',
+    'down-payment-field-label',
+    'down-payment-placeholder',
+    'down-payment-help',
+    'down-payment-required',
+    'add-item-button-label',
+    'total-label',
+    'down-payment-value',
+    'settlement-invoice-number',
+    'settlement-remaining-balance',
+    'settlement-paid-amount',
+    'settlement-payment-status',
+    'currency-placeholder',
+]);
 ?>
 
 <div
+    {{ $forwardedAttributes->merge(['class' => 'space-y-6']) }}
     id="{{ $componentId }}"
     x-data="invoiceTabsComponent({
         id: '{{ $componentId }}',
@@ -46,7 +68,6 @@ $currencyPlaceholder = $currencyPlaceholder ?? 'Contoh: 1.500.000';
         variant: '{{ $variant }}',
     })"
     x-init="init()"
-    class="space-y-6"
     data-form-id="{{ $formId }}"
     data-category-options='@json($categoryOptions)'
 >
@@ -144,6 +165,46 @@ $currencyPlaceholder = $currencyPlaceholder ?? 'Contoh: 1.500.000';
 
         <div x-show="activeTab === 'settlement'" data-tab-visible="settlement" x-cloak>
             <h3 class="text-lg font-medium text-gray-900 mb-4">Detail Pelunasan</h3>
+            <div data-settlement-feedback class="space-y-3 mb-6">
+                <div data-settlement-error class="hidden rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"></div>
+                <div data-settlement-summary class="hidden rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
+                    <h4 class="text-sm font-semibold text-indigo-800">Ringkasan Invoice Referensi</h4>
+                    <dl class="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-indigo-600">Nama Klien</dt>
+                            <dd class="font-semibold" data-settlement-client>-</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-indigo-600">Status</dt>
+                            <dd data-settlement-status>-</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-indigo-600">Nomor WhatsApp</dt>
+                            <dd data-settlement-whatsapp>-</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-indigo-600">Total Invoice</dt>
+                            <dd data-settlement-total>-</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-indigo-600">Down Payment Tercatat</dt>
+                            <dd data-settlement-down-payment>-</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-indigo-600">Sisa Tagihan</dt>
+                            <dd data-settlement-remaining>-</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-indigo-600">Jatuh Tempo</dt>
+                            <dd data-settlement-due-date>-</dd>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <dt class="text-xs font-medium uppercase tracking-wide text-indigo-600">Alamat Klien</dt>
+                            <dd data-settlement-address class="whitespace-pre-line">-</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
             <div class="space-y-6">
                 <div>
                     <label for="settlement_invoice_number" class="block text-sm font-medium text-gray-700">Nomor Invoice Acuan</label>
@@ -231,6 +292,15 @@ $currencyPlaceholder = $currencyPlaceholder ?? 'Contoh: 1.500.000';
                 totalElement: null,
                 categoryOptions: [],
                 itemIndex: 0,
+                referenceUrlTemplate: '',
+                settlementInvoiceInput: null,
+                settlementRemainingInput: null,
+                settlementPaidInput: null,
+                settlementSummary: null,
+                settlementSummaryFields: {},
+                settlementError: null,
+                settlementFetchTimeout: null,
+                settlementAbortController: null,
                 init() {
                     this.form = document.getElementById(this.$el.dataset.formId) || this.$el.closest('form');
                     this.itemsContainer = this.$el.querySelector('[data-items-container]');
@@ -238,12 +308,29 @@ $currencyPlaceholder = $currencyPlaceholder ?? 'Contoh: 1.500.000';
                     this.totalElement = this.$el.querySelector('[data-total-amount]');
                     this.categoryOptions = JSON.parse(this.$el.dataset.categoryOptions || '[]');
                     this.itemIndex = this.itemsContainer ? this.itemsContainer.querySelectorAll('[data-invoice-item]').length : 0;
+                    this.referenceUrlTemplate = this.$el.dataset.referenceUrlTemplate || '';
+                    this.settlementInvoiceInput = this.$el.querySelector('[name="settlement_invoice_number"]');
+                    this.settlementRemainingInput = this.$el.querySelector('[name="settlement_remaining_balance"]');
+                    this.settlementPaidInput = this.$el.querySelector('[name="settlement_paid_amount"]');
+                    this.settlementSummary = this.$el.querySelector('[data-settlement-summary]');
+                    this.settlementError = this.$el.querySelector('[data-settlement-error]');
+                    this.settlementSummaryFields = {
+                        client: this.$el.querySelector('[data-settlement-client]'),
+                        status: this.$el.querySelector('[data-settlement-status]'),
+                        whatsapp: this.$el.querySelector('[data-settlement-whatsapp]'),
+                        total: this.$el.querySelector('[data-settlement-total]'),
+                        downPayment: this.$el.querySelector('[data-settlement-down-payment]'),
+                        remaining: this.$el.querySelector('[data-settlement-remaining]'),
+                        dueDate: this.$el.querySelector('[data-settlement-due-date]'),
+                        address: this.$el.querySelector('[data-settlement-address]'),
+                    };
 
                     this.initPriceInputs();
                     this.initQuantityInputs();
                     this.setupAddItem();
                     this.setupRemoveItem();
                     this.setupFormSubmit();
+                    this.setupSettlementReferenceLookup();
                     this.applyTabScope();
                     this.updateTotal();
 
@@ -312,6 +399,8 @@ $currencyPlaceholder = $currencyPlaceholder ?? 'Contoh: 1.500.000';
                     if (totalWrapper) {
                         totalWrapper.style.display = scope === 'settlement' ? 'none' : '';
                     }
+
+                    this.handleSettlementScopeChange();
                 },
                 initPriceInputs() {
                     this.$el.querySelectorAll('[data-role="price-input"]').forEach((input) => {
@@ -407,10 +496,211 @@ $currencyPlaceholder = $currencyPlaceholder ?? 'Contoh: 1.500.000';
                         });
                     });
                 },
+                setupSettlementReferenceLookup() {
+                    if (!this.settlementInvoiceInput || !this.referenceUrlTemplate) {
+                        return;
+                    }
+
+                    this.settlementInvoiceInput.addEventListener('input', () => {
+                        this.scheduleSettlementReferenceFetch();
+                    });
+
+                    this.settlementInvoiceInput.addEventListener('blur', () => {
+                        this.scheduleSettlementReferenceFetch(true);
+                    });
+                },
+                handleSettlementScopeChange() {
+                    if (!this.settlementInvoiceInput) {
+                        return;
+                    }
+
+                    if (this.activeTab === 'settlement') {
+                        this.scheduleSettlementReferenceFetch(true);
+                    } else {
+                        this.clearSettlementFeedback();
+                    }
+                },
+                scheduleSettlementReferenceFetch(immediate = false) {
+                    if (!this.settlementInvoiceInput || !this.referenceUrlTemplate) {
+                        return;
+                    }
+
+                    if (this.activeTab !== 'settlement') {
+                        this.clearSettlementFeedback();
+                        return;
+                    }
+
+                    const number = (this.settlementInvoiceInput.value || '').trim();
+
+                    if (this.settlementFetchTimeout) {
+                        clearTimeout(this.settlementFetchTimeout);
+                    }
+
+                    if (!number) {
+                        this.clearSettlementFeedback();
+                        return;
+                    }
+
+                    const fetchAction = () => {
+                        this.settlementFetchTimeout = null;
+                        this.fetchSettlementReference(number);
+                    };
+
+                    if (immediate) {
+                        fetchAction();
+                    } else {
+                        this.settlementFetchTimeout = setTimeout(fetchAction, 400);
+                    }
+                },
+                fetchSettlementReference(number) {
+                    if (!this.referenceUrlTemplate) {
+                        return;
+                    }
+
+                    const url = this.referenceUrlTemplate.replace('__NUMBER__', encodeURIComponent(number));
+
+                    if (this.settlementAbortController) {
+                        this.settlementAbortController.abort();
+                    }
+
+                    this.settlementAbortController = new AbortController();
+
+                    fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            Accept: 'application/json',
+                        },
+                        signal: this.settlementAbortController.signal,
+                    })
+                        .then(async (response) => {
+                            if (!response.ok) {
+                                let message = 'Gagal mengambil data invoice referensi.';
+
+                                try {
+                                    const payload = await response.json();
+                                    if (payload && typeof payload.message === 'string') {
+                                        message = payload.message;
+                                    }
+                                } catch (error) {
+                                    // ignore parsing error
+                                }
+
+                                this.showSettlementError(message);
+                                return;
+                            }
+
+                            const data = await response.json();
+                            this.showSettlementSummary(data);
+                        })
+                        .catch((error) => {
+                            if (error.name === 'AbortError') {
+                                return;
+                            }
+
+                            this.showSettlementError('Tidak dapat memuat data invoice referensi.');
+                        })
+                        .finally(() => {
+                            this.settlementAbortController = null;
+                        });
+                },
+                showSettlementSummary(data) {
+                    this.clearSettlementFeedback();
+
+                    if (!this.settlementSummary) {
+                        return;
+                    }
+
+                    const currencyFormatter = (value) => this.formatCurrency(value ?? 0);
+
+                    if (this.settlementSummaryFields.client) {
+                        this.settlementSummaryFields.client.textContent = data?.client_name || '-';
+                    }
+
+                    if (this.settlementSummaryFields.status) {
+                        const status = (data?.status || '-').toString().replace(/_/g, ' ');
+                        this.settlementSummaryFields.status.textContent = status
+                            .split(' ')
+                            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ');
+                    }
+
+                    if (this.settlementSummaryFields.whatsapp) {
+                        this.settlementSummaryFields.whatsapp.textContent = data?.client_whatsapp || '-';
+                    }
+
+                    if (this.settlementSummaryFields.total) {
+                        this.settlementSummaryFields.total.textContent = currencyFormatter(data?.total);
+                    }
+
+                    if (this.settlementSummaryFields.downPayment) {
+                        this.settlementSummaryFields.downPayment.textContent = currencyFormatter(data?.down_payment);
+                    }
+
+                    if (this.settlementSummaryFields.remaining) {
+                        this.settlementSummaryFields.remaining.textContent = currencyFormatter(data?.remaining_balance);
+                    }
+
+                    if (this.settlementSummaryFields.dueDate) {
+                        const dueDate = data?.due_date ? new Date(`${data.due_date}T00:00:00`) : null;
+                        this.settlementSummaryFields.dueDate.textContent = dueDate && !Number.isNaN(dueDate.getTime())
+                            ? dueDate.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+                            : '-';
+                    }
+
+                    if (this.settlementSummaryFields.address) {
+                        this.settlementSummaryFields.address.textContent = data?.client_address || '-';
+                    }
+
+                    this.settlementSummary.classList.remove('hidden');
+
+                    this.setPriceInputValue(this.settlementRemainingInput, data?.remaining_balance);
+                    this.setPriceInputValue(this.settlementPaidInput, data?.remaining_balance);
+                },
+                showSettlementError(message) {
+                    if (this.settlementSummary) {
+                        this.settlementSummary.classList.add('hidden');
+                    }
+
+                    if (this.settlementError) {
+                        this.settlementError.textContent = message;
+                        this.settlementError.classList.remove('hidden');
+                    }
+                },
+                clearSettlementFeedback() {
+                    if (this.settlementError) {
+                        this.settlementError.textContent = '';
+                        this.settlementError.classList.add('hidden');
+                    }
+
+                    if (this.settlementSummary) {
+                        this.settlementSummary.classList.add('hidden');
+                    }
+                },
+                setPriceInputValue(input, value) {
+                    if (!input) {
+                        return;
+                    }
+
+                    const numeric = Number(value);
+                    const sanitized = Number.isFinite(numeric) ? Math.max(Math.round(numeric), 0) : 0;
+                    const rawString = String(sanitized);
+
+                    input.dataset.rawValue = rawString;
+                    input.value = rawString ? rawString.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+                },
                 formatPrice(input) {
                     const raw = (input.value || '').replace(/\D/g, '');
                     input.dataset.rawValue = raw;
                     input.value = raw ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+                },
+                formatCurrency(value) {
+                    const numeric = Number(value);
+                    const resolved = Number.isFinite(numeric) ? numeric : 0;
+
+                    return new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                    }).format(resolved);
                 },
                 updateTotal() {
                     if (!this.itemsContainer || !this.totalElement) {
@@ -426,10 +716,7 @@ $currencyPlaceholder = $currencyPlaceholder ?? 'Contoh: 1.500.000';
                         total += quantity * price;
                     });
 
-                    this.totalElement.textContent = new Intl.NumberFormat('id-ID', {
-                        style: 'currency',
-                        currency: 'IDR',
-                    }).format(total || 0);
+                    this.totalElement.textContent = this.formatCurrency(total || 0);
                 },
             };
         };
