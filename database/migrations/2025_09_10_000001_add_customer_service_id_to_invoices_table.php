@@ -28,8 +28,6 @@ return new class extends Migration
                     Role::ADMIN->value,
                     Role::ACCOUNTANT->value,
                     Role::STAFF->value,
-                    Role::CUSTOMER_SERVICE->value,
-                    Role::SETTLEMENT_ADMIN->value,
                 ])
                 ->get();
 
