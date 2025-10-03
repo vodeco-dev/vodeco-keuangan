@@ -15,6 +15,13 @@ return new class extends Migration
             $table->integer('amount');
             $table->string('description')->nullable();
             $table->date('date')->nullable();
+            $table->string('proof_disk', 50)->nullable();
+            $table->string('proof_directory')->nullable();
+            $table->string('proof_path')->nullable();
+            $table->string('proof_filename')->nullable();
+            $table->string('proof_original_name')->nullable();
+            $table->string('proof_remote_id')->nullable();
+            $table->string('proof_token', 64)->nullable()->unique();
             $table->timestamps();
         });
     }
