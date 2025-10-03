@@ -1,0 +1,437 @@
+<?php
+use Illuminate\Support\Str;
+
+$tabLabels = [
+    'down_payment' => 'Down Payment',
+    'full_payment' => 'Bayar Lunas',
+    'settlement' => 'Pelunasan',
+];
+
+$allowedTransactions = $allowedTransactions ?? array_keys($tabLabels);
+$allowedTransactions = array_values(array_intersect(array_keys($tabLabels), $allowedTransactions));
+if (empty($allowedTransactions)) {
+    $allowedTransactions = array_keys($tabLabels);
+}
+
+$defaultTransaction = $defaultTransaction ?? 'down_payment';
+if (! in_array($defaultTransaction, $allowedTransactions, true)) {
+    $defaultTransaction = $allowedTransactions[0];
+}
+
+$componentId = $attributes->get('id') ?? 'invoice-tabs-' . Str::random(8);
+$formId = $formId ?? 'invoice-form';
+$variant = $variant ?? 'internal';
+$categoryOptions = $categoryOptions ?? [];
+$items = $items ?? [];
+$downPaymentFieldLabel = $downPaymentFieldLabel ?? 'Nominal Down Payment';
+$downPaymentPlaceholder = $downPaymentPlaceholder ?? 'Contoh: 5.000.000';
+$downPaymentHelp = $downPaymentHelp ?? null;
+$downPaymentValue = $downPaymentValue ?? '';
+$downPaymentRequired = $downPaymentRequired ?? false;
+$addItemButtonLabel = $addItemButtonLabel ?? 'Tambah Item';
+$totalLabel = $totalLabel ?? 'Total Invoice';
+$showTotal = $showTotal ?? true;
+$settlementInvoiceNumber = $settlementInvoiceNumber ?? '';
+$settlementRemainingBalance = $settlementRemainingBalance ?? '';
+$settlementPaidAmount = $settlementPaidAmount ?? '';
+$settlementPaymentStatus = $settlementPaymentStatus ?? null;
+$currencyPlaceholder = $currencyPlaceholder ?? 'Contoh: 1.500.000';
+?>
+
+<div
+    id="{{ $componentId }}"
+    x-data="invoiceTabsComponent({
+        id: '{{ $componentId }}',
+        defaultTab: '{{ $defaultTransaction }}',
+        variant: '{{ $variant }}',
+    })"
+    x-init="init()"
+    class="space-y-6"
+    data-form-id="{{ $formId }}"
+    data-category-options='@json($categoryOptions)'
+>
+    <input type="hidden" name="transaction_type" :value="activeTab">
+
+    <div class="space-y-3">
+        <h3 class="text-lg font-medium text-gray-900">Jenis Transaksi</h3>
+        <div class="flex flex-wrap gap-2">
+            @foreach ($allowedTransactions as $transaction)
+                <button
+                    type="button"
+                    @click="setTab('{{ $transaction }}')"
+                    :class="tabClass('{{ $transaction }}')"
+                >
+                    {{ $tabLabels[$transaction] }}
+                </button>
+            @endforeach
+        </div>
+    </div>
+
+    <div class="space-y-6" x-cloak>
+        @if ($downPaymentFieldLabel)
+            <div x-show="activeTab === 'down_payment'" data-down-payment-visible>
+                <label for="down_payment_due" class="block text-sm font-medium text-gray-700">{{ $downPaymentFieldLabel }}</label>
+                <input
+                    type="text"
+                    name="down_payment_due"
+                    id="down_payment_due"
+                    value="{{ old('down_payment_due', $downPaymentValue) }}"
+                    class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 price-input"
+                    placeholder="{{ $downPaymentPlaceholder }}"
+                    data-transaction-scope="down-payment"
+                    data-down-payment-required="{{ $downPaymentRequired ? 'true' : 'false' }}"
+                >
+                @if ($downPaymentHelp)
+                    <p class="mt-1 text-xs text-gray-500">{{ $downPaymentHelp }}</p>
+                @endif
+                @error('down_payment_due')
+                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+        @endif
+
+        <div x-show="activeTab !== 'settlement'" data-items-wrapper x-cloak>
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium text-gray-900">Daftar Item</h3>
+                <button type="button" data-add-item class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    {{ $addItemButtonLabel }}
+                </button>
+            </div>
+
+            <div data-items-container class="space-y-4">
+                @foreach ($items as $index => $item)
+                    <div class="grid grid-cols-12 gap-4 invoice-item bg-gray-50 p-4 rounded-xl" data-invoice-item>
+                        <div class="col-span-12 md:col-span-4">
+                            <label class="block text-sm font-medium text-gray-700">Deskripsi</label>
+                            <textarea name="items[{{ $index }}][description]" rows="3" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 description" data-transaction-scope="line-item" required>{{ $item['description'] ?? '' }}</textarea>
+                            @error('items.' . $index . '.description')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div class="col-span-12 md:col-span-3">
+                            <label class="block text-sm font-medium text-gray-700">Kategori</label>
+                            <select name="items[{{ $index }}][category_id]" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 category-select" data-transaction-scope="line-item" required>
+                                <option value="">Pilih kategori pemasukan</option>
+                                @foreach ($categoryOptions as $option)
+                                    <option value="{{ $option['id'] }}" @selected(($item['category_id'] ?? '') == $option['id'])>{{ $option['name'] }}</option>
+                                @endforeach
+                            </select>
+                            @error('items.' . $index . '.category_id')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div class="col-span-6 md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Kuantitas</label>
+                            <input type="number" name="items[{{ $index }}][quantity]" class="quantity mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="{{ $item['quantity'] ?? 1 }}" min="1" data-role="quantity-input" data-transaction-scope="line-item" required>
+                            @error('items.' . $index . '.quantity')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div class="col-span-6 md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Harga Satuan</label>
+                            <input type="text" name="items[{{ $index }}][price]" class="price-input mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="{{ $item['price'] ?? '' }}" data-role="price-input" data-transaction-scope="line-item" required>
+                            @error('items.' . $index . '.price')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div class="col-span-12 md:col-span-1 flex items-end justify-end">
+                            <button type="button" class="text-sm font-semibold text-red-600 hover:text-red-700" data-remove-item>Hapus</button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        <div x-show="activeTab === 'settlement'" data-tab-visible="settlement" x-cloak>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Detail Pelunasan</h3>
+            <div class="space-y-6">
+                <div>
+                    <label for="settlement_invoice_number" class="block text-sm font-medium text-gray-700">Nomor Invoice Acuan</label>
+                    <input type="text" name="settlement_invoice_number" id="settlement_invoice_number" value="{{ old('settlement_invoice_number', $settlementInvoiceNumber) }}" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" data-transaction-scope="settlement" data-settlement-required="true">
+                    @error('settlement_invoice_number')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label for="settlement_remaining_balance" class="block text-sm font-medium text-gray-700">Sisa Tagihan</label>
+                    <input type="text" name="settlement_remaining_balance" id="settlement_remaining_balance" value="{{ old('settlement_remaining_balance', $settlementRemainingBalance) }}" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 price-input" placeholder="{{ $currencyPlaceholder }}" data-transaction-scope="settlement" data-settlement-required="true" data-role="price-input">
+                    @error('settlement_remaining_balance')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label for="settlement_paid_amount" class="block text-sm font-medium text-gray-700">Nominal Dibayarkan</label>
+                    <input type="text" name="settlement_paid_amount" id="settlement_paid_amount" value="{{ old('settlement_paid_amount', $settlementPaidAmount) }}" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 price-input" placeholder="{{ $currencyPlaceholder }}" data-transaction-scope="settlement" data-settlement-required="true" data-role="price-input">
+                    @error('settlement_paid_amount')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <span class="block text-sm font-medium text-gray-700 mb-2">Status Pelunasan</span>
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6">
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                            <input type="radio" name="settlement_payment_status" value="paid_full" @checked(old('settlement_payment_status', $settlementPaymentStatus) === 'paid_full') data-transaction-scope="settlement" data-settlement-required="true">
+                            <span>Bayar Lunas</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                            <input type="radio" name="settlement_payment_status" value="paid_partial" @checked(old('settlement_payment_status', $settlementPaymentStatus) === 'paid_partial') data-transaction-scope="settlement" data-settlement-required="true">
+                            <span>Bayar Sebagian</span>
+                        </label>
+                    </div>
+                    @error('settlement_payment_status')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if ($showTotal)
+        <div class="flex flex-col items-end gap-2 border-t border-gray-200 pt-6" data-total-wrapper>
+            <p class="text-lg font-semibold text-gray-900">{{ $totalLabel }}</p>
+            <p data-total-amount class="text-2xl font-bold text-indigo-600">Rp 0</p>
+        </div>
+    @endif
+
+    <template data-item-template>
+        <div class="grid grid-cols-12 gap-4 invoice-item bg-gray-50 p-4 rounded-xl" data-invoice-item>
+            <div class="col-span-12 md:col-span-4">
+                <label class="block text-sm font-medium text-gray-700">Deskripsi</label>
+                <textarea name="items[__INDEX__][description]" rows="3" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 description" data-transaction-scope="line-item" required></textarea>
+            </div>
+            <div class="col-span-12 md:col-span-3">
+                <label class="block text-sm font-medium text-gray-700">Kategori</label>
+                <select name="items[__INDEX__][category_id]" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 category-select" data-transaction-scope="line-item" required></select>
+            </div>
+            <div class="col-span-6 md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700">Kuantitas</label>
+                <input type="number" name="items[__INDEX__][quantity]" class="quantity mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="1" min="1" data-role="quantity-input" data-transaction-scope="line-item" required>
+            </div>
+            <div class="col-span-6 md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700">Harga Satuan</label>
+                <input type="text" name="items[__INDEX__][price]" class="price-input mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" data-role="price-input" data-transaction-scope="line-item" required>
+            </div>
+            <div class="col-span-12 md:col-span-1 flex items-end justify-end">
+                <button type="button" class="text-sm font-semibold text-red-600 hover:text-red-700" data-remove-item>Hapus</button>
+            </div>
+        </div>
+    </template>
+</div>
+
+@once
+    <script>
+        window.invoiceTabsComponent = function (config) {
+            return {
+                id: config.id,
+                variant: config.variant || 'internal',
+                activeTab: config.defaultTab || 'down_payment',
+                form: null,
+                itemsContainer: null,
+                addItemButton: null,
+                totalElement: null,
+                categoryOptions: [],
+                itemIndex: 0,
+                init() {
+                    this.form = document.getElementById(this.$el.dataset.formId) || this.$el.closest('form');
+                    this.itemsContainer = this.$el.querySelector('[data-items-container]');
+                    this.addItemButton = this.$el.querySelector('[data-add-item]');
+                    this.totalElement = this.$el.querySelector('[data-total-amount]');
+                    this.categoryOptions = JSON.parse(this.$el.dataset.categoryOptions || '[]');
+                    this.itemIndex = this.itemsContainer ? this.itemsContainer.querySelectorAll('[data-invoice-item]').length : 0;
+
+                    this.initPriceInputs();
+                    this.initQuantityInputs();
+                    this.setupAddItem();
+                    this.setupRemoveItem();
+                    this.setupFormSubmit();
+                    this.applyTabScope();
+                    this.updateTotal();
+
+                    window.dispatchEvent(new CustomEvent('invoice-transaction-tab-changed', {
+                        detail: { tab: this.activeTab, id: this.id },
+                    }));
+                },
+                setTab(tab) {
+                    this.activeTab = tab;
+                    this.applyTabScope();
+                    this.updateTotal();
+                    window.dispatchEvent(new CustomEvent('invoice-transaction-tab-changed', {
+                        detail: { tab: this.activeTab, id: this.id },
+                    }));
+                },
+                tabClass(tab) {
+                    const activeClasses = this.variant === 'public'
+                        ? 'px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white shadow'
+                        : 'px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white shadow';
+                    const inactiveClasses = 'px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200';
+
+                    return this.activeTab === tab ? activeClasses : inactiveClasses;
+                },
+                applyTabScope() {
+                    const scope = this.activeTab;
+                    this.$el.querySelectorAll('[data-transaction-scope]').forEach((element) => {
+                        const targetScope = element.dataset.transactionScope;
+                        if (targetScope === 'settlement') {
+                            const enable = scope === 'settlement';
+                            element.disabled = !enable;
+                            if (element.dataset.settlementRequired === 'true') {
+                                element.required = enable;
+                            }
+                            if (!enable && element.type === 'radio') {
+                                element.checked = false;
+                            }
+                        } else if (targetScope === 'down-payment') {
+                            const enable = scope === 'down_payment';
+                            element.disabled = !enable;
+                            if (element.dataset.downPaymentRequired === 'true') {
+                                element.required = enable;
+                            }
+                        } else if (targetScope === 'line-item') {
+                            element.disabled = scope === 'settlement';
+                        }
+                    });
+
+                    const itemsWrapper = this.$el.querySelector('[data-items-wrapper]');
+                    if (itemsWrapper) {
+                        itemsWrapper.style.display = scope === 'settlement' ? 'none' : '';
+                    }
+
+                    const settlementSection = this.$el.querySelector('[data-tab-visible="settlement"]');
+                    if (settlementSection) {
+                        settlementSection.style.display = scope === 'settlement' ? '' : 'none';
+                    }
+
+                    if (this.addItemButton) {
+                        const disabled = scope === 'settlement';
+                        this.addItemButton.disabled = disabled;
+                        this.addItemButton.classList.toggle('opacity-50', disabled);
+                        this.addItemButton.classList.toggle('cursor-not-allowed', disabled);
+                    }
+
+                    const totalWrapper = this.$el.querySelector('[data-total-wrapper]');
+                    if (totalWrapper) {
+                        totalWrapper.style.display = scope === 'settlement' ? 'none' : '';
+                    }
+                },
+                initPriceInputs() {
+                    this.$el.querySelectorAll('[data-role="price-input"]').forEach((input) => {
+                        this.formatPrice(input);
+                        input.addEventListener('input', () => {
+                            this.formatPrice(input);
+                            this.updateTotal();
+                        });
+                        input.addEventListener('blur', () => this.formatPrice(input));
+                    });
+                },
+                initQuantityInputs() {
+                    this.$el.querySelectorAll('[data-role="quantity-input"]').forEach((input) => {
+                        input.addEventListener('input', () => this.updateTotal());
+                    });
+                },
+                setupAddItem() {
+                    if (!this.addItemButton || !this.itemsContainer) {
+                        return;
+                    }
+
+                    const template = this.$el.querySelector('template[data-item-template]');
+                    this.addItemButton.addEventListener('click', () => {
+                        if (!template) {
+                            return;
+                        }
+
+                        const html = template.innerHTML.replace(/__INDEX__/g, String(this.itemIndex));
+                        const fragment = document.createElement('template');
+                        fragment.innerHTML = html.trim();
+                        const element = fragment.content.firstElementChild;
+
+                        if (!element) {
+                            return;
+                        }
+
+                        const categorySelect = element.querySelector('select[name^="items"][name$="[category_id]"]');
+                        if (categorySelect) {
+                            categorySelect.innerHTML = ['<option value="">Pilih kategori pemasukan</option>']
+                                .concat(this.categoryOptions.map((option) => `<option value="${option.id}">${option.name}</option>`))
+                                .join('');
+                        }
+
+                        this.itemsContainer.appendChild(element);
+
+                        element.querySelectorAll('[data-role="price-input"]').forEach((input) => {
+                            this.formatPrice(input);
+                            input.addEventListener('input', () => {
+                                this.formatPrice(input);
+                                this.updateTotal();
+                            });
+                            input.addEventListener('blur', () => this.formatPrice(input));
+                        });
+
+                        element.querySelectorAll('[data-role="quantity-input"]').forEach((input) => {
+                            input.addEventListener('input', () => this.updateTotal());
+                        });
+
+                        this.itemIndex += 1;
+                        this.updateTotal();
+                    });
+                },
+                setupRemoveItem() {
+                    if (!this.itemsContainer) {
+                        return;
+                    }
+
+                    this.itemsContainer.addEventListener('click', (event) => {
+                        const button = event.target.closest('[data-remove-item]');
+                        if (!button) {
+                            return;
+                        }
+
+                        const item = button.closest('[data-invoice-item]');
+                        if (item) {
+                            item.remove();
+                            this.updateTotal();
+                        }
+                    });
+                },
+                setupFormSubmit() {
+                    if (!this.form) {
+                        return;
+                    }
+
+                    this.form.addEventListener('submit', () => {
+                        this.$el.querySelectorAll('[data-role="price-input"]').forEach((input) => {
+                            if (input.disabled) {
+                                return;
+                            }
+
+                            input.value = input.dataset.rawValue || '';
+                        });
+                    });
+                },
+                formatPrice(input) {
+                    const raw = (input.value || '').replace(/\D/g, '');
+                    input.dataset.rawValue = raw;
+                    input.value = raw ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+                },
+                updateTotal() {
+                    if (!this.itemsContainer || !this.totalElement) {
+                        return;
+                    }
+
+                    let total = 0;
+                    this.itemsContainer.querySelectorAll('[data-invoice-item]').forEach((item) => {
+                        const quantityInput = item.querySelector('[data-role="quantity-input"]');
+                        const priceInput = item.querySelector('[data-role="price-input"]');
+                        const quantity = parseInt(quantityInput?.value || '0', 10) || 0;
+                        const price = parseInt(priceInput?.dataset.rawValue || '0', 10) || 0;
+                        total += quantity * price;
+                    });
+
+                    this.totalElement.textContent = new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                    }).format(total || 0);
+                },
+            };
+        };
+    </script>
+@endonce

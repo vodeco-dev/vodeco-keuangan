@@ -234,7 +234,14 @@ class InvoiceController extends Controller
                 ->withInput();
         }
 
-        $invoice = $this->persistInvoice($data, $customerService, $ownerId);
+        if ($data['transaction_type'] === 'settlement') {
+            $referenceInvoice = $request->referenceInvoice()
+                ?? Invoice::where('number', $data['settlement_invoice_number'])->firstOrFail();
+
+            $invoice = $this->persistSettlementInvoice($data, $referenceInvoice);
+        } else {
+            $invoice = $this->persistInvoice($data, $customerService, $ownerId);
+        }
 
         $settings = Setting::pluck('value', 'key')->all();
 
@@ -565,8 +572,20 @@ class InvoiceController extends Controller
     private function persistInvoice(array $data, ?CustomerService $customerService, ?int $ownerId = null): Invoice
     {
         return DB::transaction(function () use ($data, $customerService, $ownerId) {
-            $items = $this->mapInvoiceItems($data['items']);
+            $transactionType = $data['transaction_type'] ?? 'down_payment';
+            $items = $this->mapInvoiceItems($data['items'] ?? []);
             $invoiceNumber = $this->generateInvoiceNumber();
+            $total = $this->calculateInvoiceTotal($items);
+            $downPaymentDue = null;
+
+            if ($transactionType === 'down_payment' && array_key_exists('down_payment_due', $data)) {
+                $downPaymentDue = isset($data['down_payment_due']) ? (float) $data['down_payment_due'] : null;
+            }
+
+            $status = match ($transactionType) {
+                'down_payment' => 'belum lunas',
+                default => 'belum bayar',
+            };
 
             $invoice = Invoice::create([
                 'user_id' => $ownerId ?? auth()->id(),
@@ -579,13 +598,13 @@ class InvoiceController extends Controller
                 'number' => $invoiceNumber,
                 'issue_date' => $data['issue_date'] ?? now(),
                 'due_date' => $data['due_date'] ?? null,
-                'status' => 'belum bayar',
-                'total' => $this->calculateInvoiceTotal($items),
+                'status' => $status,
+                'total' => $total,
                 'type' => Invoice::TYPE_STANDARD,
                 'reference_invoice_id' => null,
-                'down_payment_due' => array_key_exists('down_payment_due', $data)
-                    ? (isset($data['down_payment_due']) ? (float) $data['down_payment_due'] : null)
-                    : null,
+                'down_payment' => 0,
+                'down_payment_due' => $downPaymentDue,
+                'payment_date' => null,
             ]);
 
             foreach ($items as $item) {
