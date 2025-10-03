@@ -174,7 +174,15 @@ class TransactionController extends Controller
 
     public function showProof(Transaction $transaction)
     {
-        if (auth()->user()->id !== $transaction->user_id) {
+        $user = auth()->user();
+
+        if (!$user) {
+            abort(403, 'UNAUTHORIZED ACTION');
+        }
+
+        $isPrivilegedRole = in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT], true);
+
+        if (!$isPrivilegedRole && $user->id !== $transaction->user_id) {
             abort(403, 'UNAUTHORIZED ACTION');
         }
 
