@@ -15,6 +15,17 @@ class InvoiceFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
+            'created_by' => function (array $attributes) {
+                $userId = $attributes['user_id'] ?? null;
+
+                if ($userId instanceof User) {
+                    $userId = $userId->getKey();
+                }
+
+                return $userId ?? User::factory();
+            },
+            'type' => Invoice::TYPE_STANDARD,
+            'reference_invoice_id' => null,
             'number' => $this->faker->unique()->numerify('INV-2025-#####'),
             'client_name' => $this->faker->name,
             'client_whatsapp' => $this->faker->unique()->numerify('08##########'),
