@@ -168,15 +168,22 @@
                             <div class="space-y-6">
                                 <div>
                                     <label for="settlement_invoice_number" class="block text-sm font-medium text-gray-700">Nomor Invoice</label>
-                                    <input type="text" name="settlement_invoice_number" id="settlement_invoice_number" value="{{ old('settlement_invoice_number') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" data-transaction-scope="settlement">
+                                    <input type="text" name="settlement_invoice_number" id="settlement_invoice_number" value="{{ old('settlement_invoice_number') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" data-transaction-scope="settlement" data-settlement-required="true">
                                     @error('settlement_invoice_number')
                                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
                                 <div>
                                     <label for="settlement_remaining_balance" class="block text-sm font-medium text-gray-700">Sisa Tagihan</label>
-                                    <input type="text" name="settlement_remaining_balance" id="settlement_remaining_balance" value="{{ old('settlement_remaining_balance') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm price-input" placeholder="Contoh: 2.500.000" data-transaction-scope="settlement">
+                                    <input type="text" name="settlement_remaining_balance" id="settlement_remaining_balance" value="{{ old('settlement_remaining_balance') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm price-input" placeholder="Contoh: 2.500.000" data-transaction-scope="settlement" data-settlement-required="true">
                                     @error('settlement_remaining_balance')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label for="settlement_paid_amount" class="block text-sm font-medium text-gray-700">Nominal Dibayarkan</label>
+                                    <input type="text" name="settlement_paid_amount" id="settlement_paid_amount" value="{{ old('settlement_paid_amount') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm price-input" placeholder="Contoh: 1.500.000" data-transaction-scope="settlement" data-settlement-required="true">
+                                    @error('settlement_paid_amount')
                                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
@@ -184,11 +191,11 @@
                                     <span class="block text-sm font-medium text-gray-700 mb-2">Status Pelunasan</span>
                                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6">
                                         <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                                            <input type="radio" name="settlement_payment_status" value="paid_full" @checked(old('settlement_payment_status') === 'paid_full') data-transaction-scope="settlement">
+                                            <input type="radio" name="settlement_payment_status" value="paid_full" @checked(old('settlement_payment_status') === 'paid_full') data-transaction-scope="settlement" data-settlement-required="true">
                                             <span>Bayar Lunas</span>
                                         </label>
                                         <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                                            <input type="radio" name="settlement_payment_status" value="paid_partial" @checked(old('settlement_payment_status') === 'paid_partial') data-transaction-scope="settlement">
+                                            <input type="radio" name="settlement_payment_status" value="paid_partial" @checked(old('settlement_payment_status') === 'paid_partial') data-transaction-scope="settlement" data-settlement-required="true">
                                             <span>Bayar Sebagian</span>
                                         </label>
                                     </div>
@@ -236,6 +243,9 @@
                     if (targetScope === 'settlement') {
                         const enable = scope === 'settlement';
                         input.disabled = !enable;
+                        if (input.dataset.settlementRequired === 'true') {
+                            input.required = enable;
+                        }
                         if (!enable && input.type === 'radio') {
                             input.checked = false;
                         }

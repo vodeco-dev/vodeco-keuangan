@@ -11,6 +11,9 @@ use Illuminate\Support\Str;
 
 class Invoice extends Model
 {
+    public const TYPE_STANDARD = 'standard';
+    public const TYPE_SETTLEMENT = 'settlement';
+
     use HasFactory;
 
     /**
@@ -34,6 +37,9 @@ class Invoice extends Model
         'payment_date',
         'customer_service_id',
         'customer_service_name',
+        'created_by',
+        'type',
+        'reference_invoice_id',
         'settlement_token',
         'settlement_token_expires_at',
     ];
@@ -110,6 +116,16 @@ class Invoice extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function referenceInvoice(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'reference_invoice_id');
     }
 
     public function debt(): HasOne

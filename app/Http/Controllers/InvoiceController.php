@@ -148,10 +148,11 @@ class InvoiceController extends Controller
     public function store(StoreInvoiceRequest $request): RedirectResponse
     {
         $data = $request->validated();
+        $transactionType = $data['transaction_type'] ?? 'down_payment';
 
         $customerService = null;
 
-        if (! empty($data['customer_service_id'])) {
+        if ($transactionType !== 'settlement' && ! empty($data['customer_service_id'])) {
             $customerService = CustomerService::find($data['customer_service_id']);
 
             if (! $customerService) {
@@ -163,7 +164,14 @@ class InvoiceController extends Controller
 
         $ownerId = $customerService?->user_id ?? auth()->id();
 
-        $this->persistInvoice($data, $customerService, $ownerId);
+        if ($transactionType === 'settlement') {
+            $referenceInvoice = $request->referenceInvoice()
+                ?? Invoice::where('number', $data['settlement_invoice_number'])->firstOrFail();
+
+            $this->persistSettlementInvoice($data, $referenceInvoice);
+        } else {
+            $this->persistInvoice($data, $customerService, $ownerId);
+        }
 
         return redirect()->route('invoices.index');
     }
@@ -519,13 +527,11 @@ class InvoiceController extends Controller
     {
         return DB::transaction(function () use ($data, $customerService, $ownerId) {
             $items = $this->mapInvoiceItems($data['items']);
-            $date = now()->format('Ymd');
-            $count = Invoice::whereDate('created_at', today())->count();
-            $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-            $invoiceNumber = "{$date}-{$sequence}";
+            $invoiceNumber = $this->generateInvoiceNumber();
 
             $invoice = Invoice::create([
                 'user_id' => $ownerId ?? auth()->id(),
+                'created_by' => auth()->id(),
                 'customer_service_id' => $customerService?->id,
                 'customer_service_name' => $customerService?->name ?? ($data['customer_service_name'] ?? null),
                 'client_name' => $data['client_name'],
@@ -536,6 +542,8 @@ class InvoiceController extends Controller
                 'due_date' => $data['due_date'] ?? null,
                 'status' => 'belum bayar',
                 'total' => $this->calculateInvoiceTotal($items),
+                'type' => Invoice::TYPE_STANDARD,
+                'reference_invoice_id' => null,
                 'down_payment_due' => array_key_exists('down_payment_due', $data)
                     ? (isset($data['down_payment_due']) ? (float) $data['down_payment_due'] : null)
                     : null,
@@ -553,6 +561,66 @@ class InvoiceController extends Controller
 
             return $invoice->load('items', 'customerService');
         });
+    }
+
+    private function persistSettlementInvoice(array $data, Invoice $referenceInvoice): Invoice
+    {
+        return DB::transaction(function () use ($data, $referenceInvoice) {
+            $invoiceNumber = $this->generateInvoiceNumber();
+            $paidAmount = (float) $data['settlement_paid_amount'];
+            $isPaidFull = $data['settlement_payment_status'] === 'paid_full';
+            $now = now();
+
+            $invoice = Invoice::create([
+                'user_id' => $referenceInvoice->user_id,
+                'created_by' => auth()->id(),
+                'customer_service_id' => $referenceInvoice->customer_service_id,
+                'customer_service_name' => $referenceInvoice->customer_service_name,
+                'client_name' => $referenceInvoice->client_name,
+                'client_whatsapp' => $referenceInvoice->client_whatsapp,
+                'client_address' => $referenceInvoice->client_address,
+                'number' => $invoiceNumber,
+                'issue_date' => $now,
+                'due_date' => null,
+                'status' => $isPaidFull ? 'lunas' : 'belum lunas',
+                'total' => $paidAmount,
+                'down_payment' => $paidAmount,
+                'payment_date' => $now,
+                'type' => Invoice::TYPE_SETTLEMENT,
+                'reference_invoice_id' => $referenceInvoice->id,
+            ]);
+
+            $referenceInvoice->loadMissing('items');
+            $firstItem = $referenceInvoice->items->first();
+
+            InvoiceItem::create([
+                'invoice_id' => $invoice->id,
+                'category_id' => $firstItem?->category_id,
+                'description' => 'Pelunasan Invoice #' . $referenceInvoice->number,
+                'quantity' => 1,
+                'price' => $paidAmount,
+            ]);
+
+            $updatedDownPayment = round((float) $referenceInvoice->down_payment, 2) + round($paidAmount, 2);
+            $newDownPayment = min((float) $referenceInvoice->total, $updatedDownPayment);
+
+            $referenceInvoice->forceFill([
+                'down_payment' => $newDownPayment,
+                'payment_date' => $now,
+                'status' => $isPaidFull || $newDownPayment >= (float) $referenceInvoice->total ? 'lunas' : 'belum lunas',
+            ])->save();
+
+            return $invoice->load('items', 'customerService', 'referenceInvoice');
+        });
+    }
+
+    private function generateInvoiceNumber(): string
+    {
+        $date = now()->format('Ymd');
+        $count = Invoice::whereDate('created_at', today())->count();
+        $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+
+        return "{$date}-{$sequence}";
     }
 
     private function mapInvoiceItems(array $items): array

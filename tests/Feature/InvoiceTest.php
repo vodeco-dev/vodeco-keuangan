@@ -25,6 +25,7 @@ class InvoiceTest extends TestCase
         $category = Category::factory()->create(['type' => 'pemasukan']);
 
         $response = $this->actingAs($user)->post('/invoices', [
+            'transaction_type' => 'down_payment',
             'client_name' => 'Client',
             'client_whatsapp' => '08123456789',
             'client_address' => 'Address',
@@ -52,6 +53,65 @@ class InvoiceTest extends TestCase
             'quantity' => 1,
             'price' => 1000,
             'category_id' => $category->id,
+        ]);
+    }
+
+    public function test_authenticated_user_can_create_settlement_invoice(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['type' => 'pemasukan']);
+
+        $referenceInvoice = Invoice::factory()->create([
+            'user_id' => $user->id,
+            'created_by' => $user->id,
+            'total' => 2000000,
+            'down_payment' => 500000,
+        ]);
+
+        InvoiceItem::create([
+            'invoice_id' => $referenceInvoice->id,
+            'category_id' => $category->id,
+            'description' => 'Jasa Utama',
+            'quantity' => 1,
+            'price' => 2000000,
+        ]);
+
+        $remaining = 1500000;
+        $paidAmount = 1500000;
+
+        $response = $this->actingAs($user)->post('/invoices', [
+            'transaction_type' => 'settlement',
+            'settlement_invoice_number' => $referenceInvoice->number,
+            'settlement_remaining_balance' => $remaining,
+            'settlement_payment_status' => 'paid_full',
+            'settlement_paid_amount' => $paidAmount,
+        ]);
+
+        $response->assertRedirect('/invoices');
+
+        $settlementInvoiceId = Invoice::where('reference_invoice_id', $referenceInvoice->id)
+            ->latest('id')
+            ->value('id');
+
+        $this->assertNotNull($settlementInvoiceId);
+
+        $this->assertDatabaseHas('invoices', [
+            'reference_invoice_id' => $referenceInvoice->id,
+            'type' => Invoice::TYPE_SETTLEMENT,
+            'total' => number_format($paidAmount, 2, '.', ''),
+            'status' => 'lunas',
+        ]);
+
+        $this->assertDatabaseHas('invoice_items', [
+            'invoice_id' => $settlementInvoiceId,
+            'description' => 'Pelunasan Invoice #' . $referenceInvoice->number,
+            'price' => number_format($paidAmount, 2, '.', ''),
+        ]);
+
+        $this->assertDatabaseHas('invoices', [
+            'id' => $referenceInvoice->id,
+            'down_payment' => number_format($referenceInvoice->down_payment + $paidAmount, 2, '.', ''),
+            'status' => 'lunas',
         ]);
     }
 
