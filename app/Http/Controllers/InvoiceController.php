@@ -18,6 +18,7 @@ use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 use App\Models\User;
 use App\Services\InvoiceSettlementService;
@@ -30,32 +31,88 @@ class InvoiceController extends Controller
     }
     public function index(): View
     {
-        $baseQuery = Invoice::query()
-            ->with('customerService')
-            ->latest();
+        $user = auth()->user();
+        $verifiedRoles = collect(session('verified_access_roles', []));
 
-        if (auth()->user()->role !== Role::ADMIN) {
-            $baseQuery->where('user_id', auth()->id());
+        $tabPermissions = [
+            'down-payment' => [
+                'label' => 'Down Payment',
+                'role' => Role::CUSTOMER_SERVICE,
+                'allowed' => Gate::allows('viewDownPaymentTab', Invoice::class),
+            ],
+            'pay-in-full' => [
+                'label' => 'Bayar Lunas',
+                'role' => Role::CUSTOMER_SERVICE,
+                'allowed' => Gate::allows('viewPayInFullTab', Invoice::class),
+            ],
+            'settlement' => [
+                'label' => 'Pelunasan',
+                'role' => Role::SETTLEMENT_ADMIN,
+                'allowed' => Gate::allows('viewSettlementTab', Invoice::class),
+            ],
+        ];
+
+        $tabStates = [];
+        foreach ($tabPermissions as $key => $config) {
+            $role = $config['role'];
+            $allowed = $config['allowed'];
+            $unlocked = $allowed && ($user->role === Role::ADMIN || $verifiedRoles->contains($role->value));
+            $requiresCode = $allowed && $user->role === $role && ! $verifiedRoles->contains($role->value);
+
+            $tabStates[$key] = [
+                'label' => $config['label'],
+                'role' => $role,
+                'allowed' => $allowed,
+                'unlocked' => $unlocked,
+                'requires_code' => $requiresCode,
+            ];
         }
 
-        $downPaymentInvoices = (clone $baseQuery)
-            ->whereIn('status', ['belum bayar', 'belum lunas'])
-            ->whereNotNull('down_payment_due')
-            ->whereRaw('COALESCE(down_payment, 0) < down_payment_due')
-            ->get();
+        $defaultTab = collect($tabStates)
+            ->filter(fn ($tab) => $tab['unlocked'])
+            ->keys()
+            ->first() ?? 'none';
 
-        $payInFullInvoices = (clone $baseQuery)
-            ->whereIn('status', ['belum bayar', 'belum lunas'])
-            ->whereRaw('COALESCE(total, 0) > COALESCE(down_payment, 0)')
-            ->where(function ($query) {
-                $query->whereNull('down_payment_due')
-                    ->orWhereRaw('COALESCE(down_payment, 0) >= down_payment_due');
-            })
-            ->get();
+        $accessCodeRole = collect($tabStates)
+            ->first(fn ($tab) => $tab['requires_code'])['role'] ?? null;
 
-        $settlementInvoices = (clone $baseQuery)
-            ->where('status', 'belum lunas')
-            ->get();
+        $baseQuery = null;
+        $shouldLoadInvoices = collect($tabStates)->contains(fn ($tab) => $tab['unlocked']);
+
+        if ($shouldLoadInvoices) {
+            $baseQuery = Invoice::query()
+                ->with('customerService')
+                ->latest();
+
+            if ($user->role !== Role::ADMIN) {
+                $baseQuery->where('user_id', $user->id);
+            }
+        }
+
+        $downPaymentInvoices = $tabStates['down-payment']['unlocked'] && $baseQuery
+            ? (clone $baseQuery)
+                ->whereIn('status', ['belum bayar', 'belum lunas'])
+                ->whereNotNull('down_payment_due')
+                ->whereRaw('COALESCE(down_payment, 0) < down_payment_due')
+                ->get()
+            : collect();
+
+        $payInFullInvoices = $tabStates['pay-in-full']['unlocked'] && $baseQuery
+            ? (clone $baseQuery)
+                ->whereIn('status', ['belum bayar', 'belum lunas'])
+                ->whereRaw('COALESCE(total, 0) > COALESCE(down_payment, 0)')
+                ->where(function ($query) {
+                    $query->whereNull('down_payment_due')
+                        ->orWhereRaw('COALESCE(down_payment, 0) >= down_payment_due');
+                })
+                ->get()
+            : collect();
+
+        $settlementInvoices = $tabStates['settlement']['unlocked'] && $baseQuery
+            ? (clone $baseQuery)
+                ->where('status', 'belum lunas')
+                ->get()
+            : collect();
 
         $incomeCategories = Category::where('type', 'pemasukan')
             ->orderBy('name')
@@ -65,7 +122,10 @@ class InvoiceController extends Controller
             'downPaymentInvoices',
             'payInFullInvoices',
             'settlementInvoices',
-            'incomeCategories'
+            'incomeCategories',
+            'tabStates',
+            'defaultTab',
+            'accessCodeRole'
         ));
     }
 

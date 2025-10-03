@@ -40,6 +40,22 @@ class InvoicePolicy
 
     public function storePayment(User $user, Invoice $invoice): bool
     {
-        return $user->id === $invoice->user_id || in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT], true);
+        return $user->id === $invoice->user_id
+            || in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT, Role::CUSTOMER_SERVICE], true);
+    }
+
+    public function viewDownPaymentTab(User $user): bool
+    {
+        return in_array($user->role, [Role::ADMIN, Role::CUSTOMER_SERVICE], true);
+    }
+
+    public function viewPayInFullTab(User $user): bool
+    {
+        return in_array($user->role, [Role::ADMIN, Role::CUSTOMER_SERVICE], true);
+    }
+
+    public function viewSettlementTab(User $user): bool
+    {
+        return in_array($user->role, [Role::ADMIN, Role::SETTLEMENT_ADMIN], true);
     }
 }
