@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth' => \App\Http\Middleware\Authenticate::class,
             'guest' => \Illuminate\Auth\Middleware\RedirectIfAuthenticated::class,
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'invoice.passphrase' => \App\Http\Middleware\EnsureInvoicePortalPassphrase::class,
         ]);
     })
     ->withProviders([
