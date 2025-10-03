@@ -11,6 +11,7 @@ use App\Models\InvoiceItem;
 use App\Models\Transaction;
 use App\Models\Category;
 use App\Models\Debt;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -137,12 +138,42 @@ class InvoiceController extends Controller
         return view('invoices.create', compact('customerServices', 'incomeCategories'));
     }
 
-    public function createPublic(): View
+    public function createPublic(Request $request): View
     {
         $customerServices = CustomerService::orderBy('name')->get();
         $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
 
-        return view('invoices.public-create', compact('customerServices', 'incomeCategories'));
+        /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
+        $passphrase = $request->attributes->get('invoicePortalPassphrase');
+        $sessionData = (array) session('invoice_portal_passphrase');
+
+        if ($passphrase) {
+            if ((int) ($sessionData['id'] ?? 0) !== $passphrase->id) {
+                $sessionData = [
+                    'id' => $passphrase->id,
+                    'token' => Crypt::encryptString((string) $passphrase->id),
+                    'access_type' => $passphrase->access_type->value,
+                    'access_label' => $passphrase->access_type->label(),
+                    'verified_at' => $sessionData['verified_at'] ?? now()->toIso8601String(),
+                ];
+
+                session(['invoice_portal_passphrase' => $sessionData]);
+            }
+        } else {
+            $sessionData = [];
+        }
+
+        $allowedTransactionTypes = $passphrase?->allowedTransactionTypes() ?? [];
+        $passphraseToken = $sessionData['token'] ?? null;
+
+        return view('invoices.public-create', [
+            'customerServices' => $customerServices,
+            'incomeCategories' => $incomeCategories,
+            'passphraseSession' => $passphrase ? $sessionData : null,
+            'allowedTransactionTypes' => $allowedTransactionTypes,
+            'passphraseToken' => $passphraseToken,
+        ]);
+
     }
 
     public function store(StoreInvoiceRequest $request): RedirectResponse
@@ -180,15 +211,21 @@ class InvoiceController extends Controller
     {
         $data = $request->validated();
 
+        $passphrase = $request->passphrase();
+
+        if (! $passphrase) {
+            abort(403, 'Passphrase portal invoice tidak valid.');
+        }
+
         $customerService = CustomerService::where('name', $data['customer_service_name'])->first();
 
-        if (! $customerService) {
+        if (! $customerService && $data['transaction_type'] !== 'settlement') {
             return back()
                 ->withErrors(['customer_service_name' => 'Customer service yang dimaksud tidak ditemukan.'])
                 ->withInput();
         }
 
-        $ownerId = $customerService->user_id
+        $ownerId = $customerService?->user_id
             ?? User::where('role', Role::ADMIN)->orderBy('id')->value('id');
 
         if (! $ownerId) {
@@ -200,6 +237,8 @@ class InvoiceController extends Controller
         $invoice = $this->persistInvoice($data, $customerService, $ownerId);
 
         $settings = Setting::pluck('value', 'key')->all();
+
+        $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'submission');
 
         return Pdf::loadView('invoices.pdf', [
             'invoice' => $invoice,

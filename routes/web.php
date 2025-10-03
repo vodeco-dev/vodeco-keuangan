@@ -6,6 +6,8 @@ use App\Http\Controllers\CustomerServiceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebtController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoicePortalPassphraseController;
+use App\Http\Controllers\InvoicePortalPassphraseVerificationController;
 use App\Http\Controllers\InvoiceSettlementController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
@@ -23,8 +25,15 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/invoices/public/create', [InvoiceController::class, 'createPublic'])->name('invoices.public.create');
-Route::post('/invoices/public', [InvoiceController::class, 'storePublic'])->name('invoices.public.store');
+Route::get('/invoices/public/create', [InvoiceController::class, 'createPublic'])
+    ->middleware('invoice.passphrase')
+    ->name('invoices.public.create');
+Route::post('/invoices/public', [InvoiceController::class, 'storePublic'])
+    ->middleware('invoice.passphrase:required')
+    ->name('invoices.public.store');
+Route::post('/invoices/public/passphrase/verify', [InvoicePortalPassphraseVerificationController::class, 'store'])
+    ->middleware('throttle:invoice-passphrase')
+    ->name('invoices.public.passphrase.verify');
 Route::get('/invoices/public/check-status', [InvoiceController::class, 'checkStatus'])->name('invoices.public.check-status');
 Route::get('/invoices/settlement/{token}', [InvoiceSettlementController::class, 'show'])
     ->name('invoices.settlement.show');
@@ -102,6 +111,17 @@ Route::middleware(['auth', 'role:admin,accountant,staff,customer_service,settlem
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::resource('users', UserController::class)->except(['show']);
     Route::post('access-codes', [AccessCodeController::class, 'store'])->name('access-codes.store');
+});
+
+Route::middleware(['auth', 'role:admin,accountant'])->group(function () {
+    Route::get('invoice-portal/passphrases', [InvoicePortalPassphraseController::class, 'index'])
+        ->name('invoice-portal.passphrases.index');
+    Route::post('invoice-portal/passphrases', [InvoicePortalPassphraseController::class, 'store'])
+        ->name('invoice-portal.passphrases.store');
+    Route::post('invoice-portal/passphrases/{passphrase}/rotate', [InvoicePortalPassphraseController::class, 'rotate'])
+        ->name('invoice-portal.passphrases.rotate');
+    Route::delete('invoice-portal/passphrases/{passphrase}', [InvoicePortalPassphraseController::class, 'deactivate'])
+        ->name('invoice-portal.passphrases.deactivate');
 });
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {

@@ -100,7 +100,9 @@ class StoreInvoiceRequest extends FormRequest
     {
         $transactionType = $this->input('transaction_type', 'down_payment');
 
-        $items = collect($this->input('items', []))->map(function ($item) {
+        $rawItems = $this->input('items', []);
+
+        $items = collect($rawItems)->map(function ($item) {
             if (isset($item['price'])) {
                 $normalizedPrice = preg_replace('/[^\d,.-]/', '', (string) $item['price']);
                 $normalizedPrice = str_replace('.', '', $normalizedPrice);
@@ -145,14 +147,19 @@ class StoreInvoiceRequest extends FormRequest
             $settlementPaidAmount = $normalized === '' ? null : $normalized;
         }
 
-        $this->merge([
+        $merged = [
             'transaction_type' => $transactionType,
-            'items' => $items->toArray(),
             'client_whatsapp' => $whatsapp,
             'down_payment_due' => $downPaymentDue,
             'settlement_remaining_balance' => $settlementRemaining,
             'settlement_paid_amount' => $settlementPaidAmount,
-        ]);
+        ];
+
+        if ($transactionType !== 'settlement' || ! empty($rawItems)) {
+            $merged['items'] = $items->toArray();
+        }
+
+        $this->merge($merged);
     }
 
     public function withValidator($validator): void
