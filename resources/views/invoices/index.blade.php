@@ -11,28 +11,82 @@
             'name' => $category->name,
         ])->values();
     @endphp
-    <div class="py-12" x-data="invoicePayments({ categories: @js($categoryOptions), defaultDate: '{{ now()->toDateString() }}', activeTab: 'down-payment' })">
+    <div class="py-12" x-data="invoicePayments({ categories: @js($categoryOptions), defaultDate: '{{ now()->toDateString() }}', activeTab: @js($defaultTab) })">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                @if (session('access_code_status'))
+                    <div class="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+                        {{ session('access_code_status') }}
+                    </div>
+                @endif
+
+                @if (session('access_code_generated'))
+                    @php($generated = session('access_code_generated'))
+                    <div class="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+                        <p class="font-semibold">Kode akses baru berhasil dibuat.</p>
+                        <p class="mt-2"><span class="font-semibold">Peran:</span> {{ $generated['role'] }}</p>
+                        @if (! empty($generated['user']))
+                            <p><span class="font-semibold">Pengguna:</span> {{ $generated['user'] }}</p>
+                        @endif
+                        <p class="mt-2">
+                            <span class="font-semibold">Kode:</span>
+                            <span class="font-mono text-base">{{ $generated['code'] }}</span>
+                        </p>
+                        <p class="mt-2 text-xs text-blue-600">Sampaikan kode ini secara aman. Kode hanya dapat digunakan satu kali.</p>
+                    </div>
+                @endif
+
                 <div class="mb-4 flex flex-wrap gap-2">
                     <a href="{{ route('invoices.create') }}" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Buat Invoices</a>
                     <a href="{{ route('customer-services.create') }}" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Tambah Customer Service</a>
                 </div>
-                <div>
-                    <div class="border-b border-gray-200 mb-6">
-                        <nav class="-mb-px flex space-x-4" aria-label="Tabs">
-                            <button type="button" @click="switchTab('down-payment')" :class="tabClass('down-payment')">
-                                Down Payment
-                            </button>
-                            <button type="button" @click="switchTab('pay-in-full')" :class="tabClass('pay-in-full')">
-                                Bayar Lunas
-                            </button>
-                            <button type="button" @click="switchTab('settlement')" :class="tabClass('settlement')">
-                                Pelunasan
-                            </button>
-                        </nav>
-                    </div>
 
+                @if ($accessCodeRole)
+                    <div class="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                        <h3 class="text-sm font-semibold text-yellow-800">Verifikasi kode akses diperlukan</h3>
+                        <p class="mt-2 text-sm text-yellow-700">Masukkan kode akses sekali pakai yang valid untuk peran {{ $accessCodeRole->label() }} sebelum mengakses tab terkait.</p>
+                        <form method="POST" action="{{ route('access-codes.verify') }}" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+                            @csrf
+                            <div class="flex-1">
+                                <label for="code" class="block text-sm font-medium text-yellow-800">Kode Akses</label>
+                                <input type="text" name="code" id="code" required autofocus
+                                    class="mt-1 block w-full rounded-md border-yellow-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+                                    placeholder="contoh: uuid:KODE123">
+                                @error('code')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="sm:w-auto">
+                                <button type="submit" class="inline-flex w-full items-center justify-center rounded-md bg-yellow-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-700">
+                                    Verifikasi
+                                </button>
+                            </div>
+                        </form>
+                        <p class="mt-2 text-xs text-yellow-700">Hubungi admin untuk menerima kode akses terbaru bila diperlukan.</p>
+                    </div>
+                @endif
+
+                @php($unlockedTabs = collect($tabStates)->filter(fn ($tab) => $tab['unlocked']))
+                <div>
+                    @if ($unlockedTabs->isNotEmpty())
+                        <div class="border-b border-gray-200 mb-6">
+                            <nav class="-mb-px flex flex-wrap gap-2" aria-label="Tabs">
+                                @foreach ($tabStates as $key => $tab)
+                                    @if ($tab['unlocked'])
+                                        <button type="button" @click="switchTab('{{ $key }}')" :class="tabClass('{{ $key }}')">
+                                            {{ $tab['label'] }}
+                                        </button>
+                                    @endif
+                                @endforeach
+                            </nav>
+                        </div>
+                    @else
+                        <div class="mb-6 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                            Tidak ada tab yang dapat ditampilkan. Pastikan Anda memiliki kode akses yang valid atau hubungi administrator.
+                        </div>
+                    @endif
+
+                    @if ($tabStates['down-payment']['unlocked'])
                     <div x-show="activeTab === 'down-payment'" x-cloak>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
@@ -77,7 +131,9 @@
                             </table>
                         </div>
                     </div>
+                    @endif
 
+                    @if ($tabStates['pay-in-full']['unlocked'])
                     <div x-show="activeTab === 'pay-in-full'" x-cloak>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
@@ -122,7 +178,9 @@
                             </table>
                         </div>
                     </div>
+                    @endif
 
+                    @if ($tabStates['settlement']['unlocked'])
                     <div x-show="activeTab === 'settlement'" x-cloak>
                         <div class="space-y-4">
                             @forelse ($settlementInvoices as $invoice)
@@ -146,6 +204,7 @@
                             @endforelse
                         </div>
                     </div>
+                    @endif
                 </div>
             </div>
         </div>

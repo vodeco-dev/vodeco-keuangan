@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccessCodeController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerServiceController;
 use App\Http\Controllers\DashboardController;
@@ -36,7 +37,11 @@ Route::get('/invoices/view/{token}', [InvoiceController::class, 'showPublic'])->
 
 // Menggunakan middleware 'auth' untuk memastikan hanya user yang sudah login
 // yang bisa mengakses halaman-halaman ini.
-Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
+Route::post('/access-codes/verify', [AccessCodeController::class, 'verify'])
+    ->middleware('auth')
+    ->name('access-codes.verify');
+
+Route::middleware(['auth', 'role:admin,accountant,staff,customer_service,settlement_admin'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -96,6 +101,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
 // Route Khusus untuk Admin - Manajemen User
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::resource('users', UserController::class)->except(['show']);
+    Route::post('access-codes', [AccessCodeController::class, 'store'])->name('access-codes.store');
 });
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
