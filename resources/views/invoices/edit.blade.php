@@ -87,7 +87,7 @@
                         <div class="grid grid-cols-12 gap-4 invoice-item bg-gray-50 p-4 rounded-lg">
                             <div class="col-span-12 md:col-span-4">
                                 <label class="block text-sm font-medium text-gray-700">Deskripsi</label>
-                                <input type="text" name="items[{{ $index }}][description]" value="{{ $item['description'] ?? '' }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm description" required>
+                                <textarea name="items[{{ $index }}][description]" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm description" required>{{ $item['description'] ?? '' }}</textarea>
                                 @error('items.' . $index . '.description')
                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -174,7 +174,7 @@
             wrapper.className = 'grid grid-cols-12 gap-4 invoice-item bg-gray-50 p-4 rounded-lg';
             wrapper.innerHTML = `
                 <div class="col-span-12 md:col-span-4">
-                    <input type="text" name="items[${itemIndex}][description]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm description" placeholder="Deskripsi" required>
+                    <textarea name="items[${itemIndex}][description]" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm description" placeholder="Deskripsi" required></textarea>
                 </div>
                 <div class="col-span-12 md:col-span-3">
                     <select name="items[${itemIndex}][category_id]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm category-select" required>
