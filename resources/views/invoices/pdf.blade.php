@@ -1,4 +1,6 @@
 @php
+    use App\Models\Invoice as InvoiceModel;
+
     $manifestPath = public_path('build/manifest.json');
     $manifest = is_file($manifestPath) ? json_decode(file_get_contents($manifestPath), true) : null;
     $cssFile = $manifest['resources/css/app.css']['file'] ?? null;
@@ -27,6 +29,28 @@
     $bank2LogoPath = public_path($settings['bank_2_logo'] ?? 'logo bank mandiri.png');
     $bank2LogoData = is_file($bank2LogoPath) ? base64_encode(file_get_contents($bank2LogoPath)) : null;
     $bank2LogoMime = $bank2LogoData ? $determineMime($bank2LogoPath) : null;
+    $invoice->loadMissing('referenceInvoice');
+
+    $transactionLabel = match (true) {
+        $invoice->type === InvoiceModel::TYPE_SETTLEMENT => 'Pelunasan',
+        ! is_null($invoice->down_payment_due) => 'Down Payment',
+        default => 'Bayar Lunas',
+    };
+
+    $paymentStatusLabel = $invoice->status ? ucwords($invoice->status) : 'Menunggu Pembayaran';
+
+    $referenceInvoice = $invoice->referenceInvoice;
+    $settlementPaidAmount = (float) $invoice->down_payment;
+    $remainingBeforeSettlement = null;
+    $remainingAfterSettlement = null;
+    $settlementStatusLabel = $invoice->status === 'lunas' ? 'Bayar Lunas' : 'Bayar Sebagian';
+
+    if ($invoice->type === InvoiceModel::TYPE_SETTLEMENT && $referenceInvoice) {
+        $referenceTotal = (float) $referenceInvoice->total;
+        $referencePaidBefore = max((float) $referenceInvoice->down_payment - $settlementPaidAmount, 0);
+        $remainingBeforeSettlement = max($referenceTotal - $referencePaidBefore, 0);
+        $remainingAfterSettlement = max($referenceTotal - (float) $referenceInvoice->down_payment, 0);
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -77,6 +101,11 @@
                 <p><strong>Inv Date :</strong> {{ $invoice->issue_date->format('d/m/Y') }}</p>
                 <p><strong>Kepada :</strong> {{ $invoice->client_name }}</p>
                 <p><strong>Customer Service :</strong> {{ $invoice->customer_service_name ?? $invoice->customerService?->name ?? '-' }}</p>
+                <p><strong>Jenis Transaksi :</strong> {{ $transactionLabel }}</p>
+                <p><strong>Status Pelunasan :</strong> {{ $paymentStatusLabel }}</p>
+                @if($invoice->type === InvoiceModel::TYPE_SETTLEMENT && $referenceInvoice)
+                    <p><strong>Invoice Acuan :</strong> #{{ $referenceInvoice->number }}</p>
+                @endif
             </div>
         </section>
 
@@ -107,11 +136,19 @@
                         <td class="px-3 py-3" colspan="2">
                             <div class="flex flex-col items-end text-right text-red-600 space-y-1">
                                 <p><strong>Sub Total:</strong> <span class="ml-2">Rp. {{ number_format($invoice->total, 2, ',', '.') }}</span></p>
-                                @if(! is_null($invoice->down_payment_due))
-                                    <p><strong>Rencana Down Payment:</strong> <span class="ml-2">Rp. {{ number_format($invoice->down_payment_due, 2, ',', '.') }}</span></p>
+                                @if($invoice->type !== InvoiceModel::TYPE_SETTLEMENT)
+                                    @if(! is_null($invoice->down_payment_due))
+                                        <p><strong>Nominal Down Payment Ditagihkan:</strong> <span class="ml-2">Rp. {{ number_format($invoice->down_payment_due, 2, ',', '.') }}</span></p>
+                                    @endif
+                                    <p><strong>Down Payment Tercatat:</strong> <span class="ml-2">Rp. {{ number_format($invoice->down_payment, 2, ',', '.') }}</span></p>
+                                @else
+                                    <p><strong>Nominal Pelunasan:</strong> <span class="ml-2">Rp. {{ number_format($invoice->down_payment, 2, ',', '.') }}</span></p>
+                                    @if($referenceInvoice)
+                                        <p><strong>Sisa Tagihan Sebelum Pelunasan:</strong> <span class="ml-2">Rp. {{ number_format($remainingBeforeSettlement ?? 0, 2, ',', '.') }}</span></p>
+                                        <p><strong>Sisa Tagihan Setelah Pelunasan:</strong> <span class="ml-2">Rp. {{ number_format($remainingAfterSettlement ?? 0, 2, ',', '.') }}</span></p>
+                                    @endif
                                 @endif
-                                <p><strong>Down Payment:</strong> <span class="ml-2">Rp. {{ number_format($invoice->down_payment, 2, ',', '.') }}</span></p>
-                                <p><strong>Keterangan:</strong> <span class="ml-2">{{ $invoice->status ? ucwords($invoice->status) : 'Menunggu Pembayaran' }}</span></p>
+                                <p><strong>Status Pembayaran:</strong> <span class="ml-2">{{ $invoice->type === InvoiceModel::TYPE_SETTLEMENT ? $settlementStatusLabel : $paymentStatusLabel }}</span></p>
                             </div>
                         </td>
                     </tr>
