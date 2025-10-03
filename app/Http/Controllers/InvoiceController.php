@@ -376,6 +376,9 @@ class InvoiceController extends Controller
                 'issue_date' => $data['issue_date'] ?? $invoice->issue_date ?? now(),
                 'due_date' => $data['due_date'] ?? null,
                 'total' => $this->calculateInvoiceTotal($items),
+                'down_payment_due' => array_key_exists('down_payment_due', $data)
+                    ? (isset($data['down_payment_due']) ? (float) $data['down_payment_due'] : null)
+                    : $invoice->down_payment_due,
             ]);
 
             $invoice->items()->delete();
@@ -427,6 +430,9 @@ class InvoiceController extends Controller
                 'due_date' => $data['due_date'] ?? null,
                 'status' => 'belum bayar',
                 'total' => $this->calculateInvoiceTotal($items),
+                'down_payment_due' => array_key_exists('down_payment_due', $data)
+                    ? (isset($data['down_payment_due']) ? (float) $data['down_payment_due'] : null)
+                    : null,
             ]);
 
             foreach ($items as $item) {

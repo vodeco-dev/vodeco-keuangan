@@ -158,6 +158,15 @@
                             <p id="total-amount" class="text-2xl font-bold text-indigo-600">Rp 0</p>
                         </div>
 
+                        <div>
+                            <label for="down_payment_due" class="block text-sm font-medium text-gray-700">Rencana Down Payment</label>
+                            <input type="text" name="down_payment_due" id="down_payment_due" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 price-input" value="{{ old('down_payment_due') }}" placeholder="Contoh: 5.000.000">
+                            <p class="mt-1 text-xs text-gray-500">Opsional. Nilai ini akan diusulkan sebagai nominal pembayaran awal ketika mencatat pembayaran.</p>
+                            @error('down_payment_due')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         <div class="flex justify-end">
                             <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                                 Buat & Unduh Invoice

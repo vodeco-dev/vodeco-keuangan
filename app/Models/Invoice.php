@@ -30,6 +30,7 @@ class Invoice extends Model
         'client_whatsapp',
         'client_address',
         'down_payment',
+        'down_payment_due',
         'payment_date',
         'customer_service_id',
         'customer_service_name',
@@ -45,6 +46,7 @@ class Invoice extends Model
         'due_date' => 'date',
         'total' => 'decimal:2',
         'down_payment' => 'decimal:2',
+        'down_payment_due' => 'decimal:2',
     ];
 
     /**

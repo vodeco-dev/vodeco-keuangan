@@ -29,6 +29,7 @@ class StoreInvoiceRequest extends FormRequest
             'client_address' => ['required', 'string'],
             'issue_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date'],
+            'down_payment_due' => ['nullable', 'numeric', 'min:0'],
             'items.*.description' => ['required', 'string'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.price' => ['required', 'numeric'],
@@ -54,6 +55,8 @@ class StoreInvoiceRequest extends FormRequest
             'client_address.required' => 'Alamat klien wajib diisi.',
             'issue_date.date' => 'Format tanggal terbit tidak valid.',
             'due_date.date' => 'Format tanggal jatuh tempo tidak valid.',
+            'down_payment_due.numeric' => 'Rencana down payment harus berupa angka.',
+            'down_payment_due.min' => 'Rencana down payment minimal 0.',
             'customer_service_id.exists' => 'Customer service yang dipilih tidak valid.',
             'items.*.description.required' => 'Deskripsi item wajib diisi.',
             'items.*.description.string' => 'Deskripsi item harus berupa teks.',
@@ -90,9 +93,18 @@ class StoreInvoiceRequest extends FormRequest
             $whatsapp = preg_replace('/[^\d+]/', '', $whatsapp);
         }
 
+        $downPaymentDue = $this->input('down_payment_due');
+        if (isset($downPaymentDue)) {
+            $normalizedDownPaymentDue = preg_replace('/[^\d,.-]/', '', (string) $downPaymentDue);
+            $normalizedDownPaymentDue = str_replace('.', '', $normalizedDownPaymentDue);
+            $normalizedDownPaymentDue = str_replace(',', '.', $normalizedDownPaymentDue);
+            $downPaymentDue = $normalizedDownPaymentDue === '' ? null : $normalizedDownPaymentDue;
+        }
+
         $this->merge([
             'items' => $items->toArray(),
             'client_whatsapp' => $whatsapp,
+            'down_payment_due' => $downPaymentDue,
         ]);
     }
 }

@@ -126,6 +126,22 @@
                 </div>
             </div>
 
+            <div>
+                <label for="down_payment_due" class="block text-sm font-medium text-gray-700">Rencana Down Payment</label>
+                <input
+                    type="text"
+                    name="down_payment_due"
+                    id="down_payment_due"
+                    value="{{ old('down_payment_due', $invoice->down_payment_due !== null ? (string) (int) round($invoice->down_payment_due) : '') }}"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm price-input"
+                    placeholder="Contoh: 5.000.000"
+                >
+                <p class="mt-1 text-xs text-gray-500">Opsional. Nilai ini akan diusulkan sebagai nominal pembayaran awal ketika mencatat pembayaran.</p>
+                @error('down_payment_due')
+                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
             <div class="flex justify-end">
                 <button type="submit" class="px-6 py-3 text-base font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">Perbarui Invoice</button>
             </div>

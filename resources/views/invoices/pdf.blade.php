@@ -107,6 +107,9 @@
                         <td class="px-3 py-3" colspan="2">
                             <div class="flex flex-col items-end text-right text-red-600 space-y-1">
                                 <p><strong>Sub Total:</strong> <span class="ml-2">Rp. {{ number_format($invoice->total, 2, ',', '.') }}</span></p>
+                                @if(! is_null($invoice->down_payment_due))
+                                    <p><strong>Rencana Down Payment:</strong> <span class="ml-2">Rp. {{ number_format($invoice->down_payment_due, 2, ',', '.') }}</span></p>
+                                @endif
                                 <p><strong>Down Payment:</strong> <span class="ml-2">Rp. {{ number_format($invoice->down_payment, 2, ',', '.') }}</span></p>
                                 <p><strong>Keterangan:</strong> <span class="ml-2">{{ $invoice->status ? ucwords($invoice->status) : 'Menunggu Pembayaran' }}</span></p>
                             </div>

@@ -131,6 +131,16 @@
                         <button type="button" id="add-item" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Tambah Item</button>
                     </div>
 
+                    {{-- Rencana Down Payment --}}
+                    <div class="mt-6">
+                        <label for="down_payment_due" class="block text-sm font-medium text-gray-700">Rencana Down Payment</label>
+                        <input type="text" name="down_payment_due" id="down_payment_due" value="{{ old('down_payment_due') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm price-input" placeholder="Contoh: 5.000.000">
+                        <p class="mt-1 text-xs text-gray-500">Opsional. Nilai ini akan diusulkan sebagai nominal pembayaran awal ketika mencatat pembayaran.</p>
+                        @error('down_payment_due')
+                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     {{-- Total --}}
                     <div class="mt-6 pt-6 border-t border-gray-200 flex justify-end">
                         <div class="text-right">
