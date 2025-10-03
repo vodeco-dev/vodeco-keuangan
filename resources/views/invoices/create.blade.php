@@ -87,14 +87,14 @@
                     <div id="invoice-items" class="space-y-4">
                         @foreach($oldItems as $index => $item)
                             <div class="grid grid-cols-12 gap-4 invoice-item bg-gray-50 p-4 rounded-lg">
-                                <div class="col-span-12 md:col-span-4">
+                                <div class="col-span-12">
                                     <label class="block text-sm font-medium text-gray-700">Deskripsi</label>
                                     <textarea name="items[{{ $index }}][description]" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm description" required>{{ $item['description'] ?? '' }}</textarea>
                                     @error('items.' . $index . '.description')
                                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
-                                <div class="col-span-12 md:col-span-3">
+                                <div class="col-span-12 md:col-span-4">
                                     <label class="block text-sm font-medium text-gray-700">Kategori</label>
                                     <select name="items[{{ $index }}][category_id]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm category-select" required>
                                         <option value="">Pilih kategori pemasukan</option>
@@ -106,21 +106,21 @@
                                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
-                                <div class="col-span-6 md:col-span-2">
+                                <div class="col-span-6 md:col-span-3">
                                     <label class="block text-sm font-medium text-gray-700">Kuantitas</label>
                                     <input type="number" name="items[{{ $index }}][quantity]" value="{{ $item['quantity'] ?? 1 }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm quantity" min="1" required>
                                     @error('items.' . $index . '.quantity')
                                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
-                                <div class="col-span-6 md:col-span-2">
+                                <div class="col-span-6 md:col-span-3">
                                     <label class="block text-sm font-medium text-gray-700">Harga Satuan</label>
                                     <input type="text" name="items[{{ $index }}][price]" value="{{ $item['price'] ?? '' }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm price-input" required>
                                     @error('items.' . $index . '.price')
                                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
-                                <div class="col-span-12 md:col-span-1 flex items-end justify-end">
+                                <div class="col-span-12 md:col-span-2 flex items-end justify-end">
                                     <button type="button" class="text-red-500 hover:text-red-700 remove-item">Hapus</button>
                                 </div>
                             </div>
@@ -204,21 +204,21 @@
                 const wrapper = document.createElement('div');
                 wrapper.className = 'grid grid-cols-12 gap-4 invoice-item bg-gray-50 p-4 rounded-lg';
                 wrapper.innerHTML = `
-                    <div class="col-span-12 md:col-span-4">
+                    <div class="col-span-12">
                         <textarea name="items[${itemIndex}][description]" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm description" placeholder="Deskripsi" required></textarea>
                     </div>
-                    <div class="col-span-12 md:col-span-3">
+                    <div class="col-span-12 md:col-span-4">
                         <select name="items[${itemIndex}][category_id]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm category-select" required>
                             ${buildCategoryOptions(categoryOptions[0]?.id ?? '')}
                         </select>
                     </div>
-                    <div class="col-span-6 md:col-span-2">
+                    <div class="col-span-6 md:col-span-3">
                         <input type="number" name="items[${itemIndex}][quantity]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm quantity" value="1" min="1" required>
                     </div>
-                    <div class="col-span-6 md:col-span-2">
+                    <div class="col-span-6 md:col-span-3">
                         <input type="text" name="items[${itemIndex}][price]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm price-input" required>
                     </div>
-                    <div class="col-span-12 md:col-span-1 flex items-end justify-end">
+                    <div class="col-span-12 md:col-span-2 flex items-end justify-end">
                         <button type="button" class="text-red-500 hover:text-red-700 remove-item">Hapus</button>
                     </div>
                 `;
