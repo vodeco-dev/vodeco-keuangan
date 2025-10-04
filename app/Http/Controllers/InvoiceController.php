@@ -605,8 +605,12 @@ class InvoiceController extends Controller
 
             $status = match ($transactionType) {
                 'down_payment' => 'belum lunas',
+                'full_payment' => 'lunas',
                 default => 'belum bayar',
             };
+
+            $downPayment = $transactionType === 'full_payment' ? $total : 0;
+            $paymentDate = $transactionType === 'full_payment' ? now() : null;
 
             $invoice = Invoice::create([
                 'user_id' => $ownerId ?? auth()->id(),
@@ -623,9 +627,9 @@ class InvoiceController extends Controller
                 'total' => $total,
                 'type' => Invoice::TYPE_STANDARD,
                 'reference_invoice_id' => null,
-                'down_payment' => 0,
+                'down_payment' => $downPayment,
                 'down_payment_due' => $downPaymentDue,
-                'payment_date' => null,
+                'payment_date' => $paymentDate,
             ]);
 
             foreach ($items as $item) {

@@ -56,6 +56,45 @@ class InvoiceTest extends TestCase
         ]);
     }
 
+    public function test_authenticated_user_can_create_full_payment_invoice(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['type' => 'pemasukan']);
+
+        $response = $this->actingAs($user)->post('/invoices', [
+            'transaction_type' => 'full_payment',
+            'client_name' => 'Client Lunas',
+            'client_whatsapp' => '08123456789',
+            'client_address' => 'Address',
+            'items' => [
+                [
+                    'description' => 'Service Lunas',
+                    'quantity' => 1,
+                    'price' => 250000,
+                    'category_id' => $category->id,
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect('/invoices');
+
+        $invoice = Invoice::where('client_name', 'Client Lunas')->first();
+
+        $this->assertNotNull($invoice);
+        $this->assertSame('lunas', $invoice->status);
+        $this->assertEquals(250000.0, (float) $invoice->total);
+        $this->assertEquals(250000.0, (float) $invoice->down_payment);
+        $this->assertNotNull($invoice->payment_date);
+
+        $this->assertDatabaseHas('invoice_items', [
+            'invoice_id' => $invoice->id,
+            'description' => 'Service Lunas',
+            'quantity' => 1,
+            'price' => 250000,
+            'category_id' => $category->id,
+        ]);
+    }
+
     public function test_authenticated_user_can_create_settlement_invoice(): void
     {
         $user = User::factory()->create();
