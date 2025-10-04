@@ -28,8 +28,10 @@ return new class extends Migration
 
         Schema::create('invoice_portal_passphrase_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('invoice_portal_passphrase_id')
-                ->constrained('invoice_portal_passphrases')
+            $table->foreignId('invoice_portal_passphrase_id');
+            $table->foreign('invoice_portal_passphrase_id', 'passphrase_log_passphrase_fk')
+                ->references('id')
+                ->on('invoice_portal_passphrases')
                 ->cascadeOnDelete();
             $table->string('action');
             $table->string('ip_address', 45)->nullable();
