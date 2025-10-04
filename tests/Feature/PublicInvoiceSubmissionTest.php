@@ -126,4 +126,88 @@ class PublicInvoiceSubmissionTest extends TestCase
             'action' => 'submission',
         ]);
     }
+
+    public function test_public_invoice_submission_with_full_payment_transaction_generates_paid_invoice(): void
+    {
+        $admin = User::factory()->create([
+            'role' => Role::ADMIN,
+        ]);
+
+        $category = Category::factory()->create([
+            'type' => 'pemasukan',
+        ]);
+
+        $passphrase = new InvoicePortalPassphrase([
+            'public_id' => InvoicePortalPassphrase::makePublicId(),
+            'access_type' => InvoicePortalPassphraseAccessType::CUSTOMER_SERVICE,
+            'label' => 'Tim CS',
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+        $passphrase->setPassphrase('RahasiaPassphrase123');
+        $passphrase->save();
+
+        $session = [
+            'invoice_portal_passphrase' => [
+                'id' => $passphrase->id,
+                'token' => Crypt::encryptString((string) $passphrase->id),
+                'access_type' => $passphrase->access_type->value,
+                'access_label' => $passphrase->access_type->label(),
+                'label' => $passphrase->label,
+                'display_label' => $passphrase->displayLabel(),
+                'verified_at' => now()->toIso8601String(),
+            ],
+        ];
+
+        $pdfMock = Mockery::mock(DomPdf::class);
+        $pdfMock->shouldReceive('setPaper')
+            ->once()
+            ->with('a4')
+            ->andReturnSelf();
+        $pdfMock->shouldReceive('download')
+            ->once()
+            ->with(Mockery::type('string'))
+            ->andReturn(response('PDF content', 200, ['Content-Type' => 'application/pdf']));
+
+        Pdf::shouldReceive('loadView')
+            ->once()
+            ->with('invoices.pdf', Mockery::on(function ($data) {
+                return isset($data['invoice'], $data['settings']);
+            }))
+            ->andReturn($pdfMock);
+
+        $submissionData = [
+            'passphrase_token' => $session['invoice_portal_passphrase']['token'],
+            'transaction_type' => 'full_payment',
+            'client_name' => 'Jane Doe',
+            'client_whatsapp' => '08111111111',
+            'client_address' => 'Jl. Melati No. 2',
+            'due_date' => now()->addWeek()->toDateString(),
+            'items' => [
+                [
+                    'description' => 'Pembuatan Website',
+                    'quantity' => 1,
+                    'price' => 2500000,
+                    'category_id' => $category->id,
+                ],
+            ],
+        ];
+
+        $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+
+        $this->assertDatabaseHas('invoices', [
+            'client_name' => 'Jane Doe',
+            'status' => 'lunas',
+            'down_payment' => 2500000,
+        ]);
+
+        $this->assertDatabaseHas('invoice_items', [
+            'description' => 'Pembuatan Website',
+            'quantity' => 1,
+            'price' => 2500000,
+        ]);
+    }
 }

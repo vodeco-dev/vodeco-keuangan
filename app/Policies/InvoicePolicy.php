@@ -15,7 +15,11 @@ class InvoicePolicy
 
     public function view(User $user, Invoice $invoice): bool
     {
-        return $user->id === $invoice->user_id || $user->role === Role::ADMIN;
+        if ($user->id === $invoice->user_id || $user->role === Role::ADMIN) {
+            return true;
+        }
+
+        return in_array($user->role, [Role::ACCOUNTANT, Role::STAFF], true);
     }
 
     public function create(User $user): bool

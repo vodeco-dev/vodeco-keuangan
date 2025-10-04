@@ -36,17 +36,30 @@ class InvoicePolicyTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_user_cannot_view_other_users_invoice()
+    public function test_accountant_can_view_other_users_invoice()
     {
-        $user1 = User::factory()->create();
-        $user2 = User::factory()->create();
-        $invoice = Invoice::factory()->create(['user_id' => $user2->id]);
+        $accountant = User::factory()->create(['role' => 'accountant']);
+        $owner = User::factory()->create();
+        $invoice = Invoice::factory()->create(['user_id' => $owner->id]);
 
-        $this->actingAs($user1);
+        $this->actingAs($accountant);
 
         $response = $this->get(route('invoices.show', $invoice));
 
-        $response->assertStatus(403);
+        $response->assertStatus(200);
+    }
+
+    public function test_staff_can_view_other_users_invoice()
+    {
+        $staff = User::factory()->create(['role' => 'staff']);
+        $owner = User::factory()->create();
+        $invoice = Invoice::factory()->create(['user_id' => $owner->id]);
+
+        $this->actingAs($staff);
+
+        $response = $this->get(route('invoices.show', $invoice));
+
+        $response->assertStatus(200);
     }
 
     public function test_admin_can_update_any_invoice()
