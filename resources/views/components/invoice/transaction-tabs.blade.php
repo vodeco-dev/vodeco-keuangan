@@ -71,7 +71,7 @@ $forwardedAttributes = $attributes->except([
     data-form-id="{{ $formId }}"
     data-category-options='@json($categoryOptions)'
 >
-    <input type="hidden" name="transaction_type" :value="activeTab">
+    <input type="hidden" name="transaction_type" value="{{ $defaultTransaction }}" x-model="activeTab">
 
     <div class="space-y-3">
         <h3 class="text-lg font-medium text-gray-900">Jenis Transaksi</h3>
