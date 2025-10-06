@@ -5,13 +5,7 @@
         </h2>
     </x-slot>
 
-    @php
-        $categoryOptions = $incomeCategories->map(fn ($category) => [
-            'id' => $category->id,
-            'name' => $category->name,
-        ])->values();
-    @endphp
-    <div class="py-12" x-data="invoicePayments({ categories: @js($categoryOptions), defaultDate: '{{ now()->toDateString() }}', activeTab: @js($defaultTab) })">
+    <div class="py-12" x-data="invoicePayments({ defaultDate: '{{ now()->toDateString() }}', activeTab: @js($defaultTab) })">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                 @if (session('access_code_status'))
@@ -229,17 +223,6 @@
                                     x-model="paymentDate"
                                     class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
                             </div>
-                            <div class="mt-4" x-show="willBePaidOff" x-cloak>
-                                <label for="category_id" class="block text-sm font-medium text-gray-700">Kategori Pemasukan</label>
-                                <select name="category_id" id="category_id" x-model="categoryId" :required="willBePaidOff" :disabled="!willBePaidOff"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                    <option value="">Pilih kategori pemasukan</option>
-                                    <template x-for="category in categories" :key="category.id">
-                                        <option :value="category.id" x-text="category.name"></option>
-                                    </template>
-                                </select>
-                                <p class="mt-2 text-xs text-gray-500">Pilih kategori pemasukan untuk mencatat pembayaran lunas.</p>
-                            </div>
                         </div>
                         <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                             <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
@@ -259,7 +242,6 @@
             return {
                 openModal: false,
                 selectedInvoice: null,
-                categories: config.categories ?? [],
                 defaultDate: config.defaultDate,
                 activeTab: config.activeTab ?? 'down-payment',
                 total: 0,
@@ -267,7 +249,6 @@
                 plannedDownPayment: 0,
                 paymentAmount: '',
                 paymentDate: config.defaultDate,
-                categoryId: '',
                 tabClass(tab) {
                     const isActive = this.activeTab === tab;
                     const baseClasses = 'whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium focus:outline-none';
@@ -281,10 +262,6 @@
                 get remaining() {
                     const remaining = this.total - this.paid;
                     return remaining > 0 ? Number(remaining.toFixed(2)) : 0;
-                },
-                get willBePaidOff() {
-                    const amount = Number(this.paymentAmount || 0);
-                    return this.remaining > 0 && amount >= this.remaining;
                 },
                 open(id, total, downPayment, plannedDownPayment = 0) {
                     this.selectedInvoice = id;
@@ -301,7 +278,6 @@
                         this.paymentAmount = '';
                     }
                     this.paymentDate = this.defaultDate;
-                    this.categoryId = '';
                     this.openModal = true;
                 },
                 close() {
