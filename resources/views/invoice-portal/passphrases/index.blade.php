@@ -163,18 +163,18 @@
                                         </td>
                                     </tr>
                                     <x-modal name="edit-passphrase-{{ $passphrase->id }}" :show="$isEditingThis || $errors->has('passphrase_'.$passphrase->id)" focusable class="p-6 sm:p-8 max-w-lg">
-                                        <form action="{{ route('invoice-portal.passphrases.rotate', $passphrase) }}" method="POST" class="space-y-6 p-6 sm:p-8">
+                                        <form action="{{ route('invoice-portal.passphrases.rotate', $passphrase) }}" method="POST" class="space-y-6">
                                             @csrf
                                             <input type="hidden" name="editing_passphrase" value="{{ $passphrase->id }}">
 
-                                            <div>
-                                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mx-6">Edit Passphrase</h4>
-                                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300 mx-6">Perbarui informasi passphrase atau putar nilai passphrase baru sesuai kebutuhan.</p>
+                                            <div class="space-y-1">
+                                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Edit Passphrase</h4>
+                                                <p class="text-sm text-gray-600 dark:text-gray-300">Perbarui informasi passphrase atau putar nilai passphrase baru sesuai kebutuhan.</p>
                                             </div>
 
                                             @if ($isEditingThis && $errors->hasBag('rotatePassphrase'))
-                                                <div class=" mx-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                                                    <ul class="mx-6 list-disc space-y-1 pl-5">
+                                                <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                                    <ul class="list-disc space-y-1 pl-5">
                                                         @foreach ($errors->getBag('rotatePassphrase')->all() as $message)
                                                             <li>{{ $message }}</li>
                                                         @endforeach
