@@ -122,7 +122,7 @@ $forwardedAttributes = $attributes->except([
             <div data-items-container class="space-y-4">
                 @foreach ($items as $index => $item)
                     <div class="grid grid-cols-12 gap-4 invoice-item bg-gray-50 p-4 rounded-xl" data-invoice-item>
-                        <div class="col-span-12 md:col-span-4">
+                        <div class="col-span-12">
                             <label class="block text-sm font-medium text-gray-700">Deskripsi</label>
                             <textarea name="items[{{ $index }}][description]" rows="3" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 description" data-transaction-scope="line-item" required>{{ $item['description'] ?? '' }}</textarea>
                             @error('items.' . $index . '.description')
@@ -256,7 +256,7 @@ $forwardedAttributes = $attributes->except([
 
     <template data-item-template>
         <div class="grid grid-cols-12 gap-4 invoice-item bg-gray-50 p-4 rounded-xl" data-invoice-item>
-            <div class="col-span-12 md:col-span-4">
+            <div class="col-span-12">
                 <label class="block text-sm font-medium text-gray-700">Deskripsi</label>
                 <textarea name="items[__INDEX__][description]" rows="3" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 description" data-transaction-scope="line-item" required></textarea>
             </div>
