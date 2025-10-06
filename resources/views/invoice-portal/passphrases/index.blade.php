@@ -203,7 +203,7 @@
                                                 </div>
                                             </div>
 
-                                            <div class="flex justify-end gap-2">
+                                            <div class="flex justify-end gap-2 mt-6">
                                                 <x-secondary-button type="button" x-on:click="$dispatch('close')">
                                                     Batal
                                                 </x-secondary-button>
