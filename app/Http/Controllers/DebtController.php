@@ -168,7 +168,7 @@ class DebtController extends Controller
                         'category_id' => $debt->category_id,
                         'date' => $validated['payment_date'] ?? now(),
                         'amount' => $debt->amount,
-                        'description' => 'Pelunasan: ' . $debt->description,
+                        'description' => $debt->description,
                         'user_id' => $request->user()->id, // Keamanan: Pastikan transaksi memiliki pemilik
                     ]);
 

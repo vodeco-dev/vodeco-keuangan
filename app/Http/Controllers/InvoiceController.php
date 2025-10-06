@@ -340,6 +340,8 @@ class InvoiceController extends Controller
             'category_id' => 'nullable|exists:categories,id',
         ]);
 
+        $invoice->loadMissing('items');
+
         $paymentAmount = round((float) $request->input('payment_amount'), 2);
         $paymentDate = $request->input('payment_date');
         $categoryId = $request->input('category_id');
@@ -349,9 +351,13 @@ class InvoiceController extends Controller
         $willBePaidOff = $invoiceTotal > 0 && round($currentDownPayment + $paymentAmount, 2) >= $invoiceTotal;
 
         if ($willBePaidOff && empty($categoryId)) {
-            return back()
-                ->withErrors(['category_id' => 'Pilih kategori pemasukan untuk pembayaran lunas.'])
-                ->withInput();
+            $categoryId = $invoice->items->first()?->category_id;
+
+            if (empty($categoryId)) {
+                return back()
+                    ->withErrors(['category_id' => 'Pilih kategori pemasukan untuk pembayaran lunas.'])
+                    ->withInput();
+            }
         }
 
         if ($paymentAmount > $remainingBalance) {
@@ -433,7 +439,7 @@ class InvoiceController extends Controller
                     'category_id' => $categoryId,
                     'user_id' => auth()->id(),
                     'amount' => $paymentAmount,
-                    'description' => 'Pembayaran lunas Invoice #' . $invoice->number,
+                    'description' => $invoice->itemDescriptionSummary(),
                     'date' => $paymentDate,
                 ]);
             }
