@@ -163,7 +163,7 @@
                                         </td>
                                     </tr>
                                     <x-modal name="edit-passphrase-{{ $passphrase->id }}" :show="$isEditingThis || $errors->has('passphrase_'.$passphrase->id)" focusable>
-                                        <form action="{{ route('invoice-portal.passphrases.rotate', $passphrase) }}" method="POST" class="p-6 space-y-6">
+                                        <form action="{{ route('invoice-portal.passphrases.rotate', $passphrase) }}" method="POST" class="space-y-6 p-6 sm:p-8">
                                             @csrf
                                             <input type="hidden" name="editing_passphrase" value="{{ $passphrase->id }}">
 
@@ -189,17 +189,17 @@
                                             @endif
 
                                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                <div class="md:col-span-2">
+                                                <div class="space-y-2 md:col-span-2">
                                                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Nama Pemilik</label>
-                                                    <input type="text" name="label" value="{{ $labelValue }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: Ayu">
+                                                    <input type="text" name="label" value="{{ $labelValue }}" class="block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:bg-white focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" placeholder="Contoh: Ayu">
                                                 </div>
-                                                <div>
+                                                <div class="space-y-2">
                                                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Kedaluwarsa baru</label>
-                                                    <input type="datetime-local" name="expires_at" value="{{ $expiresValue }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                    <input type="datetime-local" name="expires_at" value="{{ $expiresValue }}" class="block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:bg-white focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
                                                 </div>
-                                                <div>
+                                                <div class="space-y-2">
                                                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Passphrase khusus</label>
-                                                    <input type="text" name="passphrase" value="{{ $customPassphraseValue }}" placeholder="Otomatis jika dikosongkan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                    <input type="text" name="passphrase" value="{{ $customPassphraseValue }}" placeholder="Otomatis jika dikosongkan" class="block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:bg-white focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
                                                 </div>
                                             </div>
 
