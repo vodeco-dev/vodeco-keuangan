@@ -24,8 +24,8 @@
             left: 50%;
             transform: translate(-50%, -50%);
             width: 100%;
-            opacity: 0.08;
-            z-index: 0;
+            opacity: 0.2;
+            z-index: 2;
             pointer-events: none;
         }
 

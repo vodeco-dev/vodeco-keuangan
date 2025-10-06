@@ -82,16 +82,14 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 100%;
-            height: 100%;
-            opacity: 0.08;
-            z-index: 0;
+            width: 60%;
+            opacity: 0.2;
+            z-index: 2;
             pointer-events: none;
         }
 
         .watermark img {
             width: 100%;
-            height: 100%;
             object-fit: contain;
         }
 
