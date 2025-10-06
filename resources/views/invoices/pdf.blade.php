@@ -77,29 +77,42 @@
             position: relative;
         }
         @if ($watermarkData)
-        body::before {
-            content: "";
+        .watermark {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             width: 100%;
             height: 100%;
-            background-image: url('data:image/{{ $watermarkMime }};base64,{{ $watermarkData }}');
-            background-position: center;
-            background-repeat: no-repeat;
-            background-size: contain;
             opacity: 0.08;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .watermark img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .pdf-content {
+            position: relative;
+            z-index: 1;
         }
         @endif
     </style>
 </head>
 
 <body class="text-sm">
+    @if ($watermarkData)
+    <div class="watermark">
+        <img src="data:image/{{ $watermarkMime }};base64,{{ $watermarkData }}" alt="Watermark">
+    </div>
+    @endif
     <div style="position: absolute; top: 0; right: 0;">
         <img src="data:image/png;base64,{{ $headerBgData }}" style="width: 200px; height: auto;">
     </div>
-    <div class="mx-auto max-w-[210mm] bg-white px-10 py-8">
+    <div class="mx-auto max-w-[210mm] bg-white px-10 py-8 pdf-content">
         <!-- Header -->
         <table style="width: 100%;margin-top: 40px;">
             <tr>
