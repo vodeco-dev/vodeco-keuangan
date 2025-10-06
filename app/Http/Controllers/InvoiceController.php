@@ -438,7 +438,7 @@ class InvoiceController extends Controller
                 Transaction::create([
                     'category_id' => $categoryId,
                     'user_id' => auth()->id(),
-                    'amount' => $paymentAmount,
+                    'amount' => $invoice->total,
                     'description' => $invoice->itemDescriptionSummary(),
                     'date' => $paymentDate,
                 ]);
