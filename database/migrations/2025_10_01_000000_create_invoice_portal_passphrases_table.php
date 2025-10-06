@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('public_id')->unique();
             $table->string('passphrase_hash');
-            $table->enum('access_type', ['customer_service', 'admin_pelunasan']);
+            $table->enum('access_type', ['customer_service', 'admin_pelunasan', 'admin_perpanjangan']);
             $table->boolean('is_active')->default(true);
             $table->timestamp('expires_at')->nullable();
             $table->timestamp('last_used_at')->nullable();

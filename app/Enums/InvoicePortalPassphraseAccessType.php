@@ -6,12 +6,14 @@ enum InvoicePortalPassphraseAccessType: string
 {
     case CUSTOMER_SERVICE = 'customer_service';
     case ADMIN_PELUNASAN = 'admin_pelunasan';
+    case ADMIN_PERPANJANGAN = 'admin_perpanjangan';
 
     public function label(): string
     {
         return match ($this) {
             self::CUSTOMER_SERVICE => 'Customer Service',
             self::ADMIN_PELUNASAN => 'Admin Pelunasan',
+            self::ADMIN_PERPANJANGAN => 'Admin Perpanjangan',
         };
     }
 
@@ -23,6 +25,7 @@ enum InvoicePortalPassphraseAccessType: string
         return match ($this) {
             self::CUSTOMER_SERVICE => ['down_payment', 'full_payment'],
             self::ADMIN_PELUNASAN => ['settlement'],
+            self::ADMIN_PERPANJANGAN => ['full_payment'],
         };
     }
 }
