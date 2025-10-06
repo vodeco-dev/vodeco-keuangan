@@ -112,7 +112,7 @@ class InvoiceSettlementService
                         'category_id' => $categoryId,
                         'user_id' => $invoice->user_id,
                         'amount' => $remainingBalance,
-                        'description' => 'Pelunasan invoice #' . $invoice->number . ' melalui tautan konfirmasi',
+                        'description' => $invoice->itemDescriptionSummary(),
                         'date' => $now,
                     ]);
                 }
