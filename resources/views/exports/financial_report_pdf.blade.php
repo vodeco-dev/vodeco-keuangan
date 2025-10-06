@@ -14,7 +14,6 @@
     @include('exports.partials.financial_report_styles')
     <style>
         body {
-            padding: 32px 40px;
             position: relative;
         }
 
