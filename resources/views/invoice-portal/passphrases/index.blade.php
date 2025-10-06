@@ -87,6 +87,10 @@
                         </div>
                     @endif
 
+                    @php
+                        $editingPassphraseId = old('editing_passphrase');
+                    @endphp
+
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead class="bg-gray-50 dark:bg-gray-800">
@@ -133,25 +137,20 @@
                                             {{ $passphrase->creator?->name ?? 'Tidak diketahui' }}
                                         </td>
                                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
-                                            <div class="flex flex-col gap-2">
-                                                <form action="{{ route('invoice-portal.passphrases.rotate', $passphrase) }}" method="POST" class="space-y-2">
-                                                    @csrf
-                                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                                        <div>
-                                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Nama Pemilik</label>
-                                                            <input type="text" name="label" value="{{ old('label', $passphrase->label) }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: Ayu">
-                                                        </div>
-                                                        <div>
-                                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Kedaluwarsa baru</label>
-                                                            <input type="datetime-local" name="expires_at" value="{{ old('expires_at') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                                        </div>
-                                                        <div>
-                                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Passphrase khusus</label>
-                                                            <input type="text" name="passphrase" placeholder="Otomatis jika dikosongkan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                                        </div>
-                                                    </div>
-                                                    <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Putar Passphrase</button>
-                                                </form>
+                                            @php
+                                                $isEditingThis = (string) $editingPassphraseId === (string) $passphrase->id;
+                                                $defaultExpiresAt = optional($passphrase->expires_at)->timezone(config('app.timezone'))?->format('Y-m-d\TH:i');
+                                                $labelValue = $isEditingThis ? old('label', $passphrase->label) : $passphrase->label;
+                                                $expiresValue = $isEditingThis ? old('expires_at', $defaultExpiresAt) : $defaultExpiresAt;
+                                                $customPassphraseValue = $isEditingThis ? old('passphrase') : '';
+                                            @endphp
+                                            <div class="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                                    x-data="{}"
+                                                    x-on:click.prevent="$dispatch('open-modal', 'edit-passphrase-{{ $passphrase->id }}')"
+                                                >Edit</button>
                                                 <form action="{{ route('invoice-portal.passphrases.deactivate', $passphrase) }}" method="POST" onsubmit="return confirm('Nonaktifkan passphrase ini? Akses terkait akan dicabut.');">
                                                     @csrf
                                                     @method('DELETE')
@@ -163,6 +162,57 @@
                                             @enderror
                                         </td>
                                     </tr>
+                                    <x-modal name="edit-passphrase-{{ $passphrase->id }}" :show="$isEditingThis || $errors->has('passphrase_'.$passphrase->id)" focusable>
+                                        <form action="{{ route('invoice-portal.passphrases.rotate', $passphrase) }}" method="POST" class="p-6 space-y-6">
+                                            @csrf
+                                            <input type="hidden" name="editing_passphrase" value="{{ $passphrase->id }}">
+
+                                            <div>
+                                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Edit Passphrase</h4>
+                                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Perbarui informasi passphrase atau putar nilai passphrase baru sesuai kebutuhan.</p>
+                                            </div>
+
+                                            @if ($isEditingThis && $errors->hasBag('rotatePassphrase'))
+                                                <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                                    <ul class="list-disc space-y-1 pl-5">
+                                                        @foreach ($errors->getBag('rotatePassphrase')->all() as $message)
+                                                            <li>{{ $message }}</li>
+                                                        @endforeach
+                                                    </ul>
+                                                </div>
+                                            @endif
+
+                                            @if ($errors->has('passphrase_'.$passphrase->id))
+                                                <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                                    {{ $errors->first('passphrase_'.$passphrase->id) }}
+                                                </div>
+                                            @endif
+
+                                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                <div class="md:col-span-2">
+                                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Nama Pemilik</label>
+                                                    <input type="text" name="label" value="{{ $labelValue }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: Ayu">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Kedaluwarsa baru</label>
+                                                    <input type="datetime-local" name="expires_at" value="{{ $expiresValue }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Passphrase khusus</label>
+                                                    <input type="text" name="passphrase" value="{{ $customPassphraseValue }}" placeholder="Otomatis jika dikosongkan" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                </div>
+                                            </div>
+
+                                            <div class="flex justify-end gap-2">
+                                                <x-secondary-button type="button" x-on:click="$dispatch('close')">
+                                                    Batal
+                                                </x-secondary-button>
+                                                <button type="submit" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                                    Simpan Perubahan
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </x-modal>
                                 @empty
                                     <tr>
                                         <td colspan="7" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-300">Belum ada passphrase yang dibuat.</td>
