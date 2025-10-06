@@ -12,6 +12,7 @@
     $signatureData = base64_encode(file_get_contents($signaturePath));
     $headerBgPath = public_path('image4.png');
     $headerBgData = base64_encode(file_get_contents($headerBgPath));
+    $watermarkPath = public_path('image2.png');
 
     $determineMime = function ($path) {
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
@@ -21,6 +22,9 @@
 
         return $extension ?: 'png';
     };
+
+    $watermarkData = is_file($watermarkPath) ? base64_encode(file_get_contents($watermarkPath)) : null;
+    $watermarkMime = $watermarkData ? $determineMime($watermarkPath) : null;
 
     $bank1LogoPath = public_path($settings['bank_1_logo'] ?? 'logo-bank-bca.png');
     $bank1LogoData = is_file($bank1LogoPath) ? base64_encode(file_get_contents($bank1LogoPath)) : null;
@@ -69,9 +73,25 @@
             font-family: 'Arial', sans-serif;
         }
         body {
-            background: url("public/image2.png") no-repeat center;
             margin: 0;
+            position: relative;
         }
+        @if ($watermarkData)
+        body::before {
+            content: "";
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/{{ $watermarkMime }};base64,{{ $watermarkData }}');
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: contain;
+            opacity: 0.08;
+        }
+        @endif
     </style>
 </head>
 
