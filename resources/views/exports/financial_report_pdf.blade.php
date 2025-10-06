@@ -7,6 +7,7 @@
     <style>
         body {
             padding: 32px 40px;
+            background: url("public/image2.png") no-repeat center;
         }
 
         .report-wrapper {

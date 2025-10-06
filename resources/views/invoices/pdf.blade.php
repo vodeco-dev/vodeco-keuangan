@@ -68,6 +68,10 @@
         * {
             font-family: 'Arial', sans-serif;
         }
+        body {
+            background: url("public/image2.png") no-repeat center;
+            margin: 0;
+        }
     </style>
 </head>
 
