@@ -210,4 +210,154 @@ class PublicInvoiceSubmissionTest extends TestCase
             'price' => 2500000,
         ]);
     }
+
+    public function test_admin_perpanjangan_passphrase_only_allows_full_payment_transactions(): void
+    {
+        $admin = User::factory()->create([
+            'role' => Role::ADMIN,
+        ]);
+
+        $category = Category::factory()->create([
+            'type' => 'pemasukan',
+        ]);
+
+        $passphrase = new InvoicePortalPassphrase([
+            'public_id' => InvoicePortalPassphrase::makePublicId(),
+            'access_type' => InvoicePortalPassphraseAccessType::ADMIN_PERPANJANGAN,
+            'label' => 'Tim Perpanjangan',
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+        $passphrase->setPassphrase('RahasiaPerpanjangan12');
+        $passphrase->save();
+
+        $session = [
+            'invoice_portal_passphrase' => [
+                'id' => $passphrase->id,
+                'token' => Crypt::encryptString((string) $passphrase->id),
+                'access_type' => $passphrase->access_type->value,
+                'access_label' => $passphrase->access_type->label(),
+                'label' => $passphrase->label,
+                'display_label' => $passphrase->displayLabel(),
+                'verified_at' => now()->toIso8601String(),
+            ],
+        ];
+
+        $response = $this->withSession($session)->get(route('invoices.public.create'));
+        $response->assertOk();
+
+        $dom = new \DOMDocument();
+        @$dom->loadHTML($response->getContent());
+
+        $xpath = new \DOMXPath($dom);
+        $transactionInput = $xpath->query('//input[@name="transaction_type"]')->item(0);
+        $this->assertSame('full_payment', $transactionInput?->getAttribute('value'));
+
+        $transactionButtons = $xpath->query("//h3[text()='Jenis Transaksi']/following-sibling::div[1]//button");
+        $this->assertSame(1, $transactionButtons->length);
+        $this->assertSame('Bayar Lunas', trim($transactionButtons->item(0)?->textContent ?? ''));
+
+        $pdfMock = Mockery::mock(DomPdf::class);
+        $pdfMock->shouldReceive('setPaper')
+            ->once()
+            ->with('a4')
+            ->andReturnSelf();
+        $pdfMock->shouldReceive('download')
+            ->once()
+            ->with(Mockery::type('string'))
+            ->andReturn(response('PDF content', 200, ['Content-Type' => 'application/pdf']));
+
+        Pdf::shouldReceive('loadView')
+            ->once()
+            ->with('invoices.pdf', Mockery::on(function ($data) {
+                return isset($data['invoice'], $data['settings']);
+            }))
+            ->andReturn($pdfMock);
+
+        $submissionData = [
+            'passphrase_token' => $session['invoice_portal_passphrase']['token'],
+            'transaction_type' => 'full_payment',
+            'client_name' => 'Siti Budi',
+            'client_whatsapp' => '081222333444',
+            'client_address' => 'Jl. Kenanga No. 3',
+            'due_date' => now()->addWeek()->toDateString(),
+            'items' => [
+                [
+                    'description' => 'Layanan Perpanjangan',
+                    'quantity' => 1,
+                    'price' => 1800000,
+                    'category_id' => $category->id,
+                ],
+            ],
+        ];
+
+        $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+
+        $this->assertDatabaseHas('invoices', [
+            'client_name' => 'Siti Budi',
+            'status' => 'lunas',
+            'down_payment' => 1800000,
+        ]);
+    }
+
+    public function test_admin_perpanjangan_passphrase_rejects_non_full_payment_transactions(): void
+    {
+        $admin = User::factory()->create([
+            'role' => Role::ADMIN,
+        ]);
+
+        $category = Category::factory()->create([
+            'type' => 'pemasukan',
+        ]);
+
+        $passphrase = new InvoicePortalPassphrase([
+            'public_id' => InvoicePortalPassphrase::makePublicId(),
+            'access_type' => InvoicePortalPassphraseAccessType::ADMIN_PERPANJANGAN,
+            'label' => 'Tim Perpanjangan',
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+        $passphrase->setPassphrase('RahasiaPerpanjangan12');
+        $passphrase->save();
+
+        $session = [
+            'invoice_portal_passphrase' => [
+                'id' => $passphrase->id,
+                'token' => Crypt::encryptString((string) $passphrase->id),
+                'access_type' => $passphrase->access_type->value,
+                'access_label' => $passphrase->access_type->label(),
+                'label' => $passphrase->label,
+                'display_label' => $passphrase->displayLabel(),
+                'verified_at' => now()->toIso8601String(),
+            ],
+        ];
+
+        $submissionData = [
+            'passphrase_token' => $session['invoice_portal_passphrase']['token'],
+            'transaction_type' => 'down_payment',
+            'client_name' => 'Agus Tono',
+            'client_whatsapp' => '081555666777',
+            'client_address' => 'Jl. Flamboyan No. 5',
+            'due_date' => now()->addWeek()->toDateString(),
+            'down_payment_due' => 900000,
+            'items' => [
+                [
+                    'description' => 'Layanan Perpanjangan Tahunan',
+                    'quantity' => 1,
+                    'price' => 1800000,
+                    'category_id' => $category->id,
+                ],
+            ],
+        ];
+
+        $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
+
+        $response->assertRedirect();
+        $response->assertSessionHasErrors([
+            'transaction_type' => 'Transaksi ini tidak diizinkan oleh passphrase yang digunakan.',
+        ]);
+    }
 }
