@@ -36,10 +36,6 @@
                     </div>
                 @endif
 
-                <div class="mb-4 flex flex-wrap gap-2">
-                    <a href="{{ route('invoices.create') }}" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Buat Invoices</a>
-                </div>
-
                 @if ($accessCodeRole)
                     <div class="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
                         <h3 class="text-sm font-semibold text-yellow-800">Verifikasi kode akses diperlukan</h3>
