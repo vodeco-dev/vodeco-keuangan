@@ -380,7 +380,7 @@ class InvoiceController extends Controller
             $debt = Debt::updateOrCreate(
                 ['invoice_id' => $invoice->id],
                 [
-                    'description' => $invoice->itemDescriptionSummary(),
+                    'description' => $invoice->transactionDescription(),
                     'related_party' => $relatedParty,
                     'type' => Debt::TYPE_DOWN_PAYMENT,
                     'amount' => $invoice->total,
@@ -427,7 +427,7 @@ class InvoiceController extends Controller
                 $debt->status = $invoice->status === 'lunas'
                     ? Debt::STATUS_LUNAS
                     : Debt::STATUS_BELUM_LUNAS;
-                $debt->description = $invoice->itemDescriptionSummary();
+                $debt->description = $invoice->transactionDescription();
                 $debt->amount = $invoice->total;
                 $debt->due_date = $invoice->due_date;
                 $debt->related_party = $relatedParty;
@@ -439,7 +439,7 @@ class InvoiceController extends Controller
                     'category_id' => $categoryId,
                     'user_id' => auth()->id(),
                     'amount' => $invoice->total,
-                    'description' => $invoice->itemDescriptionSummary(),
+                    'description' => $invoice->transactionDescription(),
                     'date' => $paymentDate,
                 ]);
             }
@@ -762,7 +762,7 @@ class InvoiceController extends Controller
         $relatedParty = $invoice->client_name
             ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
 
-        $debt->description = $invoice->itemDescriptionSummary();
+        $debt->description = $invoice->transactionDescription();
         $debt->amount = $invoice->total;
         $debt->due_date = $invoice->due_date;
         $debt->related_party = $relatedParty;

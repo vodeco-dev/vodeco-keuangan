@@ -70,7 +70,7 @@ class InvoiceSettlementTest extends TestCase
         $this->assertSame(Debt::STATUS_LUNAS, $debt->status);
         $this->assertEquals($invoice->total, (float) $debt->payments()->sum('amount'));
 
-        $transaction = Transaction::where('description', 'Pelunasan invoice #' . $invoice->number . ' melalui tautan konfirmasi')->first();
+        $transaction = Transaction::where('description', $invoice->transactionDescription())->first();
         $this->assertNotNull($transaction);
         $this->assertEquals($invoice->user_id, $transaction->user_id);
         $this->assertEquals($invoice->total, (float) $transaction->amount);
