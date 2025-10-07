@@ -122,7 +122,13 @@ class InvoiceController extends Controller
 
         $settlementInvoices = $tabStates['settlement']['unlocked'] && $baseQuery
             ? (clone $baseQuery)
-                ->where('status', 'belum lunas')
+                ->whereIn('status', ['belum bayar', 'belum lunas'])
+                ->where('type', '!=', Invoice::TYPE_SETTLEMENT)
+                ->whereNotNull('settlement_token')
+                ->where(function ($query) {
+                    $query->whereNull('settlement_token_expires_at')
+                        ->orWhere('settlement_token_expires_at', '>', now());
+                })
                 ->get()
             : collect();
 
