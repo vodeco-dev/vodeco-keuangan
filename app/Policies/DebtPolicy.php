@@ -15,6 +15,10 @@ class DebtPolicy
 
     public function view(User $user, Debt $debt): bool
     {
+        if (in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT], true)) {
+            return true;
+        }
+
         return $debt->user_id === $user->id;
     }
 
@@ -25,7 +29,7 @@ class DebtPolicy
 
     public function update(User $user, Debt $debt): bool
     {
-        if ($user->role === Role::ADMIN) {
+        if (in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT], true)) {
             return true;
         }
 
@@ -34,6 +38,10 @@ class DebtPolicy
 
     public function delete(User $user, Debt $debt): bool
     {
+        if (in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT], true)) {
+            return true;
+        }
+
         return $debt->user_id === $user->id;
     }
 }
