@@ -147,7 +147,7 @@ class DebtController extends Controller
 
                     $invoice->save();
 
-                    $debt->description = $invoice->itemDescriptionSummary();
+                    $debt->description = $invoice->transactionDescription();
                     $debt->amount = $invoice->total;
                     $debt->due_date = $invoice->due_date;
                     $debt->related_party = $invoice->client_name

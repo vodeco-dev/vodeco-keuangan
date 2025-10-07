@@ -51,7 +51,7 @@ class InvoiceSettlementService
             $debt = Debt::updateOrCreate(
                 ['invoice_id' => $invoice->id],
                 [
-                    'description' => $invoice->itemDescriptionSummary(),
+                    'description' => $invoice->transactionDescription(),
                     'related_party' => $relatedParty,
                     'type' => Debt::TYPE_DOWN_PAYMENT,
                     'amount' => $invoiceTotal,
@@ -89,7 +89,7 @@ class InvoiceSettlementService
 
             $debt->forceFill([
                 'status' => Debt::STATUS_LUNAS,
-                'description' => $invoice->itemDescriptionSummary(),
+                'description' => $invoice->transactionDescription(),
                 'amount' => $invoiceTotal,
                 'due_date' => $invoice->due_date,
                 'related_party' => $relatedParty,
@@ -112,7 +112,7 @@ class InvoiceSettlementService
                         'category_id' => $categoryId,
                         'user_id' => $invoice->user_id,
                         'amount' => $remainingBalance,
-                        'description' => $invoice->itemDescriptionSummary(),
+                        'description' => $invoice->transactionDescription(),
                         'date' => $now,
                     ]);
                 }

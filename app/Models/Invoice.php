@@ -108,6 +108,19 @@ class Invoice extends Model
         return Str::limit($summary, $maxLength);
     }
 
+    public function transactionDescription(int $maxLength = 120): string
+    {
+        if ($this->type === self::TYPE_SETTLEMENT) {
+            $referenceInvoice = $this->referenceInvoice;
+
+            if ($referenceInvoice) {
+                return $referenceInvoice->itemDescriptionSummary($maxLength);
+            }
+        }
+
+        return $this->itemDescriptionSummary($maxLength);
+    }
+
     public function customerService(): BelongsTo
     {
         return $this->belongsTo(CustomerService::class);
