@@ -25,6 +25,10 @@ class TransactionPolicy
 
     public function update(User $user, Transaction $transaction): bool
     {
+        if (in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT], true)) {
+            return true;
+        }
+
         return $transaction->user_id === $user->id;
     }
 
