@@ -2,11 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Role;
 use App\Exports\TransactionsExport;
 use App\Models\Setting;
+use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -140,5 +146,93 @@ class SettingController extends Controller
         $fileName = 'Laporan_Transaksi_'.$startDate.'_sampai_'.$endDate.'.'.$format;
 
         return Excel::download(new TransactionsExport($request->user()->id, $startDate, $endDate), $fileName);
+    }
+
+    public function purgeData(Request $request): RedirectResponse
+    {
+        if ($request->user()->role !== Role::ADMIN) {
+            abort(403);
+        }
+
+        $this->deleteTransactionProofs();
+
+        $tablesToTruncate = [
+            'transaction_deletion_requests',
+            'transactions',
+            'payments',
+            'debts',
+            'invoice_items',
+            'invoices',
+            'customer_services',
+            'invoice_portal_passphrase_logs',
+            'invoice_portal_passphrases',
+            'access_codes',
+            'categories',
+            'activity_logs',
+        ];
+
+        Schema::disableForeignKeyConstraints();
+
+        try {
+            foreach ($tablesToTruncate as $table) {
+                DB::table($table)->truncate();
+            }
+        } finally {
+            Schema::enableForeignKeyConstraints();
+        }
+
+        User::whereRaw('LOWER(name) != ?', ['admin'])->delete();
+
+        Cache::flush();
+
+        return redirect()->route('settings.data')
+            ->with('success', 'Seluruh data berhasil dihapus, kecuali akun Admin.');
+    }
+
+    private function deleteTransactionProofs(): void
+    {
+        $directoriesByDisk = [];
+
+        Transaction::query()
+            ->select(['id', 'proof_disk', 'proof_directory', 'proof_path'])
+            ->whereNotNull('proof_path')
+            ->chunkById(100, function ($transactions) use (&$directoriesByDisk) {
+                foreach ($transactions as $transaction) {
+                    $disk = $transaction->proof_disk ?: config('filesystems.default');
+                    $fullPath = $transaction->proof_full_path;
+
+                    if (! $disk || ! $fullPath) {
+                        continue;
+                    }
+
+                    try {
+                        $filesystem = Storage::disk($disk);
+                    } catch (\InvalidArgumentException $exception) {
+                        continue;
+                    }
+
+                    if ($filesystem->exists($fullPath)) {
+                        $filesystem->delete($fullPath);
+                    }
+
+                    $directory = trim((string) $transaction->proof_directory, '/');
+
+                    if ($directory !== '') {
+                        $directoriesByDisk[$disk][$directory] = true;
+                    }
+                }
+            });
+
+        foreach ($directoriesByDisk as $disk => $directories) {
+            try {
+                $filesystem = Storage::disk($disk);
+            } catch (\InvalidArgumentException $exception) {
+                continue;
+            }
+
+            foreach (array_keys($directories) as $directory) {
+                $filesystem->deleteDirectory($directory);
+            }
+        }
     }
 }
