@@ -46,5 +46,38 @@
                 </div>
             </form>
         </div>
+
+        <div id="danger-zone" class="bg-white rounded-lg shadow-sm p-8 mt-8">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Hapus Semua Data</h3>
+            <p class="text-gray-600 mb-6">
+                Aksi ini akan menghapus seluruh transaksi, hutang, invoice, kategori, dan data pendukung lainnya.
+                Akun dengan nama <strong>Admin</strong> akan dipertahankan.
+            </p>
+
+            @if (auth()->user()->role === \App\Enums\Role::ADMIN)
+                <form method="POST" action="{{ route('settings.data.purge') }}"
+                    onsubmit="return confirm('Tindakan ini tidak dapat dibatalkan dan hanya akan menyisakan akun Admin. Lanjutkan?');">
+                    @csrf
+                    @method('DELETE')
+
+                    <button type="submit"
+                        class="px-6 py-3 font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 flex items-center gap-2">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3m4 0H5" />
+                        </svg>
+                        <span>Hapus Semua Data</span>
+                    </button>
+                </form>
+            @else
+                <div class="p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                    <p class="text-sm text-gray-600">
+                        Hanya admin yang dapat menghapus seluruh data. Hubungi administrator apabila Anda membutuhkan bantuan.
+                    </p>
+                </div>
+            @endif
+        </div>
     </div>
 @endsection

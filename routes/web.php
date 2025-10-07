@@ -110,6 +110,9 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('/settings/storage', [SettingController::class, 'updateStorage'])->name('settings.storage.update');
     Route::get('/settings/data', [SettingController::class, 'data'])->name('settings.data');
     Route::post('/settings/export', [SettingController::class, 'export'])->name('settings.export');
+    Route::delete('/settings/data/purge', [SettingController::class, 'purgeData'])
+        ->middleware('role:admin')
+        ->name('settings.data.purge');
 
     // Riwayat Permintaan Penghapusan Pengguna
     Route::get('/deletion-requests', [UserDeletionRequestController::class, 'index'])->name('user-deletion-requests.index');

@@ -63,7 +63,12 @@
                     </li>
                     <li class="flex items-center justify-between">
                         <span class="text-gray-600">Hapus Semua Data</span>
-                        <button class="text-gray-400 text-sm font-medium cursor-not-allowed">Hapus</button>
+                        @if (auth()->user()->role === \App\Enums\Role::ADMIN)
+                            <a href="{{ route('settings.data') }}#danger-zone"
+                                class="text-red-600 hover:text-red-700 text-sm font-medium">Kelola</a>
+                        @else
+                            <span class="text-gray-400 text-sm font-medium">Hanya Admin</span>
+                        @endif
                     </li>
                     @can('admin')
                     <li class="flex items-center justify-between">
