@@ -51,7 +51,9 @@ class TransactionService
             }
         }
 
-        return $query->paginate(10);
+        return $query
+            ->paginate(10)
+            ->appends($request->except('page'));
     }
 
     /**
@@ -130,7 +132,9 @@ class TransactionService
             }
         }
 
-        return $query->paginate(10);
+        return $query
+            ->paginate(10)
+            ->appends($request->except('page'));
     }
 
     /**
