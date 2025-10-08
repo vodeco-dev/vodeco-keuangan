@@ -26,6 +26,11 @@ class Debt extends Model
         'category_id',
         'user_id',
         'invoice_id',
+        'daily_deduction',
+    ];
+
+    protected $casts = [
+        'daily_deduction' => 'decimal:2',
     ];
 
     public function payments()
