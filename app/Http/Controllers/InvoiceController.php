@@ -661,40 +661,9 @@ class InvoiceController extends Controller
     private function persistSettlementInvoice(array $data, Invoice $referenceInvoice): Invoice
     {
         return DB::transaction(function () use ($data, $referenceInvoice) {
-            $invoiceNumber = $this->generateInvoiceNumber();
             $paidAmount = (float) $data['settlement_paid_amount'];
             $isPaidFull = $data['settlement_payment_status'] === 'paid_full';
             $now = now();
-
-            $invoice = Invoice::create([
-                'user_id' => $referenceInvoice->user_id,
-                'created_by' => auth()->id(),
-                'customer_service_id' => $referenceInvoice->customer_service_id,
-                'customer_service_name' => $referenceInvoice->customer_service_name,
-                'client_name' => $referenceInvoice->client_name,
-                'client_whatsapp' => $referenceInvoice->client_whatsapp,
-                'client_address' => $referenceInvoice->client_address,
-                'number' => $invoiceNumber,
-                'issue_date' => $now,
-                'due_date' => null,
-                'status' => $isPaidFull ? 'lunas' : 'belum lunas',
-                'total' => $paidAmount,
-                'down_payment' => $paidAmount,
-                'payment_date' => $now,
-                'type' => Invoice::TYPE_SETTLEMENT,
-                'reference_invoice_id' => $referenceInvoice->id,
-            ]);
-
-            $referenceInvoice->loadMissing('items');
-            $firstItem = $referenceInvoice->items->first();
-
-            InvoiceItem::create([
-                'invoice_id' => $invoice->id,
-                'category_id' => $firstItem?->category_id,
-                'description' => 'Pelunasan Invoice #' . $referenceInvoice->number,
-                'quantity' => 1,
-                'price' => $paidAmount,
-            ]);
 
             $updatedDownPayment = round((float) $referenceInvoice->down_payment, 2) + round($paidAmount, 2);
             $newDownPayment = min((float) $referenceInvoice->total, $updatedDownPayment);
@@ -705,7 +674,7 @@ class InvoiceController extends Controller
                 'status' => $isPaidFull || $newDownPayment >= (float) $referenceInvoice->total ? 'lunas' : 'belum lunas',
             ])->save();
 
-            return $invoice->load('items', 'customerService', 'referenceInvoice');
+            return $referenceInvoice->load('items', 'customerService');
         });
     }
 
