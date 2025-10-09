@@ -19,6 +19,7 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
     {
         return array_merge(parent::rules(), [
             'passphrase_token' => ['required', 'string'],
+            'payment_proof' => ['required', 'image', 'mimes:png,jpg,jpeg', 'max:5120'],
         ]);
     }
 
@@ -31,6 +32,7 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
     {
         return array_merge(parent::messages(), [
             'passphrase_token.required' => 'Verifikasi passphrase portal invoice sebelum mengirim formulir.',
+            'payment_proof.required' => 'Unggah bukti pembayaran sebelum melanjutkan.',
         ]);
     }
 

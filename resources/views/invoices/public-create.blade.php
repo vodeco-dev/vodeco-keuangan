@@ -105,8 +105,10 @@
                             </div>
                         @else
                             <form action="{{ route('invoices.public.store') }}" method="POST" class="space-y-10" id="invoice-form"
+                                enctype="multipart/form-data"
                                 x-data="{
                                     activeTab: '{{ $defaultTransaction }}',
+                                    proofConfirmed: false,
                                     init() {
                                         window.addEventListener('invoice-transaction-tab-changed', (event) => {
                                             if (!event.detail || !event.detail.tab) {
@@ -115,10 +117,33 @@
 
                                             this.activeTab = event.detail.tab;
                                         });
+
+                                        this.$watch('proofConfirmed', (value) => {
+                                            if (!value && this.$refs.paymentProof) {
+                                                this.$refs.paymentProof.value = '';
+                                            }
+                                        });
                                     },
                                 }">
                                 @csrf
                                 <input type="hidden" name="passphrase_token" value="{{ $passphraseToken }}">
+
+                                <div class="rounded-lg border border-blue-100 bg-blue-50 p-5">
+                                    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                        <div>
+                                            <h2 class="text-lg font-semibold text-blue-900">Konfirmasi Bukti Pembayaran</h2>
+                                            <p class="mt-1 text-sm text-blue-800">Unggah bukti pembayaran dalam format PNG atau JPG sebelum mengirim formulir. Bukti akan diverifikasi kembali oleh tim akuntansi.</p>
+                                        </div>
+                                        <button type="button"
+                                            class="inline-flex items-center justify-center rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50"
+                                            @click="proofConfirmed = !proofConfirmed">
+                                            <span x-text="proofConfirmed ? 'Batalkan Konfirmasi' : 'Konfirmasi & Unggah Bukti'"></span>
+                                        </button>
+                                    </div>
+                                    <p class="mt-3 text-xs text-blue-700" x-show="!proofConfirmed" x-cloak>
+                                        Tekan tombol konfirmasi untuk membuka kolom unggah bukti.
+                                    </p>
+                                </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div class="space-y-4">
@@ -177,8 +202,22 @@
                                     data-reference-url-template="{{ route('invoices.public.reference', ['number' => '__NUMBER__']) }}"
                                 />
 
+                                <div class="space-y-2">
+                                    <label for="payment_proof" class="block text-sm font-medium text-gray-700">Bukti Pembayaran (PNG atau JPG)</label>
+                                    <input type="file" name="payment_proof" id="payment_proof" x-ref="paymentProof"
+                                        accept="image/png,image/jpeg"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        :required="proofConfirmed"
+                                        :disabled="!proofConfirmed">
+                                    <p class="text-xs text-gray-500">Pastikan bukti terlihat jelas. File maksimal 5MB.</p>
+                                    @error('payment_proof')
+                                        <p class="text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
                                 <div class="flex justify-end">
-                                    <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                    <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                        :disabled="!proofConfirmed">
                                         Buat & Unduh Invoice
                                     </button>
                                 </div>

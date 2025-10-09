@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Invoice extends Model
@@ -44,6 +45,11 @@ class Invoice extends Model
         'reference_invoice_id',
         'settlement_token',
         'settlement_token_expires_at',
+        'payment_proof_disk',
+        'payment_proof_path',
+        'payment_proof_filename',
+        'payment_proof_original_name',
+        'payment_proof_uploaded_at',
     ];
 
     /**
@@ -58,6 +64,7 @@ class Invoice extends Model
         'down_payment' => 'decimal:2',
         'down_payment_due' => 'decimal:2',
         'settlement_token_expires_at' => 'datetime',
+        'payment_proof_uploaded_at' => 'datetime',
     ];
 
     /**
@@ -163,5 +170,25 @@ class Invoice extends Model
         }
 
         return true;
+    }
+
+    public function hasPaymentProof(): bool
+    {
+        return ! empty($this->payment_proof_path);
+    }
+
+    public function getPaymentProofUrlAttribute(): ?string
+    {
+        if (! $this->hasPaymentProof()) {
+            return null;
+        }
+
+        $disk = $this->payment_proof_disk ?: config('filesystems.default');
+
+        try {
+            return Storage::disk($disk)->url($this->payment_proof_path);
+        } catch (\Throwable $exception) {
+            return null;
+        }
     }
 }
