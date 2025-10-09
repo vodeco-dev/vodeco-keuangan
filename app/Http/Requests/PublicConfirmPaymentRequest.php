@@ -2,42 +2,52 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Invoice;
 use App\Models\InvoicePortalPassphrase;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Crypt;
 use Throwable;
 
-class PublicStoreInvoiceRequest extends StoreInvoiceRequest
+class PublicConfirmPaymentRequest extends FormRequest
 {
     protected ?InvoicePortalPassphrase $passphrase = null;
 
+    protected ?Invoice $invoice = null;
+
+    public function authorize(): bool
+    {
+        return true;
+    }
+
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array|string>
      */
     public function rules(): array
     {
-        return array_merge(parent::rules(), [
+        return [
             'passphrase_token' => ['required', 'string'],
-        ]);
+            'invoice_number' => ['required', 'string'],
+            'payment_proof' => ['required', 'image', 'mimes:png,jpg,jpeg', 'max:5120'],
+        ];
     }
 
     /**
-     * Get the error messages for the defined validation rules.
-     *
      * @return array<string, string>
      */
     public function messages(): array
     {
-        return array_merge(parent::messages(), [
+        return [
             'passphrase_token.required' => 'Verifikasi passphrase portal invoice sebelum mengirim formulir.',
-        ]);
+            'invoice_number.required' => 'Nomor invoice wajib diisi.',
+            'payment_proof.required' => 'Unggah bukti pembayaran sebelum melanjutkan.',
+            'payment_proof.image' => 'Bukti pembayaran harus berupa gambar.',
+            'payment_proof.mimes' => 'Format bukti pembayaran harus PNG atau JPG.',
+            'payment_proof.max' => 'Ukuran bukti pembayaran maksimal 5MB.',
+        ];
     }
 
     public function withValidator($validator): void
     {
-        parent::withValidator($validator);
-
         $validator->after(function ($validator) {
             $token = $this->input('passphrase_token');
 
@@ -69,21 +79,34 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
                 return;
             }
 
-            $transactionType = $this->input('transaction_type', 'down_payment');
-            $allowedTypes = $passphrase->allowedTransactionTypes();
+            $number = $this->input('invoice_number');
+            if (! $number) {
+                return;
+            }
 
-            if (! in_array($transactionType, $allowedTypes, true)) {
-                $validator->errors()->add('transaction_type', 'Transaksi ini tidak diizinkan oleh passphrase yang digunakan.');
+            $invoice = Invoice::query()
+                ->where('number', $number)
+                ->where('type', '!=', Invoice::TYPE_SETTLEMENT)
+                ->first();
+
+            if (! $invoice) {
+                $validator->errors()->add('invoice_number', 'Invoice tidak ditemukan.');
 
                 return;
             }
 
             $this->passphrase = $passphrase;
+            $this->invoice = $invoice;
         });
     }
 
     public function passphrase(): ?InvoicePortalPassphrase
     {
         return $this->passphrase;
+    }
+
+    public function invoice(): ?Invoice
+    {
+        return $this->invoice;
     }
 }

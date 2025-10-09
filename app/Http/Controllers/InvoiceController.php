@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Role;
+use App\Http\Requests\PublicConfirmPaymentRequest;
 use App\Http\Requests\PublicStoreInvoiceRequest;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Invoice;
@@ -233,26 +234,6 @@ class InvoiceController extends Controller
 
         $data['customer_service_name'] = $passphrase->displayLabel();
 
-        if ($request->hasFile('payment_proof')) {
-            $proofFile = $request->file('payment_proof');
-
-            $disk = 'public';
-            $directory = 'invoice-proofs/' . now()->format('Y/m');
-            $extension = strtolower($proofFile->getClientOriginalExtension() ?: $proofFile->extension() ?: 'png');
-            $filename = 'payment-proof-' . Str::uuid()->toString() . '.' . $extension;
-            $path = trim($directory . '/' . $filename, '/');
-
-            Storage::disk($disk)->putFileAs($directory, $proofFile, $filename);
-
-            $data['payment_proof_disk'] = $disk;
-            $data['payment_proof_path'] = $path;
-            $data['payment_proof_filename'] = $filename;
-            $data['payment_proof_original_name'] = $proofFile->getClientOriginalName();
-            $data['payment_proof_uploaded_at'] = now();
-        }
-
-        unset($data['payment_proof']);
-
         if ($data['transaction_type'] === 'settlement') {
             $referenceInvoice = $request->referenceInvoice()
                 ?? Invoice::where('number', $data['settlement_invoice_number'])->firstOrFail();
@@ -272,6 +253,45 @@ class InvoiceController extends Controller
         ])
             ->setPaper('a4')
             ->download($invoice->number . '.pdf');
+    }
+
+    public function confirmPublicPayment(PublicConfirmPaymentRequest $request): RedirectResponse
+    {
+        $invoice = $request->invoice();
+        $passphrase = $request->passphrase();
+
+        if (! $invoice || ! $passphrase) {
+            abort(403, 'Permintaan tidak valid.');
+        }
+
+        $proofFile = $request->file('payment_proof');
+
+        $disk = 'public';
+        $directory = 'invoice-proofs/' . now()->format('Y/m');
+        $extension = strtolower($proofFile->getClientOriginalExtension() ?: $proofFile->extension() ?: 'png');
+        $filename = 'payment-proof-' . Str::uuid()->toString() . '.' . $extension;
+        $path = trim($directory . '/' . $filename, '/');
+
+        if ($invoice->payment_proof_path && $invoice->payment_proof_disk) {
+            Storage::disk($invoice->payment_proof_disk)->delete($invoice->payment_proof_path);
+        }
+
+        Storage::disk($disk)->putFileAs($directory, $proofFile, $filename);
+
+        $invoice->forceFill([
+            'payment_proof_disk' => $disk,
+            'payment_proof_path' => $path,
+            'payment_proof_filename' => $filename,
+            'payment_proof_original_name' => $proofFile->getClientOriginalName(),
+            'payment_proof_uploaded_at' => now(),
+        ])->save();
+
+        $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'payment_confirmation');
+
+        return redirect()
+            ->route('invoices.public.create')
+            ->with('status', 'Bukti pembayaran berhasil dikirim. Tim akuntansi akan memverifikasi dalam waktu dekat.')
+            ->with('active_portal_tab', 'confirm_payment');
     }
 
     public function publicReference(Request $request, string $number): JsonResponse

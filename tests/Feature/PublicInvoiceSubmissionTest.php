@@ -85,8 +85,6 @@ class PublicInvoiceSubmissionTest extends TestCase
             }))
             ->andReturn($pdfMock);
 
-        Storage::fake('public');
-
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
             'transaction_type' => $defaultTransaction,
@@ -102,7 +100,6 @@ class PublicInvoiceSubmissionTest extends TestCase
                     'category_id' => $category->id,
                 ],
             ],
-            'payment_proof' => UploadedFile::fake()->image('bukti.png', 600, 600),
         ];
 
         $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
@@ -123,8 +120,7 @@ class PublicInvoiceSubmissionTest extends TestCase
         ]);
 
         $invoice = Invoice::latest('id')->first();
-        $this->assertNotNull($invoice?->payment_proof_path);
-        Storage::disk('public')->assertExists($invoice->payment_proof_path);
+        $this->assertNull($invoice?->payment_proof_path);
 
         $passphrase->refresh();
 
@@ -186,8 +182,6 @@ class PublicInvoiceSubmissionTest extends TestCase
             }))
             ->andReturn($pdfMock);
 
-        Storage::fake('public');
-
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
             'transaction_type' => 'full_payment',
@@ -203,7 +197,6 @@ class PublicInvoiceSubmissionTest extends TestCase
                     'category_id' => $category->id,
                 ],
             ],
-            'payment_proof' => UploadedFile::fake()->image('bukti.png', 600, 600),
         ];
 
         $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
@@ -349,8 +342,6 @@ class PublicInvoiceSubmissionTest extends TestCase
             ],
         ];
 
-        Storage::fake('public');
-
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
             'transaction_type' => 'down_payment',
@@ -367,7 +358,6 @@ class PublicInvoiceSubmissionTest extends TestCase
                     'category_id' => $category->id,
                 ],
             ],
-            'payment_proof' => UploadedFile::fake()->image('bukti.png', 600, 600),
         ];
 
         $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
@@ -375,6 +365,70 @@ class PublicInvoiceSubmissionTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHasErrors([
             'transaction_type' => 'Transaksi ini tidak diizinkan oleh passphrase yang digunakan.',
+        ]);
+    }
+
+    public function test_public_payment_confirmation_uploads_payment_proof(): void
+    {
+        $admin = User::factory()->create([
+            'role' => Role::ADMIN,
+        ]);
+
+        $passphrase = new InvoicePortalPassphrase([
+            'public_id' => InvoicePortalPassphrase::makePublicId(),
+            'access_type' => InvoicePortalPassphraseAccessType::CUSTOMER_SERVICE,
+            'label' => 'Tim CS',
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+        $passphrase->setPassphrase('RahasiaPassphrase123');
+        $passphrase->save();
+
+        $session = [
+            'invoice_portal_passphrase' => [
+                'id' => $passphrase->id,
+                'token' => Crypt::encryptString((string) $passphrase->id),
+                'access_type' => $passphrase->access_type->value,
+                'access_label' => $passphrase->access_type->label(),
+                'label' => $passphrase->label,
+                'display_label' => $passphrase->displayLabel(),
+                'verified_at' => now()->toIso8601String(),
+            ],
+        ];
+
+        $invoice = Invoice::factory()->create([
+            'user_id' => $admin->id,
+            'created_by' => $admin->id,
+            'customer_service_name' => $passphrase->displayLabel(),
+            'status' => 'belum lunas',
+            'total' => 2500000,
+            'down_payment' => 0,
+        ]);
+
+        Storage::fake('public');
+
+        $response = $this->withSession($session)->post(route('invoices.public.payment-confirm'), [
+            'passphrase_token' => $session['invoice_portal_passphrase']['token'],
+            'invoice_number' => $invoice->number,
+            'payment_proof' => UploadedFile::fake()->image('bukti.png', 600, 600),
+        ]);
+
+        $response->assertRedirect(route('invoices.public.create'));
+        $response->assertSessionHas('status', 'Bukti pembayaran berhasil dikirim. Tim akuntansi akan memverifikasi dalam waktu dekat.');
+        $response->assertSessionHas('active_portal_tab', 'confirm_payment');
+
+        $invoice->refresh();
+
+        $this->assertNotNull($invoice->payment_proof_path);
+        Storage::disk('public')->assertExists($invoice->payment_proof_path);
+
+        $passphrase->refresh();
+        $this->assertSame(1, $passphrase->usage_count);
+        $this->assertNotNull($passphrase->last_used_at);
+
+        $this->assertDatabaseHas('invoice_portal_passphrase_logs', [
+            'invoice_portal_passphrase_id' => $passphrase->id,
+            'action' => 'payment_confirmation',
         ]);
     }
 }
