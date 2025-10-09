@@ -36,6 +36,11 @@ class InvoiceFactory extends Factory
             'total' => $this->faker->randomFloat(2, 100, 1000),
             'settlement_token' => Str::random(64),
             'settlement_token_expires_at' => now()->addDays(7),
+            'payment_proof_disk' => null,
+            'payment_proof_path' => null,
+            'payment_proof_filename' => null,
+            'payment_proof_original_name' => null,
+            'payment_proof_uploaded_at' => null,
         ];
     }
 }

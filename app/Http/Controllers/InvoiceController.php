@@ -19,6 +19,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use App\Models\User;
 use App\Services\InvoiceSettlementService;
@@ -230,6 +232,26 @@ class InvoiceController extends Controller
         }
 
         $data['customer_service_name'] = $passphrase->displayLabel();
+
+        if ($request->hasFile('payment_proof')) {
+            $proofFile = $request->file('payment_proof');
+
+            $disk = 'public';
+            $directory = 'invoice-proofs/' . now()->format('Y/m');
+            $extension = strtolower($proofFile->getClientOriginalExtension() ?: $proofFile->extension() ?: 'png');
+            $filename = 'payment-proof-' . Str::uuid()->toString() . '.' . $extension;
+            $path = trim($directory . '/' . $filename, '/');
+
+            Storage::disk($disk)->putFileAs($directory, $proofFile, $filename);
+
+            $data['payment_proof_disk'] = $disk;
+            $data['payment_proof_path'] = $path;
+            $data['payment_proof_filename'] = $filename;
+            $data['payment_proof_original_name'] = $proofFile->getClientOriginalName();
+            $data['payment_proof_uploaded_at'] = now();
+        }
+
+        unset($data['payment_proof']);
 
         if ($data['transaction_type'] === 'settlement') {
             $referenceInvoice = $request->referenceInvoice()
@@ -642,6 +664,11 @@ class InvoiceController extends Controller
                 'down_payment' => $downPayment,
                 'down_payment_due' => $downPaymentDue,
                 'payment_date' => $paymentDate,
+                'payment_proof_disk' => $data['payment_proof_disk'] ?? null,
+                'payment_proof_path' => $data['payment_proof_path'] ?? null,
+                'payment_proof_filename' => $data['payment_proof_filename'] ?? null,
+                'payment_proof_original_name' => $data['payment_proof_original_name'] ?? null,
+                'payment_proof_uploaded_at' => $data['payment_proof_uploaded_at'] ?? null,
             ]);
 
             foreach ($items as $item) {
@@ -683,6 +710,11 @@ class InvoiceController extends Controller
                 'payment_date' => $now,
                 'type' => Invoice::TYPE_SETTLEMENT,
                 'reference_invoice_id' => $referenceInvoice->id,
+                'payment_proof_disk' => $data['payment_proof_disk'] ?? null,
+                'payment_proof_path' => $data['payment_proof_path'] ?? null,
+                'payment_proof_filename' => $data['payment_proof_filename'] ?? null,
+                'payment_proof_original_name' => $data['payment_proof_original_name'] ?? null,
+                'payment_proof_uploaded_at' => $data['payment_proof_uploaded_at'] ?? null,
             ]);
 
             $referenceInvoice->loadMissing('items');

@@ -7,6 +7,13 @@
 
     <div class="py-12" x-data="invoicePayments({ defaultDate: '{{ now()->toDateString() }}', activeTab: @js($defaultTab) })">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div x-show="lightboxOpen" x-cloak class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-6" @keydown.window.escape="closeLightbox()">
+                <div class="absolute inset-0" @click="closeLightbox()"></div>
+                <div class="relative z-10 w-full max-w-3xl">
+                    <img :src="lightboxImageUrl" alt="Bukti Pembayaran" class="max-h-[80vh] w-full rounded-lg bg-white object-contain p-4">
+                    <button type="button" class="absolute -right-3 -top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-2xl font-semibold text-gray-700 shadow-lg" @click="closeLightbox()">&times;</button>
+                </div>
+            </div>
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                 @if (session('access_code_status'))
                     <div class="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
@@ -124,6 +131,13 @@
                                             <td class="px-6 py-4 text-right">Rp {{ number_format((float) $invoice->down_payment_due, 0, ',', '.') }}</td>
                                             <td class="px-6 py-4 text-center">
                                                 <div class="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+                                                    @if ($invoice->hasPaymentProof())
+                                                        <button type="button"
+                                                            class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
+                                                            @click="showProof('{{ $invoice->payment_proof_url }}')">
+                                                            Bukti
+                                                        </button>
+                                                    @endif
                                                     <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-sm font-medium text-gray-600 hover:text-gray-900">PDF</a>
                                                     <button type="button"
                                                         @click="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }}, {{ (float) ($invoice->down_payment_due ?? 0) }})"
@@ -171,6 +185,13 @@
                                             <td class="px-6 py-4 text-right">Rp {{ number_format(max((float) $invoice->total - (float) $invoice->down_payment, 0), 0, ',', '.') }}</td>
                                             <td class="px-6 py-4 text-center">
                                                 <div class="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+                                                    @if ($invoice->hasPaymentProof())
+                                                        <button type="button"
+                                                            class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
+                                                            @click="showProof('{{ $invoice->payment_proof_url }}')">
+                                                            Bukti
+                                                        </button>
+                                                    @endif
                                                     <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-sm font-medium text-gray-600 hover:text-gray-900">PDF</a>
                                                     <button type="button"
                                                         @click="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
@@ -204,6 +225,13 @@
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <span class="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800 uppercase">{{ ucwords($invoice->status) }}</span>
+                                            @if ($invoice->hasPaymentProof())
+                                                <button type="button"
+                                                    class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
+                                                    @click="showProof('{{ $invoice->payment_proof_url }}')">
+                                                    Lihat Bukti
+                                                </button>
+                                            @endif
                                             <a href="{{ route('invoices.public.show', $invoice->public_token) }}" target="_blank" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
                                                 Buka Tautan Pelunasan
                                             </a>
@@ -271,6 +299,13 @@
                 plannedDownPayment: 0,
                 paymentAmount: '',
                 paymentDate: config.defaultDate,
+                lightboxOpen: false,
+                lightboxImageUrl: null,
+                init() {
+                    this.$watch('lightboxOpen', (value) => {
+                        document.body.classList.toggle('overflow-hidden', value);
+                    });
+                },
                 tabClass(tab) {
                     const isActive = this.activeTab === tab;
                     const baseClasses = 'whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium focus:outline-none';
@@ -304,6 +339,18 @@
                 },
                 close() {
                     this.openModal = false;
+                },
+                showProof(url) {
+                    if (!url) {
+                        return;
+                    }
+
+                    this.lightboxImageUrl = url;
+                    this.lightboxOpen = true;
+                },
+                closeLightbox() {
+                    this.lightboxOpen = false;
+                    this.lightboxImageUrl = null;
                 },
                 formatCurrency(value) {
                     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(value || 0);

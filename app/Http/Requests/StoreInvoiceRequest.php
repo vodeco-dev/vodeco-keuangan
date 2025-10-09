@@ -52,6 +52,7 @@ class StoreInvoiceRequest extends FormRequest
                 Rule::in(['paid_full', 'paid_partial']),
             ],
             'settlement_paid_amount' => ['required_if:transaction_type,settlement', 'nullable', 'numeric', 'min:0'],
+            'payment_proof' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:5120'],
         ];
     }
 
@@ -91,6 +92,9 @@ class StoreInvoiceRequest extends FormRequest
             'settlement_paid_amount.required_if' => 'Nominal yang dibayarkan wajib diisi.',
             'settlement_paid_amount.numeric' => 'Nominal yang dibayarkan harus berupa angka.',
             'settlement_paid_amount.min' => 'Nominal yang dibayarkan minimal 0.',
+            'payment_proof.image' => 'Bukti pembayaran harus berupa gambar.',
+            'payment_proof.mimes' => 'Format bukti pembayaran harus PNG atau JPG.',
+            'payment_proof.max' => 'Ukuran bukti pembayaran maksimal 5MB.',
         ];
     }
 

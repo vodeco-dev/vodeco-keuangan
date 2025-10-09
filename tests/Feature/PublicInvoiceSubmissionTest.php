@@ -5,12 +5,15 @@ namespace Tests\Feature;
 use App\Enums\InvoicePortalPassphraseAccessType;
 use App\Enums\Role;
 use App\Models\Category;
+use App\Models\Invoice;
 use App\Models\InvoicePortalPassphrase;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as DomPdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Tests\TestCase;
 
@@ -82,6 +85,8 @@ class PublicInvoiceSubmissionTest extends TestCase
             }))
             ->andReturn($pdfMock);
 
+        Storage::fake('public');
+
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
             'transaction_type' => $defaultTransaction,
@@ -97,6 +102,7 @@ class PublicInvoiceSubmissionTest extends TestCase
                     'category_id' => $category->id,
                 ],
             ],
+            'payment_proof' => UploadedFile::fake()->image('bukti.png', 600, 600),
         ];
 
         $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
@@ -115,6 +121,10 @@ class PublicInvoiceSubmissionTest extends TestCase
             'quantity' => 1,
             'price' => 1500000,
         ]);
+
+        $invoice = Invoice::latest('id')->first();
+        $this->assertNotNull($invoice?->payment_proof_path);
+        Storage::disk('public')->assertExists($invoice->payment_proof_path);
 
         $passphrase->refresh();
 
@@ -176,6 +186,8 @@ class PublicInvoiceSubmissionTest extends TestCase
             }))
             ->andReturn($pdfMock);
 
+        Storage::fake('public');
+
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
             'transaction_type' => 'full_payment',
@@ -191,6 +203,7 @@ class PublicInvoiceSubmissionTest extends TestCase
                     'category_id' => $category->id,
                 ],
             ],
+            'payment_proof' => UploadedFile::fake()->image('bukti.png', 600, 600),
         ];
 
         $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
@@ -289,6 +302,7 @@ class PublicInvoiceSubmissionTest extends TestCase
                     'category_id' => $category->id,
                 ],
             ],
+            'payment_proof' => UploadedFile::fake()->image('bukti.png', 600, 600),
         ];
 
         $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
@@ -335,6 +349,8 @@ class PublicInvoiceSubmissionTest extends TestCase
             ],
         ];
 
+        Storage::fake('public');
+
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
             'transaction_type' => 'down_payment',
@@ -351,6 +367,7 @@ class PublicInvoiceSubmissionTest extends TestCase
                     'category_id' => $category->id,
                 ],
             ],
+            'payment_proof' => UploadedFile::fake()->image('bukti.png', 600, 600),
         ];
 
         $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
