@@ -259,6 +259,8 @@ class TransactionService
             $baseQuery->where('category_id', $categoryId);
         }
 
+        $dateExpression = $this->dateGroupExpression();
+
         $pemasukanData = collect();
         if (!$type || $type === 'pemasukan') {
             $pemasukanQuery = clone $baseQuery;
@@ -266,9 +268,9 @@ class TransactionService
                 ->whereHas('category', function ($query) {
                     $query->where('type', 'pemasukan');
                 })
-                ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
-                ->groupBy('date')
-                ->pluck('total', 'date');
+                ->selectRaw("{$dateExpression} as grouped_date, SUM(amount) as total")
+                ->groupByRaw($dateExpression)
+                ->pluck('total', 'grouped_date');
         }
 
         $pengeluaranData = collect();
@@ -278,9 +280,9 @@ class TransactionService
                 ->whereHas('category', function ($query) {
                     $query->where('type', 'pengeluaran');
                 })
-                ->select(DB::raw('DATE(date) as date'), DB::raw('SUM(amount) as total'))
-                ->groupBy('date')
-                ->pluck('total', 'date');
+                ->selectRaw("{$dateExpression} as grouped_date, SUM(amount) as total")
+                ->groupByRaw($dateExpression)
+                ->pluck('total', 'grouped_date');
         }
 
         $dates = collect();
@@ -297,6 +299,18 @@ class TransactionService
             'pemasukan' => $dates->map(fn ($date) => $pemasukanData[$date] ?? 0),
             'pengeluaran' => $dates->map(fn ($date) => $pengeluaranData[$date] ?? 0),
         ];
+    }
+
+    private function dateGroupExpression(): string
+    {
+        $connection = DB::connection();
+        $grammar = $connection->getQueryGrammar();
+        $column = $grammar->wrap('transactions.date');
+
+        return match ($connection->getDriverName()) {
+            'sqlsrv' => "CONVERT(date, {$column})",
+            default => "DATE({$column})",
+        };
     }
 }
 
