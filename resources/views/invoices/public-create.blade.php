@@ -72,6 +72,13 @@
                                 'id' => $category->id,
                                 'name' => $category->name,
                             ])->values();
+
+                            $allowedPortalTabs = ['create_invoice', 'confirm_payment'];
+                            $activePortalTab = old('portal_mode') ?: session('active_portal_tab', 'create_invoice');
+
+                            if (! in_array($activePortalTab, $allowedPortalTabs, true)) {
+                                $activePortalTab = 'create_invoice';
+                            }
                         @endphp
 
                         <div class="rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-indigo-800">
@@ -99,130 +106,155 @@
                             </div>
                         @endif
 
-                        @if (empty($allowedTransactions))
-                            <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
-                                Passphrase aktif tidak memiliki tipe transaksi yang diizinkan. Hubungi administrator untuk memperbarui konfigurasi.
-                            </div>
-                        @else
-                            <form action="{{ route('invoices.public.store') }}" method="POST" class="space-y-10" id="invoice-form"
-                                enctype="multipart/form-data"
-                                x-data="{
-                                    activeTab: '{{ $defaultTransaction }}',
-                                    proofConfirmed: false,
-                                    init() {
-                                        window.addEventListener('invoice-transaction-tab-changed', (event) => {
-                                            if (!event.detail || !event.detail.tab) {
-                                                return;
-                                            }
-
-                                            this.activeTab = event.detail.tab;
-                                        });
-
-                                        this.$watch('proofConfirmed', (value) => {
-                                            if (!value && this.$refs.paymentProof) {
-                                                this.$refs.paymentProof.value = '';
-                                            }
-                                        });
-                                    },
-                                }">
-                                @csrf
-                                <input type="hidden" name="passphrase_token" value="{{ $passphraseToken }}">
-
-                                <div class="rounded-lg border border-blue-100 bg-blue-50 p-5">
-                                    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                        <div>
-                                            <h2 class="text-lg font-semibold text-blue-900">Konfirmasi Bukti Pembayaran</h2>
-                                            <p class="mt-1 text-sm text-blue-800">Unggah bukti pembayaran dalam format PNG atau JPG sebelum mengirim formulir. Bukti akan diverifikasi kembali oleh tim akuntansi.</p>
-                                        </div>
-                                        <button type="button"
-                                            class="inline-flex items-center justify-center rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50"
-                                            @click="proofConfirmed = !proofConfirmed">
-                                            <span x-text="proofConfirmed ? 'Batalkan Konfirmasi' : 'Konfirmasi & Unggah Bukti'"></span>
-                                        </button>
-                                    </div>
-                                    <p class="mt-3 text-xs text-blue-700" x-show="!proofConfirmed" x-cloak>
-                                        Tekan tombol konfirmasi untuk membuka kolom unggah bukti.
-                                    </p>
-                                </div>
-
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div class="space-y-4">
-                                        <div>
-                                            <label for="client_name" class="block text-sm font-medium text-gray-700">Nama Klien</label>
-                                            <input type="text" name="client_name" id="client_name" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="{{ old('client_name') }}" :required="activeTab !== 'settlement'" :disabled="activeTab === 'settlement'">
-                                            @error('client_name')
-                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                        <div>
-                                            <label for="client_whatsapp" class="block text-sm font-medium text-gray-700">Nomor WhatsApp Klien</label>
-                                            <input type="text" name="client_whatsapp" id="client_whatsapp" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="{{ old('client_whatsapp') }}" :required="activeTab !== 'settlement'" :disabled="activeTab === 'settlement'">
-                                            @error('client_whatsapp')
-                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                        <div>
-                                            <label for="due_date" class="block text-sm font-medium text-gray-700">Tanggal Jatuh Tempo</label>
-                                            <input type="date" name="due_date" id="due_date" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="{{ old('due_date') }}" :disabled="activeTab === 'settlement'">
-                                            @error('due_date')
-                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                    <div class="space-y-4">
-                                        <div>
-                                            <label for="client_address" class="block text-sm font-medium text-gray-700">Alamat Klien</label>
-                                            <textarea name="client_address" id="client_address" rows="6" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" :required="activeTab !== 'settlement'" :disabled="activeTab === 'settlement'">{{ old('client_address') }}</textarea>
-                                            @error('client_address')
-                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <x-invoice.transaction-tabs
-                                    id="public-invoice-tabs"
-                                    form-id="invoice-form"
-                                    :items="$oldItems"
-                                    :category-options="$categoryOptions"
-                                    :allowed-transactions="$allowedTransactions"
-                                    :default-transaction="$defaultTransaction"
-                                    variant="public"
-                                    down-payment-field-label="Rencana Down Payment"
-                                    down-payment-placeholder="Contoh: 5.000.000"
-                                    down-payment-help="Opsional. Nilai ini akan diusulkan sebagai nominal pembayaran awal ketika mencatat pembayaran."
-                                    :down-payment-required="false"
-                                    add-item-button-label="+ Tambah Item"
-                                    total-label="Total Invoice"
-                                    :down-payment-value="old('down_payment_due')"
-                                    :settlement-invoice-number="old('settlement_invoice_number')"
-                                    :settlement-remaining-balance="old('settlement_remaining_balance')"
-                                    :settlement-paid-amount="old('settlement_paid_amount')"
-                                    :settlement-payment-status="old('settlement_payment_status')"
-                                    data-reference-url-template="{{ route('invoices.public.reference', ['number' => '__NUMBER__']) }}"
-                                />
-
-                                <div class="space-y-2">
-                                    <label for="payment_proof" class="block text-sm font-medium text-gray-700">Bukti Pembayaran (PNG atau JPG)</label>
-                                    <input type="file" name="payment_proof" id="payment_proof" x-ref="paymentProof"
-                                        accept="image/png,image/jpeg"
-                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                        :required="proofConfirmed"
-                                        :disabled="!proofConfirmed">
-                                    <p class="text-xs text-gray-500">Pastikan bukti terlihat jelas. File maksimal 5MB.</p>
-                                    @error('payment_proof')
-                                        <p class="text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div class="flex justify-end">
-                                    <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-                                        :disabled="!proofConfirmed">
-                                        Buat & Unduh Invoice
+                        <div x-data="{ activePortalTab: '{{ $activePortalTab }}' }">
+                            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div class="flex items-center gap-2 rounded-xl bg-gray-100 p-1">
+                                    <button type="button"
+                                        class="flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition"
+                                        :class="activePortalTab === 'create_invoice' ? 'bg-white text-indigo-600 shadow' : 'text-gray-600 hover:text-indigo-600'"
+                                        @click="activePortalTab = 'create_invoice'">
+                                        Buat Invoice
+                                    </button>
+                                    <button type="button"
+                                        class="flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition"
+                                        :class="activePortalTab === 'confirm_payment' ? 'bg-white text-indigo-600 shadow' : 'text-gray-600 hover:text-indigo-600'"
+                                        @click="activePortalTab = 'confirm_payment'">
+                                        Konfirmasi Pembayaran
                                     </button>
                                 </div>
-                            </form>
-                        @endif
+                                <p class="text-xs text-gray-500 md:text-sm" x-show="activePortalTab === 'confirm_payment'" x-cloak>
+                                    Unggah bukti pembayaran dengan menyertakan nomor invoice yang telah diterbitkan.
+                                </p>
+                            </div>
+
+                            <div class="mt-8 space-y-10">
+                                <div x-show="activePortalTab === 'create_invoice'" x-cloak>
+                                    @if (empty($allowedTransactions))
+                                        <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
+                                            Passphrase aktif tidak memiliki tipe transaksi yang diizinkan. Hubungi administrator untuk memperbarui konfigurasi.
+                                        </div>
+                                    @else
+                                        <form action="{{ route('invoices.public.store') }}" method="POST" class="space-y-10" id="invoice-form"
+                                            x-data="{
+                                                activeTab: '{{ $defaultTransaction }}',
+                                                init() {
+                                                    window.addEventListener('invoice-transaction-tab-changed', (event) => {
+                                                        if (!event.detail || !event.detail.tab) {
+                                                            return;
+                                                        }
+
+                                                        this.activeTab = event.detail.tab;
+                                                    });
+                                                },
+                                            }">
+                                            @csrf
+                                            <input type="hidden" name="passphrase_token" value="{{ $passphraseToken }}">
+                                            <input type="hidden" name="portal_mode" value="create_invoice">
+
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div class="space-y-4">
+                                                    <div>
+                                                        <label for="client_name" class="block text-sm font-medium text-gray-700">Nama Klien</label>
+                                                        <input type="text" name="client_name" id="client_name" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="{{ old('client_name') }}" :required="activeTab !== 'settlement'" :disabled="activeTab === 'settlement'">
+                                                        @error('client_name')
+                                                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                        @enderror
+                                                    </div>
+                                                    <div>
+                                                        <label for="client_whatsapp" class="block text-sm font-medium text-gray-700">Nomor WhatsApp Klien</label>
+                                                        <input type="text" name="client_whatsapp" id="client_whatsapp" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="{{ old('client_whatsapp') }}" :required="activeTab !== 'settlement'" :disabled="activeTab === 'settlement'">
+                                                        @error('client_whatsapp')
+                                                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                        @enderror
+                                                    </div>
+                                                    <div>
+                                                        <label for="due_date" class="block text-sm font-medium text-gray-700">Tanggal Jatuh Tempo</label>
+                                                        <input type="date" name="due_date" id="due_date" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="{{ old('due_date') }}" :disabled="activeTab === 'settlement'">
+                                                        @error('due_date')
+                                                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                        @enderror
+                                                    </div>
+                                                </div>
+                                                <div class="space-y-4">
+                                                    <div>
+                                                        <label for="client_address" class="block text-sm font-medium text-gray-700">Alamat Klien</label>
+                                                        <textarea name="client_address" id="client_address" rows="6" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" :required="activeTab !== 'settlement'" :disabled="activeTab === 'settlement'">{{ old('client_address') }}</textarea>
+                                                        @error('client_address')
+                                                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                        @enderror
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <x-invoice.transaction-tabs
+                                                id="public-invoice-tabs"
+                                                form-id="invoice-form"
+                                                :items="$oldItems"
+                                                :category-options="$categoryOptions"
+                                                :allowed-transactions="$allowedTransactions"
+                                                :default-transaction="$defaultTransaction"
+                                                variant="public"
+                                                down-payment-field-label="Rencana Down Payment"
+                                                down-payment-placeholder="Contoh: 5.000.000"
+                                                down-payment-help="Opsional. Nilai ini akan diusulkan sebagai nominal pembayaran awal ketika mencatat pembayaran."
+                                                :down-payment-required="false"
+                                                add-item-button-label="+ Tambah Item"
+                                                total-label="Total Invoice"
+                                                :down-payment-value="old('down_payment_due')"
+                                                :settlement-invoice-number="old('settlement_invoice_number')"
+                                                :settlement-remaining-balance="old('settlement_remaining_balance')"
+                                                :settlement-paid-amount="old('settlement_paid_amount')"
+                                                :settlement-payment-status="old('settlement_payment_status')"
+                                                data-reference-url-template="{{ route('invoices.public.reference', ['number' => '__NUMBER__']) }}"
+                                            />
+
+                                            <div class="flex justify-end">
+                                                <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                                    Buat & Unduh Invoice
+                                                </button>
+                                            </div>
+                                        </form>
+                                    @endif
+                                </div>
+
+                                <div x-show="activePortalTab === 'confirm_payment'" x-cloak>
+                                    <form action="{{ route('invoices.public.payment-confirm') }}" method="POST" class="space-y-6" enctype="multipart/form-data">
+                                        @csrf
+                                        <input type="hidden" name="passphrase_token" value="{{ $passphraseToken }}">
+                                        <input type="hidden" name="portal_mode" value="confirm_payment">
+
+                                        <div class="space-y-3">
+                                            <h2 class="text-lg font-semibold text-gray-900">Unggah Bukti Pembayaran</h2>
+                                            <p class="text-sm text-gray-600">Masukkan nomor invoice yang telah dibuat kemudian unggah bukti pembayaran dalam format PNG atau JPG.</p>
+                                        </div>
+
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label for="invoice_number" class="block text-sm font-medium text-gray-700">Nomor Invoice</label>
+                                                <input type="text" name="invoice_number" id="invoice_number" value="{{ old('invoice_number') }}" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                                @error('invoice_number')
+                                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                            <div>
+                                                <label for="payment_proof" class="block text-sm font-medium text-gray-700">Bukti Pembayaran (PNG atau JPG)</label>
+                                                <input type="file" name="payment_proof" id="payment_proof" accept="image/png,image/jpeg" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                                <p class="mt-1 text-xs text-gray-500">Pastikan bukti terlihat jelas. File maksimal 5MB.</p>
+                                                @error('payment_proof')
+                                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                        </div>
+
+                                        <div class="flex justify-end">
+                                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                                Kirim Bukti Pembayaran
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     @endif
                 </div>
             </div>
