@@ -15,7 +15,9 @@
                 @endif
 
                 @if (session('access_code_generated'))
-                    @php($generated = session('access_code_generated'))
+                    @php
+                        $generated = session('access_code_generated');
+                    @endphp
                     <div class="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
                         <p class="font-semibold">Kode akses baru berhasil dibuat.</p>
                         <p class="mt-2"><span class="font-semibold">Peran:</span> {{ $generated['role'] }}</p>
@@ -55,7 +57,14 @@
                     </div>
                 @endif
 
-                @if (in_array(auth()->user()->role, [\App\Enums\Role::STAFF, \App\Enums\Role::ADMIN], true))
+                @php
+                    $userRole = auth()->user()?->role;
+                    $canCreatePassThroughInvoice = \Illuminate\Support\Facades\Route::has('pass-through.invoices.create')
+                        && $userRole !== null
+                        && in_array($userRole, [\App\Enums\Role::STAFF, \App\Enums\Role::ADMIN], true);
+                @endphp
+
+                @if ($canCreatePassThroughInvoice)
                     <div class="mb-6 flex justify-end">
                         <a href="{{ route('pass-through.invoices.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-purple-700">
                             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -66,7 +75,9 @@
                     </div>
                 @endif
 
-                @php($unlockedTabs = collect($tabStates)->filter(fn ($tab) => $tab['unlocked']))
+                @php
+                    $unlockedTabs = collect($tabStates)->filter(fn ($tab) => $tab['unlocked']);
+                @endphp
                 <div>
                     @if ($unlockedTabs->isNotEmpty())
                         <div class="border-b border-gray-200 mb-6">
