@@ -19,7 +19,6 @@ Vodeco Keuangan membantu tim keuangan mencatat transaksi, menerbitkan invoice, m
 - [Persiapan Lingkungan](#-persiapan-lingkungan)
 - [Langkah Instalasi Cepat](#-langkah-instalasi-cepat)
 - [Konfigurasi Penting](#-konfigurasi-penting)
-- [Data Contoh & Akun Demo](#-data-contoh--akun-demo)
 - [Alur Kerja Harian](#-alur-kerja-harian)
 - [Pengujian](#-pengujian)
 - [Deployment](#-deployment)
@@ -120,20 +119,6 @@ Sesuaikan variabel berikut di `.env`:
 - `CACHE_STORE` atau `REDIS_*` – aktifkan cache sesuai kebutuhan.
 
 Jangan lupa menjalankan `php artisan storage:link` jika memakai penyimpanan lokal untuk bukti transaksi.
-
----
-
-## 🧪 Data Contoh & Akun Demo
-
-Menjalankan `php artisan migrate --seed` akan membuat akun berikut:
-
-| Peran       | Email                     | Kata Sandi |
-| ----------- | ------------------------- | ---------- |
-| Admin       | `admin@vodeco.co.id`      | `masukaja` |
-| Staff       | `staff@vodeco.co.id`      | `masukaja` |
-| Accountant  | `accountant@vodeco.co.id` | `masukaja` |
-
-Seeder juga menambahkan kategori transaksi dasar sehingga fitur dapat langsung dicoba.
 
 ---
 
