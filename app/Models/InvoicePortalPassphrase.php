@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -54,6 +55,20 @@ class InvoicePortalPassphrase extends Model
     public function logs(): HasMany
     {
         return $this->hasMany(InvoicePortalPassphraseLog::class);
+    }
+
+    public function creatorCustomerService(): HasOne
+    {
+        return $this->hasOne(CustomerService::class, 'user_id', 'created_by');
+    }
+
+    public function creatorCustomerServiceId(): ?int
+    {
+        if ($this->relationLoaded('creatorCustomerService')) {
+            return $this->creatorCustomerService?->id;
+        }
+
+        return $this->creatorCustomerService()->value('id');
     }
 
     public function isExpired(): bool
@@ -110,5 +125,82 @@ class InvoicePortalPassphrase extends Model
         $typeLabel = $this->access_type?->label();
 
         return $typeLabel ? sprintf('%s (%s)', $name, $typeLabel) : $name;
+    }
+
+    public function canManageInvoice(Invoice $invoice): bool
+    {
+        $customerServiceId = $this->creatorCustomerServiceId();
+
+        if ($invoice->customer_service_id) {
+            if (! $customerServiceId || (int) $invoice->customer_service_id !== (int) $customerServiceId) {
+                return false;
+            }
+        }
+
+        if ($invoice->created_by && (int) $invoice->created_by !== (int) $this->created_by) {
+            return false;
+        }
+
+        if (! $invoice->customer_service_id && ! $invoice->created_by) {
+            $fingerprint = $this->normalizeLabel($invoice->customer_service_name);
+
+            if ($fingerprint !== '' && ! in_array($fingerprint, $this->knownLabelFingerprints(), true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function labelMatches(?string $value): bool
+    {
+        $fingerprint = $this->normalizeLabel($value);
+
+        if ($fingerprint === '') {
+            return false;
+        }
+
+        return in_array($fingerprint, $this->knownLabelFingerprints(), true);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function knownLabelFingerprints(): array
+    {
+        $labels = [
+            $this->displayLabel(),
+            $this->label,
+            optional($this->creator)->name,
+        ];
+
+        $fingerprints = [];
+
+        foreach ($labels as $label) {
+            $normalized = $this->normalizeLabel($label);
+
+            if ($normalized === '') {
+                continue;
+            }
+
+            $fingerprints[$normalized] = $normalized;
+        }
+
+        return array_values($fingerprints);
+    }
+
+    protected function normalizeLabel(?string $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $normalized = trim((string) $value);
+
+        if ($normalized === '') {
+            return '';
+        }
+
+        return preg_replace('/\s+/u', ' ', mb_strtolower($normalized, 'UTF-8'));
     }
 }
