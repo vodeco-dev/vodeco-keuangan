@@ -11,6 +11,7 @@ use App\Models\InvoiceItem;
 use App\Models\Transaction;
 use App\Models\Category;
 use App\Models\Debt;
+use App\Models\CustomerService;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -234,6 +235,16 @@ class InvoiceController extends Controller
 
         $data['customer_service_name'] = $passphrase->displayLabel();
 
+        $customerServiceId = CustomerService::query()
+            ->where('user_id', $passphrase->created_by)
+            ->value('id');
+
+        if ($customerServiceId) {
+            $data['customer_service_id'] = $customerServiceId;
+        }
+
+        $data['created_by'] = $passphrase->created_by;
+
         if ($data['transaction_type'] === 'settlement') {
             $referenceInvoice = $request->referenceInvoice()
                 ?? Invoice::where('number', $data['settlement_invoice_number'])->firstOrFail();
@@ -264,6 +275,23 @@ class InvoiceController extends Controller
             abort(403, 'Permintaan tidak valid.');
         }
 
+        $metadataUpdates = [];
+        $creatorId = $passphrase->created_by;
+
+        if (! $invoice->created_by && $creatorId) {
+            $metadataUpdates['created_by'] = $creatorId;
+        }
+
+        $customerServiceId = $passphrase->creatorCustomerServiceId();
+
+        if ($customerServiceId && ! $invoice->customer_service_id) {
+            $metadataUpdates['customer_service_id'] = $customerServiceId;
+        }
+
+        if (! $invoice->customer_service_name || $passphrase->labelMatches($invoice->customer_service_name)) {
+            $metadataUpdates['customer_service_name'] = $passphrase->displayLabel();
+        }
+
         $proofFile = $request->file('payment_proof');
 
         $disk = 'public';
@@ -278,20 +306,21 @@ class InvoiceController extends Controller
 
         Storage::disk($disk)->putFileAs($directory, $proofFile, $filename);
 
-        $invoice->forceFill([
+        $invoice->forceFill(array_merge($metadataUpdates, [
             'payment_proof_disk' => $disk,
             'payment_proof_path' => $path,
             'payment_proof_filename' => $filename,
             'payment_proof_original_name' => $proofFile->getClientOriginalName(),
             'payment_proof_uploaded_at' => now(),
-        ])->save();
+        ]))->save();
 
         $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'payment_confirmation');
 
         return redirect()
             ->route('invoices.public.create')
             ->with('status', 'Bukti pembayaran berhasil dikirim. Tim akuntansi akan memverifikasi dalam waktu dekat.')
-            ->with('active_portal_tab', 'confirm_payment');
+            ->with('active_portal_tab', 'confirm_payment')
+            ->with('confirmed_invoice_summary', $this->makeInvoiceReferencePayload($invoice));
     }
 
     public function publicReference(Request $request, string $number): JsonResponse
@@ -314,6 +343,37 @@ class InvoiceController extends Controller
             return response()->json([
                 'message' => 'Invoice referensi tidak ditemukan.',
             ], Response::HTTP_NOT_FOUND);
+        }
+
+        return response()->json($this->makeInvoiceReferencePayload($invoice));
+    }
+
+    public function publicPaymentReference(Request $request, string $number): JsonResponse
+    {
+        /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
+        $passphrase = $request->attributes->get('invoicePortalPassphrase');
+
+        if (! $passphrase) {
+            return response()->json([
+                'message' => 'Passphrase tidak valid atau sudah kedaluwarsa.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        $invoice = Invoice::query()
+            ->where('number', $number)
+            ->where('type', '!=', Invoice::TYPE_SETTLEMENT)
+            ->first();
+
+        if (! $invoice) {
+            return response()->json([
+                'message' => 'Invoice tidak ditemukan.',
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        if (! $passphrase->canManageInvoice($invoice)) {
+            return response()->json([
+                'message' => 'Invoice tidak terdaftar pada akun Anda atau tidak diizinkan.',
+            ], Response::HTTP_FORBIDDEN);
         }
 
         return response()->json($this->makeInvoiceReferencePayload($invoice));
@@ -668,8 +728,8 @@ class InvoiceController extends Controller
 
             $invoice = Invoice::create([
                 'user_id' => $ownerId ?? auth()->id(),
-                'created_by' => auth()->id(),
-                'customer_service_id' => null,
+                'created_by' => $data['created_by'] ?? auth()->id(),
+                'customer_service_id' => $data['customer_service_id'] ?? null,
                 'customer_service_name' => $data['customer_service_name'] ?? auth()->user()?->name,
                 'client_name' => $data['client_name'],
                 'client_whatsapp' => $data['client_whatsapp'],
@@ -715,7 +775,7 @@ class InvoiceController extends Controller
 
             $invoice = Invoice::create([
                 'user_id' => $referenceInvoice->user_id,
-                'created_by' => auth()->id(),
+                'created_by' => $data['created_by'] ?? auth()->id(),
                 'customer_service_id' => $referenceInvoice->customer_service_id,
                 'customer_service_name' => $referenceInvoice->customer_service_name,
                 'client_name' => $referenceInvoice->client_name,
@@ -775,6 +835,8 @@ class InvoiceController extends Controller
             'down_payment' => (float) $invoice->down_payment,
             'remaining_balance' => $remaining,
             'status' => $invoice->status,
+            'customer_service_name' => $invoice->customer_service_name,
+            'payment_proof_uploaded_at' => $invoice->payment_proof_uploaded_at?->toIso8601String(),
         ];
     }
 

@@ -218,7 +218,23 @@
                                 </div>
 
                                 <div x-show="activePortalTab === 'confirm_payment'" x-cloak>
-                                    <form action="{{ route('invoices.public.payment-confirm') }}" method="POST" class="space-y-6" enctype="multipart/form-data">
+                                    @php
+                                        $confirmedInvoiceSummary = session('confirmed_invoice_summary');
+                                        $initialInvoiceNumber = old('invoice_number', $confirmedInvoiceSummary['number'] ?? '');
+                                    @endphp
+
+                                    <form
+                                        action="{{ route('invoices.public.payment-confirm') }}"
+                                        method="POST"
+                                        class="space-y-6"
+                                        enctype="multipart/form-data"
+                                        x-data="paymentConfirmationForm({
+                                            referenceUrl: @json(route('invoices.public.payment-reference', ['number' => '__NUMBER__'])),
+                                            initialNumber: @json($initialInvoiceNumber),
+                                            initialInvoice: @json($confirmedInvoiceSummary)
+                                        })"
+                                        x-init="init()"
+                                    >
                                         @csrf
                                         <input type="hidden" name="passphrase_token" value="{{ $passphraseToken }}">
                                         <input type="hidden" name="portal_mode" value="confirm_payment">
@@ -231,7 +247,24 @@
                                         <div class="space-y-4">
                                             <div>
                                                 <label for="invoice_number" class="block text-sm font-medium text-gray-700">Nomor Invoice</label>
-                                                <input type="text" name="invoice_number" id="invoice_number" value="{{ old('invoice_number') }}" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                                <div class="flex gap-3">
+                                                    <input
+                                                        type="text"
+                                                        name="invoice_number"
+                                                        id="invoice_number"
+                                                        x-model="invoiceNumber"
+                                                        @blur="lookupInvoice()"
+                                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                        required
+                                                    >
+                                                    <button
+                                                        type="button"
+                                                        class="mt-1 inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50"
+                                                        @click.prevent="lookupInvoice(true)"
+                                                    >
+                                                        Cek Invoice
+                                                    </button>
+                                                </div>
                                                 @error('invoice_number')
                                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                                 @enderror
@@ -243,6 +276,49 @@
                                                 @error('payment_proof')
                                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                                 @enderror
+                                            </div>
+
+                                            <div x-show="loading" x-cloak class="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-sm text-indigo-700">
+                                                Memeriksa data invoice...
+                                            </div>
+
+                                            <div x-show="invoice || error" x-cloak class="space-y-4">
+                                                <div x-show="invoice" x-cloak class="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                                                    <h3 class="text-base font-semibold text-green-900">Ringkasan Invoice</h3>
+                                                    <dl class="mt-3 space-y-1">
+                                                        <div class="flex items-center justify-between">
+                                                            <dt class="font-medium text-green-900">Nomor</dt>
+                                                            <dd x-text="invoice?.number ?? '-'" class="text-green-900"></dd>
+                                                        </div>
+                                                        <div class="flex items-center justify-between">
+                                                            <dt class="font-medium text-green-900">Customer Service</dt>
+                                                            <dd x-text="invoice?.customer_service_name ?? '-'" class="text-green-900"></dd>
+                                                        </div>
+                                                        <div class="flex items-center justify-between">
+                                                            <dt class="font-medium text-green-900">Klien</dt>
+                                                            <dd x-text="invoice?.client_name ?? '-'" class="text-green-900"></dd>
+                                                        </div>
+                                                        <div class="flex items-center justify-between">
+                                                            <dt class="font-medium text-green-900">Total Tagihan</dt>
+                                                            <dd x-text="formatCurrency(invoice?.total)" class="text-green-900"></dd>
+                                                        </div>
+                                                        <div class="flex items-center justify-between">
+                                                            <dt class="font-medium text-green-900">Pembayaran Masuk</dt>
+                                                            <dd x-text="formatCurrency(invoice?.down_payment)" class="text-green-900"></dd>
+                                                        </div>
+                                                        <div class="flex items-center justify-between">
+                                                            <dt class="font-medium text-green-900">Sisa Tagihan</dt>
+                                                            <dd x-text="formatCurrency(invoice?.remaining_balance)" class="text-green-900"></dd>
+                                                        </div>
+                                                        <div class="flex items-center justify-between">
+                                                            <dt class="font-medium text-green-900">Status</dt>
+                                                            <dd x-text="formatStatus(invoice?.status)" class="text-green-900"></dd>
+                                                        </div>
+                                                    </dl>
+                                                </div>
+                                                <div x-show="!invoice && error" x-cloak class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                                    <p x-text="error"></p>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -265,5 +341,105 @@
         </div>
     </div>
 
+    <script>
+        function paymentConfirmationForm({ referenceUrl, initialNumber = '', initialInvoice = null }) {
+            return {
+                referenceUrl,
+                invoiceNumber: initialNumber,
+                invoice: initialInvoice,
+                error: null,
+                loading: false,
+                lastFetchedNumber: initialInvoice?.number ?? null,
+                init() {
+                    if (this.invoice) {
+                        this.lastFetchedNumber = this.invoice?.number ?? null;
+                    } else if (this.invoiceNumber) {
+                        this.lookupInvoice();
+                    }
+                },
+                async lookupInvoice(force = false) {
+                    const number = (this.invoiceNumber || '').trim();
+
+                    if (!number) {
+                        this.invoice = null;
+                        this.error = null;
+                        this.lastFetchedNumber = null;
+
+                        return;
+                    }
+
+                    if (!force && this.lastFetchedNumber && this.lastFetchedNumber === number) {
+                        return;
+                    }
+
+                    this.loading = true;
+                    this.error = null;
+
+                    try {
+                        const response = await fetch(this.referenceUrl.replace('__NUMBER__', encodeURIComponent(number)), {
+                            headers: {
+                                'Accept': 'application/json',
+                            },
+                        });
+
+                        if (!response.ok) {
+                            let message = 'Invoice tidak ditemukan atau tidak dapat digunakan.';
+
+                            try {
+                                const data = await response.json();
+
+                                if (data?.message) {
+                                    message = data.message;
+                                }
+                            } catch (error) {
+                                // Ignore JSON parsing error
+                            }
+
+                            throw new Error(message);
+                        }
+
+                        const data = await response.json();
+
+                        this.invoice = data;
+                        this.lastFetchedNumber = number;
+                        this.error = null;
+                    } catch (error) {
+                        this.invoice = null;
+                        this.lastFetchedNumber = null;
+                        this.error = error?.message ?? 'Gagal memeriksa invoice.';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                formatCurrency(value) {
+                    if (value === null || value === undefined || value === '') {
+                        return '-';
+                    }
+
+                    const numberValue = Number(value);
+
+                    if (!Number.isFinite(numberValue)) {
+                        return value;
+                    }
+
+                    return new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0,
+                    }).format(numberValue);
+                },
+                formatStatus(status) {
+                    switch (status) {
+                        case 'lunas':
+                            return 'Lunas';
+                        case 'belum lunas':
+                            return 'Belum Lunas';
+                        default:
+                            return 'Belum Bayar';
+                    }
+                },
+            };
+        }
+    </script>
 </body>
 </html>

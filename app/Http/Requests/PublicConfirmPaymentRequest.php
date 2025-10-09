@@ -95,6 +95,12 @@ class PublicConfirmPaymentRequest extends FormRequest
                 return;
             }
 
+            if (! $passphrase->canManageInvoice($invoice)) {
+                $validator->errors()->add('invoice_number', 'Invoice tidak terdaftar pada akun Anda atau tidak dapat dikonfirmasi.');
+
+                return;
+            }
+
             $this->passphrase = $passphrase;
             $this->invoice = $invoice;
         });

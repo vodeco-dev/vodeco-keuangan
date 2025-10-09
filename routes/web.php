@@ -36,6 +36,9 @@ Route::post('/invoices/public', [InvoiceController::class, 'storePublic'])
 Route::post('/invoices/public/payment-confirmation', [InvoiceController::class, 'confirmPublicPayment'])
     ->middleware('invoice.passphrase:required')
     ->name('invoices.public.payment-confirm');
+Route::get('/invoices/public/payment-reference/{number}', [InvoiceController::class, 'publicPaymentReference'])
+    ->middleware('invoice.passphrase:required')
+    ->name('invoices.public.payment-reference');
 Route::post('/invoices/public/passphrase/verify', [InvoicePortalPassphraseVerificationController::class, 'store'])
     ->middleware('throttle:invoice-passphrase')
     ->name('invoices.public.passphrase.verify');
