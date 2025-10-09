@@ -41,6 +41,7 @@
 - [Data Contoh & Akun Demo](#-data-contoh--akun-demo)
 - [Operasional Harian](#-operasional-harian)
 - [Pengujian & Kualitas](#-pengujian--kualitas)
+- [Deployment](#-deployment)
 - [Berkontribusi](#-berkontribusi)
 - [Lisensi](#-lisensi)
 
@@ -258,6 +259,19 @@ Seeder juga menambahkan kategori dasar untuk pemasukan dan pengeluaran sehingga 
   composer test
   ```
 - Gunakan `npm run build` sebelum rilis untuk memastikan aset frontend siap produksi.
+
+---
+
+## 🚢 Deployment
+
+Saat melakukan deploy ke hosting/production, jalankan perintah berikut untuk memperbarui skema database dan menyegarkan cache Laravel:
+
+```bash
+php artisan migrate --force
+php artisan optimize:clear
+```
+
+Perintah `optimize:clear` akan menghapus cache konfigurasi, rute, event, dan view. Langkah ini penting terutama setelah menambahkan rute atau fitur baru seperti pengelolaan paket pass through. Tanpa membersihkan cache rute, Laravel tidak akan mengenali rute baru sehingga form atau tombol terkait bisa hilang di lingkungan produksi meskipun di lokal berfungsi normal.
 
 ---
 
