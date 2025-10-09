@@ -159,11 +159,6 @@
         <form method="GET" action="{{ route('debts.index') }}">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-4">
-                    <select name="type_filter" class="border-gray-300 rounded-lg text-sm">
-                        <option value="">Tipe: Semua</option>
-                        <option value="down_payment" {{ request('type_filter') == 'down_payment' ? 'selected' : '' }}>Down Payment</option>
-                        <option value="pass_through" {{ request('type_filter') == 'pass_through' ? 'selected' : '' }}>Pass Through</option>
-                    </select>
                     <select name="status_filter" class="border-gray-300 rounded-lg text-sm">
                         <option value="">Status: Semua</option>
                         <option value="{{ \App\Models\Debt::STATUS_BELUM_LUNAS }}" {{ request('status_filter') == \App\Models\Debt::STATUS_BELUM_LUNAS ? 'selected' : '' }}>Belum Lunas</option>
