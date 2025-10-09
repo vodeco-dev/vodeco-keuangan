@@ -389,7 +389,7 @@
     </div>
 
     <div x-show="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
-        <div @click.away="categoryModal = false" class="bg-white rounded-lg p-8 w-full max-w-2xl">
+        <div @click.away="categoryModal = false" class="bg-white rounded-lg p-8 w-full max-w-2xl mx-4 my-10 max-h-[calc(100vh-5rem)] overflow-y-auto">
             <h3 class="text-2xl font-bold mb-2">Pengaturan Pilihan Kategori</h3>
             <p class="text-sm text-gray-600 mb-6">Pilih kategori yang ingin ditampilkan ketika membuat atau melunasi catatan. Biarkan semua checkbox kosong untuk menampilkan seluruh kategori.</p>
             <form method="POST" action="{{ route('debts.category-preferences.update') }}" class="space-y-6">
