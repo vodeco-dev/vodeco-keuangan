@@ -303,6 +303,10 @@
                 </button>
             </div>
 
+            @php($passThroughPackageRoutesAvailable = \Illuminate\Support\Facades\Route::has('pass-through.packages.store')
+                && \Illuminate\Support\Facades\Route::has('pass-through.packages.update')
+                && \Illuminate\Support\Facades\Route::has('pass-through.packages.destroy'))
+
             @if ($errors->hasBag('passThroughPackage'))
                 <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     <h4 class="font-semibold">Gagal menambahkan paket:</h4>
@@ -325,110 +329,117 @@
                 </div>
             @endif
 
-            <div class="mt-6">
-                <h4 class="text-lg font-semibold text-gray-800">Tambah Paket Baru</h4>
-                <form method="POST" action="{{ route('pass-through.packages.store') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @csrf
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700">Nama Paket</label>
-                        <input type="text" name="name" value="{{ old('name') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Jenis Pelanggan</label>
-                        <select name="customer_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                            <option value="new" @selected(old('customer_type', 'new') === 'new')>Pelanggan Baru</option>
-                            <option value="existing" @selected(old('customer_type') === 'existing')>Pelanggan Lama</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Harga Paket</label>
-                        <input type="text" name="package_price" value="{{ old('package_price') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 10.000.000" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Saldo Harian Terpotong</label>
-                        <input type="text" name="daily_deduction" value="{{ old('daily_deduction') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000" required>
-                        <p class="mt-1 text-xs text-gray-500">Nilai ini digunakan sebagai referensi pemotongan saldo harian di menu Pass Through.</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
-                        <input type="text" name="maintenance_fee" value="{{ old('maintenance_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 1.500.000" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
-                        <input type="text" name="account_creation_fee" value="{{ old('account_creation_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000">
-                        <p class="mt-1 text-xs text-gray-500">Untuk pelanggan lama, biaya ini akan diabaikan otomatis.</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Biaya Perpanjangan</label>
-                        <input type="text" name="renewal_fee" value="{{ old('renewal_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 1.000.000">
-                    </div>
-                    <div class="md:col-span-2 flex justify-end">
-                        <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Simpan Paket</button>
-                    </div>
-                </form>
-            </div>
+            @if ($passThroughPackageRoutesAvailable)
+                <div class="mt-6">
+                    <h4 class="text-lg font-semibold text-gray-800">Tambah Paket Baru</h4>
+                    <form method="POST" action="{{ route('pass-through.packages.store') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @csrf
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Nama Paket</label>
+                            <input type="text" name="name" value="{{ old('name') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Jenis Pelanggan</label>
+                            <select name="customer_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="new" @selected(old('customer_type', 'new') === 'new')>Pelanggan Baru</option>
+                                <option value="existing" @selected(old('customer_type') === 'existing')>Pelanggan Lama</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Harga Paket</label>
+                            <input type="text" name="package_price" value="{{ old('package_price') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 10.000.000" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Saldo Harian Terpotong</label>
+                            <input type="text" name="daily_deduction" value="{{ old('daily_deduction') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000" required>
+                            <p class="mt-1 text-xs text-gray-500">Nilai ini digunakan sebagai referensi pemotongan saldo harian di menu Pass Through.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
+                            <input type="text" name="maintenance_fee" value="{{ old('maintenance_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 1.500.000" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
+                            <input type="text" name="account_creation_fee" value="{{ old('account_creation_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000">
+                            <p class="mt-1 text-xs text-gray-500">Untuk pelanggan lama, biaya ini akan diabaikan otomatis.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Biaya Perpanjangan</label>
+                            <input type="text" name="renewal_fee" value="{{ old('renewal_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 1.000.000">
+                        </div>
+                        <div class="md:col-span-2 flex justify-end">
+                            <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Simpan Paket</button>
+                        </div>
+                    </form>
+                </div>
 
-            <div class="mt-8">
-                <h4 class="text-lg font-semibold text-gray-800">Daftar Paket</h4>
-                <p class="text-sm text-gray-500">Ubah detail paket yang sudah tersedia atau hapus jika tidak lagi digunakan.</p>
-                <div class="mt-4 space-y-6">
-                    @forelse ($passThroughPackages as $package)
-                        <div class="rounded-lg border border-gray-200 p-5 shadow-sm">
-                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                                <div>
-                                    <h5 class="text-lg font-semibold text-gray-900">{{ $package->name }}</h5>
-                                    <p class="text-sm text-gray-500">{{ $package->customerLabel() }} &bull; Harga Paket: Rp{{ number_format($package->packagePrice, 0, ',', '.') }}</p>
+                <div class="mt-8">
+                    <h4 class="text-lg font-semibold text-gray-800">Daftar Paket</h4>
+                    <p class="text-sm text-gray-500">Ubah detail paket yang sudah tersedia atau hapus jika tidak lagi digunakan.</p>
+                    <div class="mt-4 space-y-6">
+                        @forelse ($passThroughPackages as $package)
+                            <div class="rounded-lg border border-gray-200 p-5 shadow-sm">
+                                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                    <div>
+                                        <h5 class="text-lg font-semibold text-gray-900">{{ $package->name }}</h5>
+                                        <p class="text-sm text-gray-500">{{ $package->customerLabel() }} &bull; Harga Paket: Rp{{ number_format($package->packagePrice, 0, ',', '.') }}</p>
+                                    </div>
+                                    <form method="POST" action="{{ route('pass-through.packages.destroy', $package->id) }}" onsubmit="return confirm('Hapus paket {{ $package->name }}?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Hapus</button>
+                                    </form>
                                 </div>
-                                <form method="POST" action="{{ route('pass-through.packages.destroy', $package->id) }}" onsubmit="return confirm('Hapus paket {{ $package->name }}?');">
+                                <form method="POST" action="{{ route('pass-through.packages.update', $package->id) }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Hapus</button>
+                                    @method('PUT')
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700">Nama Paket</label>
+                                        <input type="text" name="name" value="{{ $package->name }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Jenis Pelanggan</label>
+                                        <select name="customer_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                            <option value="new" @selected($package->customerType === 'new')>Pelanggan Baru</option>
+                                            <option value="existing" @selected($package->customerType === 'existing')>Pelanggan Lama</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Harga Paket</label>
+                                        <input type="text" name="package_price" value="{{ number_format($package->packagePrice, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Saldo Harian Terpotong</label>
+                                        <input type="text" name="daily_deduction" value="{{ number_format($package->dailyDeduction, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
+                                        <input type="text" name="maintenance_fee" value="{{ number_format($package->maintenanceFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
+                                        <input type="text" name="account_creation_fee" value="{{ number_format($package->accountCreationFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Biaya Perpanjangan</label>
+                                        <input type="text" name="renewal_fee" value="{{ number_format($package->renewalFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    </div>
+                                    <div class="md:col-span-2 flex justify-end">
+                                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Simpan Perubahan</button>
+                                    </div>
                                 </form>
                             </div>
-                            <form method="POST" action="{{ route('pass-through.packages.update', $package->id) }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                @csrf
-                                @method('PUT')
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700">Nama Paket</label>
-                                    <input type="text" name="name" value="{{ $package->name }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Jenis Pelanggan</label>
-                                    <select name="customer_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                        <option value="new" @selected($package->customerType === 'new')>Pelanggan Baru</option>
-                                        <option value="existing" @selected($package->customerType === 'existing')>Pelanggan Lama</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Harga Paket</label>
-                                    <input type="text" name="package_price" value="{{ number_format($package->packagePrice, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Saldo Harian Terpotong</label>
-                                    <input type="text" name="daily_deduction" value="{{ number_format($package->dailyDeduction, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
-                                    <input type="text" name="maintenance_fee" value="{{ number_format($package->maintenanceFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
-                                    <input type="text" name="account_creation_fee" value="{{ number_format($package->accountCreationFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Biaya Perpanjangan</label>
-                                    <input type="text" name="renewal_fee" value="{{ number_format($package->renewalFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                </div>
-                                <div class="md:col-span-2 flex justify-end">
-                                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Simpan Perubahan</button>
-                                </div>
-                            </form>
-                        </div>
-                    @empty
-                        <p class="text-sm text-gray-500">Belum ada paket pass through yang tersedia.</p>
-                    @endforelse
+                        @empty
+                            <p class="text-sm text-gray-500">Belum ada paket pass through yang tersedia.</p>
+                        @endforelse
+                    </div>
                 </div>
-            </div>
+            @else
+                <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    <h4 class="font-semibold">Fitur tidak tersedia</h4>
+                    <p>Pengelolaan paket pass through sementara tidak dapat digunakan karena rute aplikasi belum diaktifkan.</p>
+                </div>
+            @endif
 
             <div class="mt-6 flex justify-end">
                 <button type="button" @click="passThroughModal = false" class="px-4 py-2 bg-gray-200 rounded-lg">Tutup</button>
