@@ -289,8 +289,8 @@
 
     {{-- Modal Pengaturan Kategori --}}
     {{-- Modal Pengaturan Pass Through --}}
-    <div x-show="passThroughModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
-        <div @click.away="passThroughModal = false" class="bg-white rounded-lg p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div x-show="passThroughModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start overflow-y-auto py-10 px-4 z-50" style="display: none;">
+        <div @click.away="passThroughModal = false" class="bg-white rounded-lg p-8 w-full max-w-4xl max-h-[calc(100vh-5rem)] overflow-y-auto">
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <h3 class="text-2xl font-bold mb-2">Pengaturan Paket Pass Through</h3>
