@@ -129,7 +129,27 @@ class InvoicePortalPassphrase extends Model
 
     public function canManageInvoice(Invoice $invoice): bool
     {
-        return true;
+        $creatorId = (int) $this->created_by;
+
+        if ($creatorId !== 0 && (int) $invoice->created_by === $creatorId) {
+            return true;
+        }
+
+        if ((int) $invoice->created_by !== 0) {
+            return false;
+        }
+
+        $customerServiceId = $this->creatorCustomerServiceId();
+
+        if ($customerServiceId && (int) $invoice->customer_service_id === $customerServiceId) {
+            return true;
+        }
+
+        if ($invoice->customer_service_name) {
+            return $this->labelMatches($invoice->customer_service_name);
+        }
+
+        return false;
     }
 
     public function labelMatches(?string $value): bool

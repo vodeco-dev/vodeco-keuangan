@@ -19,7 +19,6 @@ use Illuminate\Http\Request;
 use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -381,37 +380,6 @@ class InvoiceController extends Controller
         return response()->json($this->makeInvoiceReferencePayload($invoice));
     }
 
-    public function publicPaymentReference(Request $request, string $number): JsonResponse
-    {
-        /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
-        $passphrase = $request->attributes->get('invoicePortalPassphrase');
-
-        if (! $passphrase) {
-            return response()->json([
-                'message' => 'Passphrase tidak valid atau sudah kedaluwarsa.',
-            ], Response::HTTP_FORBIDDEN);
-        }
-
-        $invoice = Invoice::query()
-            ->where('number', $number)
-            ->where('type', '!=', Invoice::TYPE_SETTLEMENT)
-            ->first();
-
-        if (! $invoice) {
-            return response()->json([
-                'message' => 'Invoice tidak ditemukan.',
-            ], Response::HTTP_NOT_FOUND);
-        }
-
-        if (! $passphrase->canManageInvoice($invoice)) {
-            return response()->json([
-                'message' => 'Invoice tidak terdaftar pada akun Anda atau tidak diizinkan.',
-            ], Response::HTTP_FORBIDDEN);
-        }
-
-        return response()->json($this->makeInvoiceReferencePayload($invoice));
-    }
-
     public function reference(Request $request, string $number): JsonResponse
     {
         $invoice = Invoice::query()
@@ -428,38 +396,6 @@ class InvoiceController extends Controller
         $this->authorize('view', $invoice);
 
         return response()->json($this->makeInvoiceReferencePayload($invoice));
-    }
-
-    public function checkStatus(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'number' => ['required', 'string'],
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Nomor invoice wajib diisi.',
-            ], 422);
-        }
-
-        $invoice = Invoice::query()
-            ->select(['number', 'status', 'due_date', 'total', 'client_name'])
-            ->where('number', $request->input('number'))
-            ->first();
-
-        if (! $invoice) {
-            return response()->json([
-                'message' => 'Invoice tidak ditemukan.',
-            ], 404);
-        }
-
-        return response()->json([
-            'number' => $invoice->number,
-            'status' => $invoice->status ?? 'belum bayar',
-            'due_date' => optional($invoice->due_date)->format('d F Y'),
-            'total' => number_format((float) $invoice->total, 2, ',', '.'),
-            'client_name' => $invoice->client_name,
-        ]);
     }
 
     public function send(Invoice $invoice): RedirectResponse
