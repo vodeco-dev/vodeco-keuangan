@@ -223,13 +223,17 @@
                                         $initialInvoiceNumber = old('invoice_number', $confirmedInvoiceSummary['number'] ?? '');
                                     @endphp
 
+                                    @php
+                                        $paymentReferenceUrlTemplate = route('invoices.public.payment-reference', ['number' => '__NUMBER__'], false);
+                                    @endphp
+
                                     <form
                                         action="{{ route('invoices.public.payment-confirm') }}"
                                         method="POST"
                                         class="space-y-6"
                                         enctype="multipart/form-data"
                                         x-data="paymentConfirmationForm({
-                                            referenceUrl: @json(route('invoices.public.payment-reference', ['number' => '__NUMBER__'], false)),
+                                            referenceUrl: @js($paymentReferenceUrlTemplate),
                                             initialNumber: @json($initialInvoiceNumber),
                                             initialInvoice: @json($confirmedInvoiceSummary)
                                         })"
