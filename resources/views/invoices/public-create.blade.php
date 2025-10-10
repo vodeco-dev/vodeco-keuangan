@@ -251,16 +251,28 @@
                                         <div class="space-y-4">
                                             <div>
                                                 <label for="invoice_number" class="block text-sm font-medium text-gray-700">Nomor Invoice</label>
-                                                <input
-                                                    type="text"
-                                                    name="invoice_number"
-                                                    id="invoice_number"
-                                                    x-model="invoiceNumber"
-                                                    class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                    placeholder="Masukkan nomor invoice untuk menampilkan ringkasan otomatis"
-                                                    required
-                                                >
-                                                <p class="mt-2 text-xs text-gray-500">Ringkasan invoice akan diperiksa otomatis setelah nomor diisi.</p>
+                                                <div class="mt-1 flex flex-col gap-2 sm:flex-row">
+                                                    <input
+                                                        type="text"
+                                                        name="invoice_number"
+                                                        id="invoice_number"
+                                                        x-model="invoiceNumber"
+                                                        @keydown.enter.prevent="lookupInvoice(true)"
+                                                        class="w-full flex-1 rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                        placeholder="Masukkan nomor invoice untuk menampilkan ringkasan otomatis"
+                                                        autocomplete="off"
+                                                        required
+                                                    >
+                                                    <button
+                                                        type="button"
+                                                        @click="lookupInvoice(true)"
+                                                        class="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-indigo-300 sm:w-auto"
+                                                        :disabled="loading || !invoiceNumber"
+                                                    >
+                                                        Periksa Invoice
+                                                    </button>
+                                                </div>
+                                                <p class="mt-2 text-xs text-gray-500">Ringkasan invoice akan diperiksa otomatis setelah nomor diisi atau saat tombol periksa ditekan.</p>
                                                 @error('invoice_number')
                                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                                 @enderror
@@ -397,8 +409,10 @@
 
                     try {
                         const response = await fetch(this.referenceUrl.replace('__NUMBER__', encodeURIComponent(number)), {
+                            credentials: 'same-origin',
                             headers: {
                                 'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
                             },
                         });
 
