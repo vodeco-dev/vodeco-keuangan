@@ -431,4 +431,28 @@ class PublicInvoiceSubmissionTest extends TestCase
             'action' => 'payment_confirmation',
         ]);
     }
+
+    public function test_authenticated_user_can_view_payment_proof_via_secure_route(): void
+    {
+        $admin = User::factory()->create([
+            'role' => Role::ADMIN,
+        ]);
+
+        $invoice = Invoice::factory()->create([
+            'user_id' => $admin->id,
+            'created_by' => $admin->id,
+            'payment_proof_disk' => 'public',
+            'payment_proof_path' => 'invoice-proofs/test-proof.png',
+            'payment_proof_filename' => 'test-proof.png',
+        ]);
+
+        Storage::fake('public');
+        $fakeImage = UploadedFile::fake()->image('proof.png', 300, 300);
+        Storage::disk('public')->put($invoice->payment_proof_path, file_get_contents($fakeImage->getRealPath()));
+
+        $response = $this->actingAs($admin)->get(route('invoices.payment-proof.show', $invoice));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'image/png');
+    }
 }

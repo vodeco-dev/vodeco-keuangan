@@ -134,7 +134,7 @@
                                                     @if ($invoice->hasPaymentProof())
                                                         <button type="button"
                                                             class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
-                                                            @click="showProof('{{ $invoice->payment_proof_url }}')">
+                                                            @click="showProof('{{ route('invoices.payment-proof.show', $invoice) }}')">
                                                             Bukti
                                                         </button>
                                                     @endif
@@ -188,7 +188,7 @@
                                                     @if ($invoice->hasPaymentProof())
                                                         <button type="button"
                                                             class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
-                                                            @click="showProof('{{ $invoice->payment_proof_url }}')">
+                                                            @click="showProof('{{ route('invoices.payment-proof.show', $invoice) }}')">
                                                             Bukti
                                                         </button>
                                                     @endif
@@ -228,7 +228,7 @@
                                             @if ($invoice->hasPaymentProof())
                                                 <button type="button"
                                                     class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
-                                                    @click="showProof('{{ $invoice->payment_proof_url }}')">
+                                                    @click="showProof('{{ route('invoices.payment-proof.show', $invoice) }}')">
                                                     Lihat Bukti
                                                 </button>
                                             @endif

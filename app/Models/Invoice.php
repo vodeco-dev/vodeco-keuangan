@@ -186,7 +186,23 @@ class Invoice extends Model
         $disk = $this->payment_proof_disk ?: config('filesystems.default');
 
         try {
-            return Storage::disk($disk)->url($this->payment_proof_path);
+            $storage = Storage::disk($disk);
+
+            if (! $storage->exists($this->payment_proof_path)) {
+                return null;
+            }
+
+            $url = $storage->url($this->payment_proof_path);
+
+            if (is_string($url) && $url !== '') {
+                return $url;
+            }
+        } catch (\Throwable $exception) {
+            // Fallback handled below.
+        }
+
+        try {
+            return route('invoices.payment-proof.show', $this);
         } catch (\Throwable $exception) {
             return null;
         }

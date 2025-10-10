@@ -149,6 +149,18 @@ Jangan lupa menjalankan `php artisan storage:link` jika memakai penyimpanan loka
   npm run build
   ```
 
+### 🔍 Verifikasi Portal Invoice Publik
+
+Gunakan langkah berikut untuk mengecek alur konfirmasi pembayaran yang diperbaiki:
+
+1. Pastikan dependensi terpasang dan jalankan server pengembangan Laravel:
+   ```bash
+   php artisan serve --host=0.0.0.0 --port=8000
+   ```
+2. Buka peramban ke `http://127.0.0.1:8000/invoices/public/create` dan masukkan nomor invoice untuk memastikan detailnya muncul.
+3. Unggah bukti pembayaran dan kirim formulir, lalu buka tautan pratinjau bukti di halaman admin untuk memastikan file dapat ditampilkan.
+4. Setelah selesai, hentikan server dengan `Ctrl+C`.
+
 ---
 
 ## 🚢 Deployment

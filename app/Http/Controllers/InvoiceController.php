@@ -27,6 +27,7 @@ use Illuminate\View\View;
 use App\Models\User;
 use App\Services\InvoiceSettlementService;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class InvoiceController extends Controller
 {
@@ -322,6 +323,37 @@ class InvoiceController extends Controller
             ->with('status', 'Bukti pembayaran berhasil dikirim. Tim akuntansi akan memverifikasi dalam waktu dekat.')
             ->with('active_portal_tab', 'confirm_payment')
             ->with('confirmed_invoice_summary', $this->makeInvoiceReferencePayload($invoice));
+    }
+
+    public function showPaymentProof(Invoice $invoice): Response
+    {
+        $this->authorize('view', $invoice);
+
+        if (! $invoice->hasPaymentProof()) {
+            abort(Response::HTTP_NOT_FOUND, 'Bukti pembayaran tidak ditemukan.');
+        }
+
+        $disk = $invoice->payment_proof_disk ?: config('filesystems.default');
+        $storage = Storage::disk($disk);
+
+        if (! $storage->exists($invoice->payment_proof_path)) {
+            abort(Response::HTTP_NOT_FOUND, 'Bukti pembayaran tidak ditemukan.');
+        }
+
+        try {
+            $contents = $storage->get($invoice->payment_proof_path);
+        } catch (Throwable $exception) {
+            abort(Response::HTTP_INTERNAL_SERVER_ERROR, 'Bukti pembayaran tidak dapat diakses.');
+        }
+
+        $mimeType = $storage->mimeType($invoice->payment_proof_path) ?: 'application/octet-stream';
+        $filename = $invoice->payment_proof_filename ?? basename($invoice->payment_proof_path);
+
+        return response($contents, Response::HTTP_OK, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+            'Cache-Control' => 'private, max-age=300',
+        ]);
     }
 
     public function publicReference(Request $request, string $number): JsonResponse
