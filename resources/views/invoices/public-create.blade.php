@@ -251,24 +251,16 @@
                                         <div class="space-y-4">
                                             <div>
                                                 <label for="invoice_number" class="block text-sm font-medium text-gray-700">Nomor Invoice</label>
-                                                <div class="flex gap-3">
-                                                    <input
-                                                        type="text"
-                                                        name="invoice_number"
-                                                        id="invoice_number"
-                                                        x-model="invoiceNumber"
-                                                        @blur="lookupInvoice()"
-                                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                        required
-                                                    >
-                                                    <button
-                                                        type="button"
-                                                        class="mt-1 inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50"
-                                                        @click.prevent="lookupInvoice(true)"
-                                                    >
-                                                        Cek Invoice
-                                                    </button>
-                                                </div>
+                                                <input
+                                                    type="text"
+                                                    name="invoice_number"
+                                                    id="invoice_number"
+                                                    x-model="invoiceNumber"
+                                                    class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                    placeholder="Masukkan nomor invoice untuk menampilkan ringkasan otomatis"
+                                                    required
+                                                >
+                                                <p class="mt-2 text-xs text-gray-500">Ringkasan invoice akan diperiksa otomatis setelah nomor diisi.</p>
                                                 @error('invoice_number')
                                                     <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                                 @enderror
@@ -354,7 +346,31 @@
                 error: null,
                 loading: false,
                 lastFetchedNumber: initialInvoice?.number ?? null,
+                lookupTimeout: null,
+                autoLookupDelay: 500,
                 init() {
+                    this.$watch('invoiceNumber', (value) => {
+                        if (this.lookupTimeout) {
+                            clearTimeout(this.lookupTimeout);
+                            this.lookupTimeout = null;
+                        }
+
+                        const trimmed = (value || '').trim();
+
+                        if (!trimmed) {
+                            this.invoice = null;
+                            this.error = null;
+                            this.lastFetchedNumber = null;
+
+                            return;
+                        }
+
+                        this.lookupTimeout = setTimeout(() => {
+                            this.lookupTimeout = null;
+                            this.lookupInvoice();
+                        }, this.autoLookupDelay);
+                    });
+
                     if (this.invoice) {
                         this.lastFetchedNumber = this.invoice?.number ?? null;
                     } else if (this.invoiceNumber) {
