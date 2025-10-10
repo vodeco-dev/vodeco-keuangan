@@ -205,7 +205,7 @@
                                                 :settlement-remaining-balance="old('settlement_remaining_balance')"
                                                 :settlement-paid-amount="old('settlement_paid_amount')"
                                                 :settlement-payment-status="old('settlement_payment_status')"
-                                                data-reference-url-template="{{ route('invoices.public.reference', ['number' => '__NUMBER__']) }}"
+                                                data-reference-url-template="{{ route('invoices.public.reference', ['number' => '__NUMBER__'], false) }}"
                                             />
 
                                             <div class="flex justify-end">
@@ -229,7 +229,7 @@
                                         class="space-y-6"
                                         enctype="multipart/form-data"
                                         x-data="paymentConfirmationForm({
-                                            referenceUrl: @json(route('invoices.public.payment-reference', ['number' => '__NUMBER__'])),
+                                            referenceUrl: @json(route('invoices.public.payment-reference', ['number' => '__NUMBER__'], false)),
                                             initialNumber: @json($initialInvoiceNumber),
                                             initialInvoice: @json($confirmedInvoiceSummary)
                                         })"
