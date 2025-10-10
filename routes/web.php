@@ -36,9 +36,6 @@ Route::post('/invoices/public', [InvoiceController::class, 'storePublic'])
 Route::post('/invoices/public/payment-confirmation', [InvoiceController::class, 'confirmPublicPayment'])
     ->middleware('invoice.passphrase:required')
     ->name('invoices.public.payment-confirm');
-Route::get('/invoices/public/payment-reference/{number}', [InvoiceController::class, 'publicPaymentReference'])
-    ->middleware('invoice.passphrase:required')
-    ->name('invoices.public.payment-reference');
 Route::post('/invoices/public/passphrase/verify', [InvoicePortalPassphraseVerificationController::class, 'store'])
     ->middleware('throttle:invoice-passphrase')
     ->name('invoices.public.passphrase.verify');
@@ -48,7 +45,6 @@ Route::post('/invoices/public/passphrase/logout', [InvoicePortalPassphraseVerifi
 Route::get('/invoices/public/reference/{number}', [InvoiceController::class, 'publicReference'])
     ->middleware('invoice.passphrase:required')
     ->name('invoices.public.reference');
-Route::get('/invoices/public/check-status', [InvoiceController::class, 'checkStatus'])->name('invoices.public.check-status');
 Route::get('/invoices/settlement/{token}', [InvoiceSettlementController::class, 'show'])
     ->name('invoices.settlement.show');
 Route::post('/invoices/settlement/{token}', [InvoiceSettlementController::class, 'store'])
