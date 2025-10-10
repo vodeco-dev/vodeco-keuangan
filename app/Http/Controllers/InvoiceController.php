@@ -100,7 +100,7 @@ class InvoiceController extends Controller
                 ->with('customerService')
                 ->latest();
 
-            if ($user->role !== Role::ADMIN) {
+            if ($user->role !== Role::ADMIN && $user->role !== Role::ACCOUNTANT) {
                 $baseQuery->where('user_id', $user->id);
             }
         }
@@ -312,6 +312,7 @@ class InvoiceController extends Controller
             'payment_proof_filename' => $filename,
             'payment_proof_original_name' => $proofFile->getClientOriginalName(),
             'payment_proof_uploaded_at' => now(),
+            'status' => 'belum lunas',
         ]))->save();
 
         $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'payment_confirmation');
