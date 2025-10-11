@@ -212,32 +212,38 @@
                                                 x-ref="transactionTabs"
                                             />
 
-                                            <div class="space-y-4 rounded-2xl border border-purple-200 bg-purple-50/70 p-6">
+                                            <div class="space-y-6 rounded-2xl border border-gray-200 bg-gray-50 p-6">
+                                                <div class="space-y-2">
+                                                    <h3 class="text-lg font-semibold text-gray-900">Invoice Pass Through</h3>
+                                                    <p class="text-sm text-gray-600">Gunakan paket pass through yang telah dikonfigurasi tim keuangan untuk mengisi rincian secara otomatis.</p>
+                                                </div>
+
                                                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                                    <div>
-                                                        <h3 class="text-lg font-semibold text-purple-900">Invoice Pass Through</h3>
-                                                        <p class="text-sm text-purple-700">Gunakan paket pass through yang telah dikonfigurasi tim keuangan untuk mengisi rincian secara otomatis.</p>
+                                                    <div class="space-y-1">
+                                                        <p class="text-sm font-medium text-gray-800">Aktifkan Paket Pass Through</p>
+                                                        <p class="text-xs text-gray-500">Aktifkan opsi ini bila ingin menggunakan paket pass through yang tersedia.</p>
                                                     </div>
-                                                    <button type="button"
-                                                        class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition"
-                                                        :class="passThroughEnabled ? 'bg-purple-600 text-white shadow' : 'border border-purple-300 bg-white text-purple-700 hover:bg-purple-100'"
+                                                    <button
+                                                        type="button"
+                                                        class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition"
+                                                        :class="passThroughEnabled ? 'border-green-500 bg-green-500 text-white shadow' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'"
                                                         @click="togglePassThrough()"
                                                         :disabled="!hasAvailablePackages()"
                                                         :title="hasAvailablePackages() ? '' : 'Belum ada paket pass through yang dapat dipilih.'">
                                                         <span x-text="passThroughEnabled ? 'Aktif' : 'Nonaktif'"></span>
-                                                        <span class="inline-flex h-2 w-2 rounded-full" :class="passThroughEnabled ? 'bg-white' : 'bg-purple-400'"></span>
+                                                        <span class="inline-flex h-2 w-2 rounded-full" :class="passThroughEnabled ? 'bg-white' : 'bg-gray-400'"></span>
                                                     </button>
                                                 </div>
 
-                                                <div x-show="!hasAvailablePackages()" x-cloak class="rounded-xl border border-purple-200 bg-white/60 p-4 text-sm text-purple-700">
+                                                <div x-show="!hasAvailablePackages()" x-cloak class="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
                                                     Belum ada paket pass through yang tersedia. Silakan hubungi tim keuangan untuk mengaktifkan paket terlebih dahulu.
                                                 </div>
 
                                                 <div x-show="passThroughEnabled && hasAvailablePackages()" x-cloak class="space-y-6">
                                                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                                                         <div>
-                                                            <label class="block text-sm font-medium text-purple-900">Jenis Pelanggan</label>
-                                                            <select name="pass_through_customer_type" x-model="selectedCustomerType" :disabled="!passThroughEnabled" class="mt-1 block w-full rounded-lg border-purple-200 bg-white shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                                                            <label class="block text-sm font-medium text-gray-700">Jenis Pelanggan</label>
+                                                            <select name="pass_through_customer_type" x-model="selectedCustomerType" :disabled="!passThroughEnabled" class="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                                                 <option value="{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}">Pelanggan Baru</option>
                                                                 <option value="{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_EXISTING }}">Pelanggan Lama</option>
                                                             </select>
@@ -246,8 +252,8 @@
                                                             @enderror
                                                         </div>
                                                         <div>
-                                                            <label class="block text-sm font-medium text-purple-900">Paket Pass Through</label>
-                                                            <select name="pass_through_package_id" x-model="selectedPackageId" :disabled="!passThroughEnabled || packageOptions().length === 0" class="mt-1 block w-full rounded-lg border-purple-200 bg-white shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                                                            <label class="block text-sm font-medium text-gray-700">Paket Pass Through</label>
+                                                            <select name="pass_through_package_id" x-model="selectedPackageId" :disabled="!passThroughEnabled || packageOptions().length === 0" class="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                                                 <option value="">Pilih paket</option>
                                                                 <template x-for="option in packageOptions()" :key="option.id">
                                                                     <option :value="option.id" x-text="option.name"></option>
@@ -259,36 +265,36 @@
                                                         </div>
                                                     </div>
 
-                                                    <div x-show="packageOptions().length === 0" x-cloak class="rounded-xl border border-purple-200 bg-white/80 p-4 text-sm text-purple-700">
+                                                    <div x-show="packageOptions().length === 0" x-cloak class="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
                                                         Tidak ada paket yang sesuai dengan jenis pelanggan yang dipilih.
                                                     </div>
 
-                                                    <div x-show="selectedPackageData()" x-cloak class="rounded-xl border border-white/60 bg-white p-6 shadow-sm">
-                                                        <h4 class="text-base font-semibold text-purple-900">Ringkasan Paket</h4>
-                                                        <dl class="mt-4 grid grid-cols-1 gap-4 text-sm text-purple-800 sm:grid-cols-2">
+                                                    <div x-show="selectedPackageData()" x-cloak class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                                        <h4 class="text-base font-semibold text-gray-900">Ringkasan Paket</h4>
+                                                        <dl class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
                                                             <div>
-                                                                <dt class="font-medium text-purple-600">Harga Paket</dt>
-                                                                <dd class="mt-1 text-base font-semibold" x-text="formatCurrency(selectedPackageData()?.package_price || 0)"></dd>
+                                                                <dt class="font-medium text-gray-600">Harga Paket</dt>
+                                                                <dd class="mt-1 text-base font-semibold text-gray-900" x-text="formatCurrency(selectedPackageData()?.package_price || 0)"></dd>
                                                             </div>
                                                             <div>
-                                                                <dt class="font-medium text-purple-600">Saldo Harian Terpotong</dt>
+                                                                <dt class="font-medium text-gray-600">Saldo Harian Terpotong</dt>
                                                                 <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.daily_deduction || 0)"></dd>
                                                             </div>
                                                             <div x-show="selectedCustomerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'">
-                                                                <dt class="font-medium text-purple-600">Biaya Pembuatan Akun</dt>
+                                                                <dt class="font-medium text-gray-600">Biaya Pembuatan Akun</dt>
                                                                 <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.account_creation_fee || 0)"></dd>
                                                             </div>
                                                             <div>
-                                                                <dt class="font-medium text-purple-600">Biaya Maintenance</dt>
+                                                                <dt class="font-medium text-gray-600">Biaya Maintenance</dt>
                                                                 <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.maintenance_fee || 0)"></dd>
                                                             </div>
                                                             <div>
-                                                                <dt class="font-medium text-purple-600">Biaya Perpanjangan</dt>
+                                                                <dt class="font-medium text-gray-600">Biaya Perpanjangan</dt>
                                                                 <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.renewal_fee || 0)"></dd>
                                                             </div>
                                                             <div class="sm:col-span-2">
-                                                                <dt class="font-medium text-purple-600">Dana Pass Through</dt>
-                                                                <dd class="mt-1 text-lg font-semibold text-purple-700" x-text="formatCurrency(passThroughAmount())"></dd>
+                                                                <dt class="font-medium text-gray-600">Dana Pass Through</dt>
+                                                                <dd class="mt-1 text-lg font-semibold text-gray-900" x-text="formatCurrency(passThroughAmount())"></dd>
                                                             </div>
                                                         </dl>
                                                     </div>
