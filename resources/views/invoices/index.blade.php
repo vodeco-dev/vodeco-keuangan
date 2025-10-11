@@ -214,9 +214,6 @@
                                                     Lihat Bukti
                                                 </button>
                                             @endif
-                                            <a href="{{ route('invoices.public.show', $invoice->public_token) }}" target="_blank" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
-                                                Buka Tautan Pelunasan
-                                            </a>
                                         </div>
                                     </div>
                                 </div>
