@@ -4,6 +4,7 @@ use Illuminate\Support\Str;
 $tabLabels = [
     'down_payment' => 'Down Payment',
     'full_payment' => 'Bayar Lunas',
+    'pass_through' => 'Pass Through',
     'settlement' => 'Pelunasan',
 ];
 
@@ -356,10 +357,12 @@ $forwardedAttributes = $attributes->except([
                 },
                 applyTabScope() {
                     const scope = this.activeTab;
+                    const isSettlement = scope === 'settlement';
+                    const isPassThrough = scope === 'pass_through';
                     this.$el.querySelectorAll('[data-transaction-scope]').forEach((element) => {
                         const targetScope = element.dataset.transactionScope;
                         if (targetScope === 'settlement') {
-                            const enable = scope === 'settlement';
+                            const enable = isSettlement;
                             element.disabled = !enable;
                             if (element.dataset.settlementRequired === 'true') {
                                 element.required = enable;
@@ -374,22 +377,35 @@ $forwardedAttributes = $attributes->except([
                                 element.required = enable;
                             }
                         } else if (targetScope === 'line-item') {
-                            element.disabled = scope === 'settlement';
+                            const disable = isSettlement || isPassThrough;
+                            element.disabled = disable;
+                            if (disable) {
+                                if (element.required && ! element.dataset.originalRequired) {
+                                    element.dataset.originalRequired = '1';
+                                }
+                                element.required = false;
+                            } else if (element.dataset.originalRequired === '1') {
+                                element.required = true;
+                                delete element.dataset.originalRequired;
+                            }
+                            if (! disable && element.dataset.originalRequired) {
+                                delete element.dataset.originalRequired;
+                            }
                         }
                     });
 
                     const itemsWrapper = this.$el.querySelector('[data-items-wrapper]');
                     if (itemsWrapper) {
-                        itemsWrapper.style.display = scope === 'settlement' ? 'none' : '';
+                        itemsWrapper.style.display = isSettlement || isPassThrough ? 'none' : '';
                     }
 
                     const settlementSection = this.$el.querySelector('[data-tab-visible="settlement"]');
                     if (settlementSection) {
-                        settlementSection.style.display = scope === 'settlement' ? '' : 'none';
+                        settlementSection.style.display = isSettlement ? '' : 'none';
                     }
 
                     if (this.addItemButton) {
-                        const disabled = scope === 'settlement';
+                        const disabled = isSettlement || isPassThrough;
                         this.addItemButton.disabled = disabled;
                         this.addItemButton.classList.toggle('opacity-50', disabled);
                         this.addItemButton.classList.toggle('cursor-not-allowed', disabled);
@@ -397,7 +413,7 @@ $forwardedAttributes = $attributes->except([
 
                     const totalWrapper = this.$el.querySelector('[data-total-wrapper]');
                     if (totalWrapper) {
-                        totalWrapper.style.display = scope === 'settlement' ? 'none' : '';
+                        totalWrapper.style.display = isSettlement || isPassThrough ? 'none' : '';
                     }
 
                     this.handleSettlementScopeChange();

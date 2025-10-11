@@ -54,7 +54,7 @@
                         </div>
                     @else
                         @php
-                            $allowedTransactions = array_values(array_intersect(['down_payment', 'full_payment', 'settlement'], $allowedTransactionTypes));
+                            $allowedTransactions = array_values(array_intersect(['down_payment', 'full_payment', 'pass_through', 'settlement'], $allowedTransactionTypes));
                             $defaultTransaction = old('transaction_type');
 
                             if (! $defaultTransaction || ! in_array($defaultTransaction, $allowedTransactions, true)) {
@@ -212,7 +212,11 @@
                                                 x-ref="transactionTabs"
                                             />
 
-                                            <div class="space-y-6 rounded-2xl border border-gray-200 bg-gray-50 p-6">
+                                            <div
+                                                class="space-y-6 rounded-2xl border border-gray-200 bg-gray-50 p-6"
+                                                x-show="activeTab === 'pass_through'"
+                                                x-cloak
+                                            >
                                                 <div class="space-y-2">
                                                     <h3 class="text-lg font-semibold text-gray-900">Invoice Pass Through</h3>
                                                     <p class="text-sm text-gray-600">Gunakan paket pass through yang telah dikonfigurasi tim keuangan untuk mengisi rincian secara otomatis.</p>
@@ -220,19 +224,15 @@
 
                                                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                                     <div class="space-y-1">
-                                                        <p class="text-sm font-medium text-gray-800">Aktifkan Paket Pass Through</p>
-                                                        <p class="text-xs text-gray-500">Aktifkan opsi ini bila ingin menggunakan paket pass through yang tersedia.</p>
+                                                        <p class="text-sm font-medium text-gray-800">Tab Pass Through Aktif</p>
+                                                        <p class="text-xs text-gray-500">Paket pass through akan diterapkan otomatis ketika membuat invoice dari tab ini.</p>
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition"
-                                                        :class="passThroughEnabled ? 'border-green-500 bg-green-500 text-white shadow' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'"
-                                                        @click="togglePassThrough()"
-                                                        :disabled="!hasAvailablePackages()"
-                                                        :title="hasAvailablePackages() ? '' : 'Belum ada paket pass through yang dapat dipilih.'">
-                                                        <span x-text="passThroughEnabled ? 'Aktif' : 'Nonaktif'"></span>
-                                                        <span class="inline-flex h-2 w-2 rounded-full" :class="passThroughEnabled ? 'bg-white' : 'bg-gray-400'"></span>
-                                                    </button>
+                                                    <span
+                                                        class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
+                                                        :class="hasAvailablePackages() ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'"
+                                                    >
+                                                        <span x-text="hasAvailablePackages() ? 'Paket Tersedia' : 'Paket Tidak Tersedia'"></span>
+                                                    </span>
                                                 </div>
 
                                                 <div x-show="!hasAvailablePackages()" x-cloak class="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
@@ -439,6 +439,7 @@
                         }
 
                         this.activeTab = event.detail.tab;
+                        this.syncPassThroughState();
                         this.$nextTick(() => this.syncTransactionComponents());
                     });
 
@@ -447,6 +448,7 @@
                     }
 
                     this.ensureDefaultPackage();
+                    this.syncPassThroughState();
                     this.$nextTick(() => this.syncTransactionComponents());
 
                     this.$watch('passThroughEnabled', () => {
@@ -459,19 +461,19 @@
 
                     this.$watch('selectedCustomerType', () => {
                         this.ensureDefaultPackage();
+                        this.syncPassThroughState();
                         this.$nextTick(() => this.syncTransactionComponents());
                     });
                 },
-                togglePassThrough() {
-                    if (!this.hasAvailablePackages()) {
-                        this.passThroughEnabled = false;
-                        return;
-                    }
-
-                    this.passThroughEnabled = !this.passThroughEnabled;
-                },
                 hasAvailablePackages() {
                     return Object.values(this.packagesByType).some((options) => Array.isArray(options) && options.length > 0);
+                },
+                syncPassThroughState() {
+                    const shouldEnable = this.activeTab === 'pass_through' && this.hasAvailablePackages();
+
+                    if (this.passThroughEnabled !== shouldEnable) {
+                        this.passThroughEnabled = shouldEnable;
+                    }
                 },
                 packageOptions() {
                     const options = this.packagesByType[this.selectedCustomerType] || [];
@@ -535,11 +537,11 @@
                     const itemsWrapper = tabs.querySelector('[data-items-wrapper]');
 
                     if (itemsWrapper) {
-                        const shouldHideItems = this.passThroughEnabled || this.activeTab === 'settlement';
+                        const shouldHideItems = this.passThroughEnabled || this.activeTab === 'settlement' || this.activeTab === 'pass_through';
                         itemsWrapper.style.display = shouldHideItems ? 'none' : '';
 
                         itemsWrapper.querySelectorAll('input, select, textarea').forEach((element) => {
-                            if (this.passThroughEnabled) {
+                            if (this.passThroughEnabled || this.activeTab === 'pass_through') {
                                 if (!element.dataset.passThroughDisabled) {
                                     element.dataset.passThroughDisabled = '1';
                                 }
@@ -556,7 +558,7 @@
                     const addItemButton = tabs.querySelector('[data-add-item]');
 
                     if (addItemButton) {
-                        if (this.passThroughEnabled) {
+                        if (this.passThroughEnabled || this.activeTab === 'pass_through') {
                             addItemButton.dataset.passThroughDisabled = '1';
                             addItemButton.disabled = true;
                             addItemButton.classList.add('hidden');
@@ -574,7 +576,7 @@
                     const totalWrapper = tabs.querySelector('[data-total-wrapper]');
 
                     if (totalWrapper) {
-                        const shouldHideTotal = this.passThroughEnabled || this.activeTab === 'settlement';
+                        const shouldHideTotal = this.passThroughEnabled || this.activeTab === 'settlement' || this.activeTab === 'pass_through';
                         totalWrapper.style.display = shouldHideTotal ? 'none' : '';
                     }
 

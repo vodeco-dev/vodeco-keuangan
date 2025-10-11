@@ -68,6 +68,7 @@
                             form-id="invoice-form"
                             :items="$oldItems"
                             :category-options="$categoryOptions"
+                            :allowed-transactions="['down_payment', 'full_payment', 'settlement']"
                             :default-transaction="old('transaction_type', 'down_payment')"
                             variant="internal"
                             down-payment-field-label="Nominal Down Payment"
