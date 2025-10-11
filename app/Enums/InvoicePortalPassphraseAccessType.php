@@ -23,7 +23,7 @@ enum InvoicePortalPassphraseAccessType: string
     public function allowedTransactionTypes(): array
     {
         return match ($this) {
-            self::CUSTOMER_SERVICE => ['down_payment', 'full_payment'],
+            self::CUSTOMER_SERVICE => ['down_payment', 'full_payment', 'pass_through'],
             self::ADMIN_PELUNASAN => ['settlement'],
             self::ADMIN_PERPANJANGAN => ['full_payment'],
         };

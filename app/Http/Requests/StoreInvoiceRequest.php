@@ -25,7 +25,7 @@ class StoreInvoiceRequest extends FormRequest
      */
     public function rules(): array
     {
-        $transactionTypes = ['down_payment', 'full_payment', 'settlement'];
+        $transactionTypes = ['down_payment', 'full_payment', 'pass_through', 'settlement'];
 
         return [
             'transaction_type' => ['required', Rule::in($transactionTypes)],
@@ -35,12 +35,12 @@ class StoreInvoiceRequest extends FormRequest
             'issue_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date'],
             'down_payment_due' => ['nullable', 'numeric', 'min:0'],
-            'items' => ['required_unless:transaction_type,settlement', 'array', 'min:1'],
-            'items.*.description' => ['required_unless:transaction_type,settlement', 'string'],
-            'items.*.quantity' => ['required_unless:transaction_type,settlement', 'integer', 'min:1'],
-            'items.*.price' => ['required_unless:transaction_type,settlement', 'numeric'],
+            'items' => ['required_unless:transaction_type,settlement,pass_through', 'array', 'min:1'],
+            'items.*.description' => ['required_unless:transaction_type,settlement,pass_through', 'string'],
+            'items.*.quantity' => ['required_unless:transaction_type,settlement,pass_through', 'integer', 'min:1'],
+            'items.*.price' => ['required_unless:transaction_type,settlement,pass_through', 'numeric'],
             'items.*.category_id' => [
-                'required_unless:transaction_type,settlement',
+                'required_unless:transaction_type,settlement,pass_through',
                 'integer',
                 Rule::exists('categories', 'id')->where('type', 'pemasukan'),
             ],

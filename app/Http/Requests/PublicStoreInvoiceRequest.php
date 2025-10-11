@@ -61,9 +61,17 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
 
     protected function prepareForValidation(): void
     {
+        $passThroughEnabled = $this->boolean('pass_through_enabled');
+
         $this->merge([
-            'pass_through_enabled' => $this->boolean('pass_through_enabled'),
+            'pass_through_enabled' => $passThroughEnabled,
         ]);
+
+        if ($passThroughEnabled) {
+            $this->merge([
+                'transaction_type' => 'pass_through',
+            ]);
+        }
 
         parent::prepareForValidation();
     }
@@ -106,7 +114,13 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
             $transactionType = $this->input('transaction_type', 'down_payment');
             $allowedTypes = $passphrase->allowedTransactionTypes();
 
-            if (! $this->isPassThroughEnabled() && ! in_array($transactionType, $allowedTypes, true)) {
+            if ($transactionType === 'pass_through' && ! $this->isPassThroughEnabled()) {
+                $validator->errors()->add('transaction_type', 'Aktifkan paket pass through sebelum mengirim formulir.');
+
+                return;
+            }
+
+            if (! in_array($transactionType, $allowedTypes, true)) {
                 $validator->errors()->add('transaction_type', 'Transaksi ini tidak diizinkan oleh passphrase yang digunakan.');
 
                 return;
