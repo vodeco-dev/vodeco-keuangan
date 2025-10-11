@@ -3,7 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Models\InvoicePortalPassphrase;
+use App\Support\PassThroughPackage;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class PublicStoreInvoiceRequest extends StoreInvoiceRequest
@@ -17,8 +19,28 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
      */
     public function rules(): array
     {
-        return array_merge(parent::rules(), [
+        $rules = parent::rules();
+
+        if ($this->isPassThroughEnabled()) {
+            $rules['items'] = ['nullable', 'array'];
+            $rules['items.*.description'] = ['nullable', 'string'];
+            $rules['items.*.quantity'] = ['nullable', 'integer', 'min:1'];
+            $rules['items.*.price'] = ['nullable', 'numeric'];
+            $rules['items.*.category_id'] = ['nullable', 'integer'];
+        }
+
+        return array_merge($rules, [
             'passphrase_token' => ['required', 'string'],
+            'pass_through_enabled' => ['sometimes', 'boolean'],
+            'pass_through_customer_type' => [
+                'required_if:pass_through_enabled,1',
+                'nullable',
+                Rule::in([
+                    PassThroughPackage::CUSTOMER_TYPE_NEW,
+                    PassThroughPackage::CUSTOMER_TYPE_EXISTING,
+                ]),
+            ],
+            'pass_through_package_id' => ['required_if:pass_through_enabled,1', 'nullable', 'string'],
         ]);
     }
 
@@ -31,7 +53,19 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
     {
         return array_merge(parent::messages(), [
             'passphrase_token.required' => 'Verifikasi passphrase portal invoice sebelum mengirim formulir.',
+            'pass_through_customer_type.required_if' => 'Pilih jenis pelanggan untuk invoice pass through.',
+            'pass_through_customer_type.in' => 'Jenis pelanggan pass through tidak dikenal.',
+            'pass_through_package_id.required_if' => 'Pilih paket pass through yang ingin digunakan.',
         ]);
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'pass_through_enabled' => $this->boolean('pass_through_enabled'),
+        ]);
+
+        parent::prepareForValidation();
     }
 
     public function withValidator($validator): void
@@ -72,7 +106,7 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
             $transactionType = $this->input('transaction_type', 'down_payment');
             $allowedTypes = $passphrase->allowedTransactionTypes();
 
-            if (! in_array($transactionType, $allowedTypes, true)) {
+            if (! $this->isPassThroughEnabled() && ! in_array($transactionType, $allowedTypes, true)) {
                 $validator->errors()->add('transaction_type', 'Transaksi ini tidak diizinkan oleh passphrase yang digunakan.');
 
                 return;
@@ -85,5 +119,12 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
     public function passphrase(): ?InvoicePortalPassphrase
     {
         return $this->passphrase;
+    }
+
+    protected function isPassThroughEnabled(): bool
+    {
+        $value = $this->input('pass_through_enabled');
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 }
