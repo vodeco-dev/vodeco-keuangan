@@ -79,6 +79,12 @@
                             if (! in_array($activePortalTab, $allowedPortalTabs, true)) {
                                 $activePortalTab = 'create_invoice';
                             }
+
+                            $passThroughPackagesByType = $passThroughPackagesByType ?? [];
+                            $passThroughPackagesById = $passThroughPackagesById ?? [];
+                            $defaultPassThroughEnabled = filter_var(old('pass_through_enabled'), FILTER_VALIDATE_BOOLEAN);
+                            $defaultPassThroughCustomerType = old('pass_through_customer_type', \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW);
+                            $defaultPassThroughPackageId = old('pass_through_package_id');
                         @endphp
 
                         <div class="rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-indigo-800">
@@ -135,21 +141,18 @@
                                         </div>
                                     @else
                                         <form action="{{ route('invoices.public.store') }}" method="POST" class="space-y-10" id="invoice-form"
-                                            x-data="{
-                                                activeTab: '{{ $defaultTransaction }}',
-                                                init() {
-                                                    window.addEventListener('invoice-transaction-tab-changed', (event) => {
-                                                        if (!event.detail || !event.detail.tab) {
-                                                            return;
-                                                        }
-
-                                                        this.activeTab = event.detail.tab;
-                                                    });
-                                                },
-                                            }">
+                                            x-data="publicInvoiceForm({
+                                                defaultTransaction: @json($defaultTransaction),
+                                                packagesByType: @json($passThroughPackagesByType),
+                                                packagesById: @json($passThroughPackagesById),
+                                                defaultPassThroughEnabled: @json($defaultPassThroughEnabled),
+                                                defaultCustomerType: @json($defaultPassThroughCustomerType),
+                                                defaultPackage: @json($defaultPassThroughPackageId),
+                                            })">
                                             @csrf
                                             <input type="hidden" name="passphrase_token" value="{{ $passphraseToken }}">
                                             <input type="hidden" name="portal_mode" value="create_invoice">
+                                            <input type="hidden" name="pass_through_enabled" :value="passThroughEnabled ? 1 : 0">
 
                                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div class="space-y-4">
@@ -206,7 +209,91 @@
                                                 :settlement-paid-amount="old('settlement_paid_amount')"
                                                 :settlement-payment-status="old('settlement_payment_status')"
                                                 data-reference-url-template="{{ route('invoices.public.reference', ['number' => '__NUMBER__'], false) }}"
+                                                x-ref="transactionTabs"
                                             />
+
+                                            <div class="space-y-4 rounded-2xl border border-purple-200 bg-purple-50/70 p-6">
+                                                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                                    <div>
+                                                        <h3 class="text-lg font-semibold text-purple-900">Invoice Pass Through</h3>
+                                                        <p class="text-sm text-purple-700">Gunakan paket pass through yang telah dikonfigurasi tim keuangan untuk mengisi rincian secara otomatis.</p>
+                                                    </div>
+                                                    <button type="button"
+                                                        class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition"
+                                                        :class="passThroughEnabled ? 'bg-purple-600 text-white shadow' : 'border border-purple-300 bg-white text-purple-700 hover:bg-purple-100'"
+                                                        @click="togglePassThrough()"
+                                                        :disabled="!hasAvailablePackages()"
+                                                        :title="hasAvailablePackages() ? '' : 'Belum ada paket pass through yang dapat dipilih.'">
+                                                        <span x-text="passThroughEnabled ? 'Aktif' : 'Nonaktif'"></span>
+                                                        <span class="inline-flex h-2 w-2 rounded-full" :class="passThroughEnabled ? 'bg-white' : 'bg-purple-400'"></span>
+                                                    </button>
+                                                </div>
+
+                                                <div x-show="!hasAvailablePackages()" x-cloak class="rounded-xl border border-purple-200 bg-white/60 p-4 text-sm text-purple-700">
+                                                    Belum ada paket pass through yang tersedia. Silakan hubungi tim keuangan untuk mengaktifkan paket terlebih dahulu.
+                                                </div>
+
+                                                <div x-show="passThroughEnabled && hasAvailablePackages()" x-cloak class="space-y-6">
+                                                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-purple-900">Jenis Pelanggan</label>
+                                                            <select name="pass_through_customer_type" x-model="selectedCustomerType" :disabled="!passThroughEnabled" class="mt-1 block w-full rounded-lg border-purple-200 bg-white shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                                                                <option value="{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}">Pelanggan Baru</option>
+                                                                <option value="{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_EXISTING }}">Pelanggan Lama</option>
+                                                            </select>
+                                                            @error('pass_through_customer_type')
+                                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                            @enderror
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-purple-900">Paket Pass Through</label>
+                                                            <select name="pass_through_package_id" x-model="selectedPackageId" :disabled="!passThroughEnabled || packageOptions().length === 0" class="mt-1 block w-full rounded-lg border-purple-200 bg-white shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                                                                <option value="">Pilih paket</option>
+                                                                <template x-for="option in packageOptions()" :key="option.id">
+                                                                    <option :value="option.id" x-text="option.name"></option>
+                                                                </template>
+                                                            </select>
+                                                            @error('pass_through_package_id')
+                                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                            @enderror
+                                                        </div>
+                                                    </div>
+
+                                                    <div x-show="packageOptions().length === 0" x-cloak class="rounded-xl border border-purple-200 bg-white/80 p-4 text-sm text-purple-700">
+                                                        Tidak ada paket yang sesuai dengan jenis pelanggan yang dipilih.
+                                                    </div>
+
+                                                    <div x-show="selectedPackageData()" x-cloak class="rounded-xl border border-white/60 bg-white p-6 shadow-sm">
+                                                        <h4 class="text-base font-semibold text-purple-900">Ringkasan Paket</h4>
+                                                        <dl class="mt-4 grid grid-cols-1 gap-4 text-sm text-purple-800 sm:grid-cols-2">
+                                                            <div>
+                                                                <dt class="font-medium text-purple-600">Harga Paket</dt>
+                                                                <dd class="mt-1 text-base font-semibold" x-text="formatCurrency(selectedPackageData()?.package_price || 0)"></dd>
+                                                            </div>
+                                                            <div>
+                                                                <dt class="font-medium text-purple-600">Saldo Harian Terpotong</dt>
+                                                                <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.daily_deduction || 0)"></dd>
+                                                            </div>
+                                                            <div x-show="selectedCustomerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'">
+                                                                <dt class="font-medium text-purple-600">Biaya Pembuatan Akun</dt>
+                                                                <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.account_creation_fee || 0)"></dd>
+                                                            </div>
+                                                            <div>
+                                                                <dt class="font-medium text-purple-600">Biaya Maintenance</dt>
+                                                                <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.maintenance_fee || 0)"></dd>
+                                                            </div>
+                                                            <div>
+                                                                <dt class="font-medium text-purple-600">Biaya Perpanjangan</dt>
+                                                                <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.renewal_fee || 0)"></dd>
+                                                            </div>
+                                                            <div class="sm:col-span-2">
+                                                                <dt class="font-medium text-purple-600">Dana Pass Through</dt>
+                                                                <dd class="mt-1 text-lg font-semibold text-purple-700" x-text="formatCurrency(passThroughAmount())"></dd>
+                                                            </div>
+                                                        </dl>
+                                                    </div>
+                                                </div>
+                                            </div>
 
                                             <div class="flex justify-end">
                                                 <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
@@ -330,5 +417,189 @@
         </div>
     </div>
 
+    <script>
+        function publicInvoiceForm(config) {
+            return {
+                activeTab: config.defaultTransaction || 'down_payment',
+                packagesByType: config.packagesByType || {},
+                packagesById: config.packagesById || {},
+                passThroughEnabled: Boolean(config.defaultPassThroughEnabled),
+                selectedCustomerType: config.defaultCustomerType || 'new',
+                selectedPackageId: config.defaultPackage || '',
+                init() {
+                    window.addEventListener('invoice-transaction-tab-changed', (event) => {
+                        if (!event.detail || !event.detail.tab) {
+                            return;
+                        }
+
+                        this.activeTab = event.detail.tab;
+                        this.$nextTick(() => this.syncTransactionComponents());
+                    });
+
+                    if (!this.hasAvailablePackages()) {
+                        this.passThroughEnabled = false;
+                    }
+
+                    this.ensureDefaultPackage();
+                    this.$nextTick(() => this.syncTransactionComponents());
+
+                    this.$watch('passThroughEnabled', () => {
+                        if (this.passThroughEnabled) {
+                            this.ensureDefaultPackage();
+                        }
+
+                        this.$nextTick(() => this.syncTransactionComponents());
+                    });
+
+                    this.$watch('selectedCustomerType', () => {
+                        this.ensureDefaultPackage();
+                        this.$nextTick(() => this.syncTransactionComponents());
+                    });
+                },
+                togglePassThrough() {
+                    if (!this.hasAvailablePackages()) {
+                        this.passThroughEnabled = false;
+                        return;
+                    }
+
+                    this.passThroughEnabled = !this.passThroughEnabled;
+                },
+                hasAvailablePackages() {
+                    return Object.values(this.packagesByType).some((options) => Array.isArray(options) && options.length > 0);
+                },
+                packageOptions() {
+                    const options = this.packagesByType[this.selectedCustomerType] || [];
+
+                    return Array.isArray(options) ? options : [];
+                },
+                ensureDefaultPackage() {
+                    const options = this.packageOptions();
+
+                    if (!options.length) {
+                        this.selectedPackageId = '';
+                        return;
+                    }
+
+                    const hasSelected = options.some((option) => option.id === this.selectedPackageId);
+
+                    if (!hasSelected) {
+                        this.selectedPackageId = options[0]?.id || '';
+                    }
+                },
+                selectedPackageData() {
+                    if (!this.selectedPackageId) {
+                        return null;
+                    }
+
+                    return this.packagesById[this.selectedPackageId] || null;
+                },
+                passThroughAmount() {
+                    const data = this.selectedPackageData();
+
+                    if (!data) {
+                        return 0;
+                    }
+
+                    let deductions = Number(data.maintenance_fee || 0) + Number(data.renewal_fee || 0);
+
+                    if (this.selectedCustomerType === 'new') {
+                        deductions += Number(data.account_creation_fee || 0);
+                    }
+
+                    const total = Number(data.package_price || 0) - deductions;
+
+                    return total > 0 ? total : 0;
+                },
+                formatCurrency(value) {
+                    const number = Number(value || 0);
+
+                    return new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        maximumFractionDigits: 0,
+                    }).format(number);
+                },
+                syncTransactionComponents() {
+                    const tabs = this.$refs.transactionTabs;
+
+                    if (!tabs) {
+                        return;
+                    }
+
+                    const itemsWrapper = tabs.querySelector('[data-items-wrapper]');
+
+                    if (itemsWrapper) {
+                        const shouldHideItems = this.passThroughEnabled || this.activeTab === 'settlement';
+                        itemsWrapper.style.display = shouldHideItems ? 'none' : '';
+
+                        itemsWrapper.querySelectorAll('input, select, textarea').forEach((element) => {
+                            if (this.passThroughEnabled) {
+                                if (!element.dataset.passThroughDisabled) {
+                                    element.dataset.passThroughDisabled = '1';
+                                }
+
+                                element.disabled = true;
+                                element.required = false;
+                            } else if (element.dataset.passThroughDisabled === '1' && this.activeTab !== 'settlement') {
+                                element.disabled = false;
+                                delete element.dataset.passThroughDisabled;
+                            }
+                        });
+                    }
+
+                    const addItemButton = tabs.querySelector('[data-add-item]');
+
+                    if (addItemButton) {
+                        if (this.passThroughEnabled) {
+                            addItemButton.dataset.passThroughDisabled = '1';
+                            addItemButton.disabled = true;
+                            addItemButton.classList.add('hidden');
+                        } else if (addItemButton.dataset.passThroughDisabled === '1' && this.activeTab !== 'settlement') {
+                            addItemButton.disabled = false;
+                            addItemButton.classList.remove('hidden');
+                            delete addItemButton.dataset.passThroughDisabled;
+                        } else if (this.activeTab === 'settlement') {
+                            addItemButton.classList.add('hidden');
+                        } else {
+                            addItemButton.classList.remove('hidden');
+                        }
+                    }
+
+                    const totalWrapper = tabs.querySelector('[data-total-wrapper]');
+
+                    if (totalWrapper) {
+                        const shouldHideTotal = this.passThroughEnabled || this.activeTab === 'settlement';
+                        totalWrapper.style.display = shouldHideTotal ? 'none' : '';
+                    }
+
+                    const downPaymentSection = tabs.querySelector('[data-down-payment-visible]');
+
+                    if (downPaymentSection) {
+                        if (this.passThroughEnabled) {
+                            downPaymentSection.style.display = 'none';
+
+                            downPaymentSection.querySelectorAll('input, select, textarea').forEach((element) => {
+                                if (!element.dataset.passThroughDisabled) {
+                                    element.dataset.passThroughDisabled = '1';
+                                }
+
+                                element.disabled = true;
+                                element.required = false;
+                            });
+                        } else {
+                            downPaymentSection.style.display = this.activeTab === 'down_payment' ? '' : 'none';
+
+                            downPaymentSection.querySelectorAll('input, select, textarea').forEach((element) => {
+                                if (element.dataset.passThroughDisabled === '1') {
+                                    element.disabled = false;
+                                    delete element.dataset.passThroughDisabled;
+                                }
+                            });
+                        }
+                    }
+                },
+            };
+        }
+    </script>
 </body>
 </html>

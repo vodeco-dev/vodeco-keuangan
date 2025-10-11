@@ -4,18 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Enums\Role;
 use App\Http\Requests\StorePassThroughInvoiceRequest;
-use App\Models\Debt;
-use App\Models\Invoice;
-use App\Models\InvoiceItem;
+use App\Services\PassThroughInvoiceCreator;
 use App\Services\PassThroughPackageManager;
 use App\Support\PassThroughPackage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PassThroughInvoiceController extends Controller
 {
+    public function __construct(private PassThroughInvoiceCreator $creator)
+    {
+    }
+
     public function create(Request $request, PassThroughPackageManager $manager): View
     {
         $this->authorizeAccess($request->user()?->role);
@@ -60,59 +61,19 @@ class PassThroughInvoiceController extends Controller
                 ->withInput();
         }
 
-        $invoice = DB::transaction(function () use ($request, $package, $data, $remaining) {
-            $number = $this->generateInvoiceNumber();
-            $user = $request->user();
-            $issueDate = now();
+        $user = $request->user();
 
-            $invoice = Invoice::create([
-                'user_id' => $user?->id,
-                'created_by' => $user?->id,
-                'customer_service_id' => null,
-                'customer_service_name' => $user?->name,
-                'client_name' => $data['client_name'],
-                'client_whatsapp' => $data['client_whatsapp'],
-                'client_address' => $data['client_address'] ?? null,
-                'number' => $number,
-                'issue_date' => $issueDate,
-                'due_date' => $data['due_date'] ?? null,
-                'status' => 'belum bayar',
-                'total' => $package->packagePrice,
-                'type' => $package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW
-                    ? Invoice::TYPE_PASS_THROUGH_NEW
-                    : Invoice::TYPE_PASS_THROUGH_EXISTING,
-                'reference_invoice_id' => null,
-                'down_payment' => 0,
-                'down_payment_due' => null,
-                'payment_date' => null,
-            ]);
-
-            $items = $this->makeInvoiceItems($package, $remaining);
-
-            foreach ($items as $item) {
-                InvoiceItem::create([
-                    'invoice_id' => $invoice->id,
-                    'category_id' => null,
-                    'description' => $item['description'],
-                    'quantity' => 1,
-                    'price' => $item['amount'],
-                ]);
-            }
-
-            Debt::create([
-                'user_id' => $user?->id,
-                'invoice_id' => $invoice->id,
-                'description' => $invoice->transactionDescription(),
-                'related_party' => $invoice->client_name ?: $invoice->client_whatsapp,
-                'type' => Debt::TYPE_PASS_THROUGH,
-                'amount' => $remaining,
-                'due_date' => $data['due_date'] ?? null,
-                'status' => Debt::STATUS_BELUM_LUNAS,
-                'daily_deduction' => $package->dailyDeduction,
-            ]);
-
-            return $invoice;
-        });
+        $invoice = $this->creator->create($package, [
+            'owner_id' => $user?->id,
+            'created_by' => $user?->id,
+            'customer_service_id' => null,
+            'customer_service_name' => $user?->name,
+            'client_name' => $data['client_name'],
+            'client_whatsapp' => $data['client_whatsapp'],
+            'client_address' => $data['client_address'] ?? null,
+            'due_date' => $data['due_date'] ?? null,
+            'debt_user_id' => $user?->id,
+        ]);
 
         return redirect()
             ->route('invoices.index')
@@ -128,47 +89,5 @@ class PassThroughInvoiceController extends Controller
         if ($role !== Role::STAFF && $role !== Role::ADMIN) {
             abort(403);
         }
-    }
-
-    protected function generateInvoiceNumber(): string
-    {
-        $date = now()->format('Ymd');
-        $count = Invoice::whereDate('created_at', today())->count();
-        $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-
-        return "{$date}-{$sequence}";
-    }
-
-    protected function makeInvoiceItems(PassThroughPackage $package, float $remaining): array
-    {
-        $items = [];
-
-        if ($package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW && $package->accountCreationFee > 0) {
-            $items[] = [
-                'description' => 'Biaya Pembuatan Akun Iklan',
-                'amount' => $package->accountCreationFee,
-            ];
-        }
-
-        if ($package->maintenanceFee > 0) {
-            $items[] = [
-                'description' => 'Jasa Maintenance',
-                'amount' => $package->maintenanceFee,
-            ];
-        }
-
-        if ($package->renewalFee > 0) {
-            $items[] = [
-                'description' => 'Biaya Perpanjangan',
-                'amount' => $package->renewalFee,
-            ];
-        }
-
-        $items[] = [
-            'description' => 'Dana Pass Through',
-            'amount' => $remaining,
-        ];
-
-        return $items;
     }
 }

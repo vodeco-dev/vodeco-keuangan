@@ -25,12 +25,15 @@ use Illuminate\Support\Str;
 use Illuminate\View\View;
 use App\Models\User;
 use App\Services\InvoiceSettlementService;
+use App\Services\PassThroughInvoiceCreator;
+use App\Services\PassThroughPackageManager;
+use App\Support\PassThroughPackage;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 class InvoiceController extends Controller
 {
-    public function __construct()
+    public function __construct(private PassThroughInvoiceCreator $passThroughInvoiceCreator)
     {
         $this->authorizeResource(Invoice::class, 'invoice');
     }
@@ -158,9 +161,20 @@ class InvoiceController extends Controller
         return view('invoices.create', compact('incomeCategories'));
     }
 
-    public function createPublic(Request $request): View
+    public function createPublic(Request $request, PassThroughPackageManager $packageManager): View
     {
         $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
+
+        $packages = $packageManager->all();
+        $packagesByType = $packages
+            ->groupBy(fn (PassThroughPackage $package) => $package->customerType)
+            ->map(fn ($group) => $group->map(fn (PassThroughPackage $package) => $package->toArray())->values())
+            ->toArray();
+        $packagesById = $packages
+            ->mapWithKeys(fn (PassThroughPackage $package) => [
+                $package->id => $package->toArray(),
+            ])
+            ->toArray();
 
         /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
         $passphrase = $request->attributes->get('invoicePortalPassphrase');
@@ -192,6 +206,8 @@ class InvoiceController extends Controller
             'passphraseSession' => $passphrase ? $sessionData : null,
             'allowedTransactionTypes' => $allowedTransactionTypes,
             'passphraseToken' => $passphraseToken,
+            'passThroughPackagesByType' => $packagesByType,
+            'passThroughPackagesById' => $packagesById,
         ]);
 
     }
@@ -215,7 +231,10 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index');
     }
 
-    public function storePublic(PublicStoreInvoiceRequest $request)
+    public function storePublic(
+        PublicStoreInvoiceRequest $request,
+        PassThroughPackageManager $packageManager
+    )
     {
         $data = $request->validated();
 
@@ -245,7 +264,46 @@ class InvoiceController extends Controller
 
         $data['created_by'] = $passphrase->created_by;
 
-        if ($data['transaction_type'] === 'settlement') {
+        $isPassThroughInvoice = (bool) ($data['pass_through_enabled'] ?? false);
+
+        if ($isPassThroughInvoice) {
+            $packageId = $data['pass_through_package_id'] ?? null;
+            $customerType = $data['pass_through_customer_type'] ?? null;
+
+            $package = $packageId ? $packageManager->find($packageId) : null;
+
+            if (! $package || $package->customerType !== $customerType) {
+                return back()
+                    ->withErrors(['pass_through_package_id' => 'Paket pass through tidak valid untuk jenis pelanggan yang dipilih.'])
+                    ->withInput();
+            }
+
+            $remaining = $package->remainingPassThroughAmount();
+
+            if ($remaining <= 0) {
+                return back()
+                    ->withErrors(['pass_through_package_id' => 'Konfigurasi paket menghasilkan nilai pass through yang tidak valid.'])
+                    ->withInput();
+            }
+
+            try {
+                $invoice = $this->passThroughInvoiceCreator->create($package, [
+                    'owner_id' => $ownerId,
+                    'created_by' => $passphrase->created_by,
+                    'customer_service_id' => $customerServiceId,
+                    'customer_service_name' => $data['customer_service_name'],
+                    'client_name' => $data['client_name'],
+                    'client_whatsapp' => $data['client_whatsapp'],
+                    'client_address' => $data['client_address'] ?? null,
+                    'due_date' => $data['due_date'] ?? null,
+                    'debt_user_id' => $passphrase->created_by ?: $ownerId,
+                ]);
+            } catch (\RuntimeException $exception) {
+                return back()
+                    ->withErrors(['pass_through_package_id' => $exception->getMessage()])
+                    ->withInput();
+            }
+        } elseif ($data['transaction_type'] === 'settlement') {
             $referenceInvoice = $request->referenceInvoice()
                 ?? Invoice::where('number', $data['settlement_invoice_number'])->firstOrFail();
 

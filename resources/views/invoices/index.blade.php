@@ -65,24 +65,6 @@
                 @endif
 
                 @php
-                    $userRole = auth()->user()?->role;
-                    $canCreatePassThroughInvoice = \Illuminate\Support\Facades\Route::has('pass-through.invoices.create')
-                        && $userRole !== null
-                        && in_array($userRole, [\App\Enums\Role::STAFF, \App\Enums\Role::ADMIN], true);
-                @endphp
-
-                @if ($canCreatePassThroughInvoice)
-                    <div class="mb-6 flex justify-end">
-                        <a href="{{ route('pass-through.invoices.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-purple-700">
-                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
-                            Buat Invoice Pass Through
-                        </a>
-                    </div>
-                @endif
-
-                @php
                     $unlockedTabs = collect($tabStates)->filter(fn ($tab) => $tab['unlocked']);
                 @endphp
                 <div>
