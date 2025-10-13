@@ -237,11 +237,11 @@
             },
             formatCurrency(value) {
                 const numeric = Number(value) || 0;
-                return new Intl.NumberFormat('id-ID', {
-                    style: 'currency',
-                    currency: 'IDR',
+                const formatted = new Intl.NumberFormat('id-ID', {
                     maximumFractionDigits: 0,
                 }).format(numeric);
+
+                return `IDR ${formatted}`;
             },
             passThroughAmount() {
                 const daily = Number(this.form.daily_balance) || 0;
