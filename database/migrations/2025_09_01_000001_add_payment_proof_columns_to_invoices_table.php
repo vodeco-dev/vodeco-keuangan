@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('invoices', function (Blueprint $table) {
-            $table->string('payment_proof_disk')->nullable()->after('settlement_token_expires_at');
+            $table->string('payment_proof_disk')->nullable()->after('total');
             $table->string('payment_proof_path')->nullable()->after('payment_proof_disk');
             $table->string('payment_proof_filename')->nullable()->after('payment_proof_path');
             $table->string('payment_proof_original_name')->nullable()->after('payment_proof_filename');
