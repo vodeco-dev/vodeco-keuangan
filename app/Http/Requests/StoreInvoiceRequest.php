@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Invoice;
+use App\Support\PassThroughPackage;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -44,6 +45,24 @@ class StoreInvoiceRequest extends FormRequest
                 'integer',
                 Rule::exists('categories', 'id')->where('type', 'pemasukan'),
             ],
+            'pass_through_customer_type' => [
+                'required_if:transaction_type,pass_through',
+                'nullable',
+                Rule::in([
+                    PassThroughPackage::CUSTOMER_TYPE_NEW,
+                    PassThroughPackage::CUSTOMER_TYPE_EXISTING,
+                ]),
+            ],
+            'pass_through_daily_balance' => ['required_if:transaction_type,pass_through', 'nullable', 'numeric', 'min:0'],
+            'pass_through_estimated_days' => ['required_if:transaction_type,pass_through', 'nullable', 'integer', 'min:1'],
+            'pass_through_maintenance_fee' => ['required_if:transaction_type,pass_through', 'nullable', 'numeric', 'min:0'],
+            'pass_through_account_creation_fee' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                Rule::requiredIf(fn () => $this->input('transaction_type') === 'pass_through'
+                    && $this->input('pass_through_customer_type') === PassThroughPackage::CUSTOMER_TYPE_NEW),
+            ],
             'settlement_invoice_number' => ['required_if:transaction_type,settlement', 'nullable', 'string'],
             'settlement_remaining_balance' => ['required_if:transaction_type,settlement', 'nullable', 'numeric', 'min:0'],
             'settlement_payment_status' => [
@@ -84,6 +103,17 @@ class StoreInvoiceRequest extends FormRequest
             'items.*.price.numeric' => 'Harga item harus berupa angka.',
             'items.*.category_id.required_unless' => 'Kategori item wajib dipilih.',
             'items.*.category_id.exists' => 'Kategori item tidak valid.',
+            'pass_through_customer_type.required_if' => 'Pilih jenis pelanggan untuk invoice pass through.',
+            'pass_through_customer_type.in' => 'Jenis pelanggan pass through tidak dikenal.',
+            'pass_through_daily_balance.required_if' => 'Saldo harian wajib diisi untuk invoice pass through.',
+            'pass_through_daily_balance.numeric' => 'Saldo harian pass through harus berupa angka.',
+            'pass_through_estimated_days.required_if' => 'Estimasi waktu wajib diisi untuk invoice pass through.',
+            'pass_through_estimated_days.integer' => 'Estimasi waktu pass through harus berupa angka bulat.',
+            'pass_through_estimated_days.min' => 'Estimasi waktu pass through minimal 1 hari.',
+            'pass_through_maintenance_fee.required_if' => 'Nominal jasa maintenance wajib diisi.',
+            'pass_through_maintenance_fee.numeric' => 'Nominal jasa maintenance harus berupa angka.',
+            'pass_through_account_creation_fee.required' => 'Biaya pembuatan akun wajib diisi untuk pelanggan baru.',
+            'pass_through_account_creation_fee.numeric' => 'Biaya pembuatan akun harus berupa angka.',
             'settlement_invoice_number.required_if' => 'Nomor invoice referensi wajib diisi untuk pelunasan.',
             'settlement_remaining_balance.required_if' => 'Sisa tagihan wajib diisi untuk pelunasan.',
             'settlement_remaining_balance.numeric' => 'Sisa tagihan harus berupa angka.',
@@ -149,6 +179,16 @@ class StoreInvoiceRequest extends FormRequest
             $settlementPaidAmount = $normalized === '' ? null : $normalized;
         }
 
+        $passThroughCustomerType = $this->input('pass_through_customer_type');
+
+        $passThroughFields = [
+            'pass_through_daily_balance' => $this->sanitizeCurrency($this->input('pass_through_daily_balance')),
+            'pass_through_maintenance_fee' => $this->sanitizeCurrency($this->input('pass_through_maintenance_fee')),
+            'pass_through_account_creation_fee' => $this->sanitizeCurrency($this->input('pass_through_account_creation_fee')),
+            'pass_through_estimated_days' => $this->sanitizeInteger($this->input('pass_through_estimated_days')),
+            'pass_through_customer_type' => $passThroughCustomerType,
+        ];
+
         $merged = [
             'transaction_type' => $transactionType,
             'client_whatsapp' => $whatsapp,
@@ -157,11 +197,41 @@ class StoreInvoiceRequest extends FormRequest
             'settlement_paid_amount' => $settlementPaidAmount,
         ];
 
+        $merged = array_merge($merged, array_filter($passThroughFields, fn ($value) => $value !== null));
+
         if ($transactionType !== 'settlement' || ! empty($rawItems)) {
             $merged['items'] = $items->toArray();
         }
 
         $this->merge($merged);
+    }
+
+    protected function sanitizeCurrency($value): ?string
+    {
+        if (! isset($value)) {
+            return null;
+        }
+
+        $normalized = preg_replace('/[^\d,.-]/', '', (string) $value);
+        $normalized = str_replace('.', '', $normalized);
+        $normalized = str_replace(',', '.', $normalized);
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    protected function sanitizeInteger($value): ?int
+    {
+        if (! isset($value)) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        $digits = preg_replace('/\D/', '', (string) $value);
+
+        return $digits === '' ? null : (int) $digits;
     }
 
     public function withValidator($validator): void
