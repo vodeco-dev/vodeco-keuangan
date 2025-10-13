@@ -80,11 +80,11 @@
                                 $activePortalTab = 'create_invoice';
                             }
 
-                            $passThroughPackagesByType = $passThroughPackagesByType ?? [];
-                            $passThroughPackagesById = $passThroughPackagesById ?? [];
-                            $defaultPassThroughEnabled = filter_var(old('pass_through_enabled'), FILTER_VALIDATE_BOOLEAN);
                             $defaultPassThroughCustomerType = old('pass_through_customer_type', \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW);
-                            $defaultPassThroughPackageId = old('pass_through_package_id');
+                            $defaultPassThroughDailyBalance = old('pass_through_daily_balance');
+                            $defaultPassThroughEstimatedDays = old('pass_through_estimated_days', 1);
+                            $defaultPassThroughMaintenanceFee = old('pass_through_maintenance_fee');
+                            $defaultPassThroughAccountCreationFee = old('pass_through_account_creation_fee');
                         @endphp
 
                         <div class="rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-indigo-800">
@@ -143,16 +143,17 @@
                                         <form action="{{ route('invoices.public.store') }}" method="POST" class="space-y-10" id="invoice-form"
                                             x-data="publicInvoiceForm({
                                                 defaultTransaction: @json($defaultTransaction),
-                                                packagesByType: @json($passThroughPackagesByType),
-                                                packagesById: @json($passThroughPackagesById),
-                                                defaultPassThroughEnabled: @json($defaultPassThroughEnabled),
-                                                defaultCustomerType: @json($defaultPassThroughCustomerType),
-                                                defaultPackage: @json($defaultPassThroughPackageId),
+                                                passThroughDefaults: {
+                                                    customerType: @json($defaultPassThroughCustomerType),
+                                                    dailyBalance: @json($defaultPassThroughDailyBalance),
+                                                    estimatedDays: @json($defaultPassThroughEstimatedDays),
+                                                    maintenanceFee: @json($defaultPassThroughMaintenanceFee),
+                                                    accountCreationFee: @json($defaultPassThroughAccountCreationFee),
+                                                },
                                             })">
                                             @csrf
                                             <input type="hidden" name="passphrase_token" value="{{ $passphraseToken }}">
                                             <input type="hidden" name="portal_mode" value="create_invoice">
-                                            <input type="hidden" name="pass_through_enabled" :value="passThroughEnabled ? 1 : 0">
 
                                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div class="space-y-4">
@@ -219,31 +220,14 @@
                                             >
                                                 <div class="space-y-2">
                                                     <h3 class="text-lg font-semibold text-gray-900">Invoice Pass Through</h3>
-                                                    <p class="text-sm text-gray-600">Gunakan paket pass through yang telah dikonfigurasi tim keuangan untuk mengisi rincian secara otomatis.</p>
+                                                    <p class="text-sm text-gray-600">Isi nilai saldo harian, estimasi waktu, serta biaya tambahan secara manual untuk menghitung total invoice pass through.</p>
                                                 </div>
 
-                                                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                                    <div class="space-y-1">
-                                                        <p class="text-sm font-medium text-gray-800">Tab Pass Through Aktif</p>
-                                                        <p class="text-xs text-gray-500">Paket pass through akan diterapkan otomatis ketika membuat invoice dari tab ini.</p>
-                                                    </div>
-                                                    <span
-                                                        class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
-                                                        :class="hasAvailablePackages() ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'"
-                                                    >
-                                                        <span x-text="hasAvailablePackages() ? 'Paket Tersedia' : 'Paket Tidak Tersedia'"></span>
-                                                    </span>
-                                                </div>
-
-                                                <div x-show="!hasAvailablePackages()" x-cloak class="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
-                                                    Belum ada paket pass through yang tersedia. Silakan hubungi tim keuangan untuk mengaktifkan paket terlebih dahulu.
-                                                </div>
-
-                                                <div x-show="passThroughEnabled && hasAvailablePackages()" x-cloak class="space-y-6">
+                                                <div class="space-y-6">
                                                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                                                         <div>
                                                             <label class="block text-sm font-medium text-gray-700">Jenis Pelanggan</label>
-                                                            <select name="pass_through_customer_type" x-model="selectedCustomerType" :disabled="!passThroughEnabled" class="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                            <select name="pass_through_customer_type" x-model="passThroughCustomerType" class="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                                                 <option value="{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}">Pelanggan Baru</option>
                                                                 <option value="{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_EXISTING }}">Pelanggan Lama</option>
                                                             </select>
@@ -252,51 +236,86 @@
                                                             @enderror
                                                         </div>
                                                         <div>
-                                                            <label class="block text-sm font-medium text-gray-700">Paket Pass Through</label>
-                                                            <select name="pass_through_package_id" x-model="selectedPackageId" :disabled="!passThroughEnabled || packageOptions().length === 0" class="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                                                <option value="">Pilih paket</option>
-                                                                <template x-for="option in packageOptions()" :key="option.id">
-                                                                    <option :value="option.id" x-text="option.name"></option>
-                                                                </template>
-                                                            </select>
-                                                            @error('pass_through_package_id')
+                                                            <label class="block text-sm font-medium text-gray-700">Saldo Harian</label>
+                                                            <input type="hidden" name="pass_through_daily_balance" :value="passThroughDailyBalance">
+                                                            <input
+                                                                type="text"
+                                                                x-model="passThroughDailyBalanceDisplay"
+                                                                @input="updateCurrencyField('DailyBalance', $event.target.value)"
+                                                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                                placeholder="Contoh: 30.000"
+                                                            >
+                                                            <p class="mt-1 text-xs text-gray-500">Nominal akan otomatis diformat menjadi ribuan. Contoh: 1000 menjadi 1.000.</p>
+                                                            @error('pass_through_daily_balance')
+                                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                            @enderror
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-gray-700">Estimasi Waktu (Hari)</label>
+                                                            <input
+                                                                type="number"
+                                                                name="pass_through_estimated_days"
+                                                                min="1"
+                                                                x-model.number="passThroughEstimatedDays"
+                                                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                                placeholder="Contoh: 30"
+                                                            >
+                                                            @error('pass_through_estimated_days')
+                                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                            @enderror
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-gray-700">Jasa Maintenance</label>
+                                                            <input type="hidden" name="pass_through_maintenance_fee" :value="passThroughMaintenanceFee">
+                                                            <input
+                                                                type="text"
+                                                                x-model="passThroughMaintenanceFeeDisplay"
+                                                                @input="updateCurrencyField('MaintenanceFee', $event.target.value)"
+                                                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                                placeholder="Contoh: 10.000"
+                                                            >
+                                                            @error('pass_through_maintenance_fee')
+                                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                            @enderror
+                                                        </div>
+                                                        <div x-show="passThroughCustomerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'" x-cloak>
+                                                            <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun</label>
+                                                            <input type="hidden" name="pass_through_account_creation_fee" :value="passThroughCustomerType === 'new' ? passThroughAccountCreationFee : 0">
+                                                            <input
+                                                                type="text"
+                                                                x-model="passThroughAccountCreationFeeDisplay"
+                                                                @input="updateCurrencyField('AccountCreationFee', $event.target.value)"
+                                                                :disabled="passThroughCustomerType !== 'new'"
+                                                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                                                placeholder="Contoh: 20.000"
+                                                            >
+                                                            @error('pass_through_account_creation_fee')
                                                                 <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                                             @enderror
                                                         </div>
                                                     </div>
 
-                                                    <div x-show="packageOptions().length === 0" x-cloak class="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
-                                                        Tidak ada paket yang sesuai dengan jenis pelanggan yang dipilih.
-                                                    </div>
-
-                                                    <div x-show="selectedPackageData()" x-cloak class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                                                        <h4 class="text-base font-semibold text-gray-900">Ringkasan Paket</h4>
+                                                    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                                        <h4 class="text-base font-semibold text-gray-900">Ringkasan Perhitungan</h4>
                                                         <dl class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
                                                             <div>
-                                                                <dt class="font-medium text-gray-600">Harga Paket</dt>
-                                                                <dd class="mt-1 text-base font-semibold text-gray-900" x-text="formatCurrency(selectedPackageData()?.package_price || 0)"></dd>
+                                                                <dt class="font-medium text-gray-600">Dana Pass Through</dt>
+                                                                <dd class="mt-1 text-base font-semibold text-purple-600" x-text="formatCurrency(passThroughAmount())"></dd>
                                                             </div>
                                                             <div>
-                                                                <dt class="font-medium text-gray-600">Saldo Harian Terpotong</dt>
-                                                                <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.daily_deduction || 0)"></dd>
+                                                                <dt class="font-medium text-gray-600">Jasa Maintenance</dt>
+                                                                <dd class="mt-1" x-text="formatCurrency(maintenanceFeeValue())"></dd>
                                                             </div>
-                                                            <div x-show="selectedCustomerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'">
+                                                            <div x-show="passThroughCustomerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'">
                                                                 <dt class="font-medium text-gray-600">Biaya Pembuatan Akun</dt>
-                                                                <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.account_creation_fee || 0)"></dd>
-                                                            </div>
-                                                            <div>
-                                                                <dt class="font-medium text-gray-600">Biaya Maintenance</dt>
-                                                                <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.maintenance_fee || 0)"></dd>
-                                                            </div>
-                                                            <div>
-                                                                <dt class="font-medium text-gray-600">Biaya Perpanjangan</dt>
-                                                                <dd class="mt-1" x-text="formatCurrency(selectedPackageData()?.renewal_fee || 0)"></dd>
+                                                                <dd class="mt-1" x-text="formatCurrency(accountCreationFeeValue())"></dd>
                                                             </div>
                                                             <div class="sm:col-span-2">
-                                                                <dt class="font-medium text-gray-600">Dana Pass Through</dt>
-                                                                <dd class="mt-1 text-lg font-semibold text-gray-900" x-text="formatCurrency(passThroughAmount())"></dd>
+                                                                <dt class="font-medium text-gray-600">Total Invoice</dt>
+                                                                <dd class="mt-1 text-lg font-semibold text-green-600" x-text="formatCurrency(totalPassThrough())"></dd>
                                                             </div>
                                                         </dl>
+                                                        <p class="mt-4 text-xs text-gray-500">Dana pass through akan dicatat sebagai hutang sebesar saldo harian dikalikan estimasi hari. Biaya lainnya otomatis masuk transaksi pemasukan.</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -427,184 +446,77 @@
         function publicInvoiceForm(config) {
             return {
                 activeTab: config.defaultTransaction || 'down_payment',
-                packagesByType: config.packagesByType || {},
-                packagesById: config.packagesById || {},
-                passThroughEnabled: Boolean(config.defaultPassThroughEnabled),
-                selectedCustomerType: config.defaultCustomerType || 'new',
-                selectedPackageId: config.defaultPackage || '',
+                passThroughCustomerType: (config.passThroughDefaults?.customerType) || 'new',
+                passThroughDailyBalance: '',
+                passThroughDailyBalanceDisplay: '',
+                passThroughEstimatedDays: Number(config.passThroughDefaults?.estimatedDays) > 0
+                    ? Number(config.passThroughDefaults.estimatedDays)
+                    : 1,
+                passThroughMaintenanceFee: '',
+                passThroughMaintenanceFeeDisplay: '',
+                passThroughAccountCreationFee: '',
+                passThroughAccountCreationFeeDisplay: '',
                 init() {
+                    this.setCurrencyField('DailyBalance', config.passThroughDefaults?.dailyBalance || '');
+                    this.setCurrencyField('MaintenanceFee', config.passThroughDefaults?.maintenanceFee || '');
+                    this.setCurrencyField('AccountCreationFee', config.passThroughDefaults?.accountCreationFee || '');
+
                     window.addEventListener('invoice-transaction-tab-changed', (event) => {
                         if (!event.detail || !event.detail.tab) {
                             return;
                         }
 
                         this.activeTab = event.detail.tab;
-                        this.syncPassThroughState();
-                        this.$nextTick(() => this.syncTransactionComponents());
                     });
 
-                    if (!this.hasAvailablePackages()) {
-                        this.passThroughEnabled = false;
-                    }
-
-                    this.ensureDefaultPackage();
-                    this.syncPassThroughState();
-                    this.$nextTick(() => this.syncTransactionComponents());
-
-                    this.$watch('passThroughEnabled', () => {
-                        if (this.passThroughEnabled) {
-                            this.ensureDefaultPackage();
+                    this.$watch('passThroughCustomerType', (value) => {
+                        if (value !== 'new') {
+                            this.setCurrencyField('AccountCreationFee', '');
                         }
-
-                        this.$nextTick(() => this.syncTransactionComponents());
-                    });
-
-                    this.$watch('selectedCustomerType', () => {
-                        this.ensureDefaultPackage();
-                        this.syncPassThroughState();
-                        this.$nextTick(() => this.syncTransactionComponents());
                     });
                 },
-                hasAvailablePackages() {
-                    return Object.values(this.packagesByType).some((options) => Array.isArray(options) && options.length > 0);
+                updateCurrencyField(kind, value) {
+                    this.setCurrencyField(kind, value);
                 },
-                syncPassThroughState() {
-                    const shouldEnable = this.activeTab === 'pass_through' && this.hasAvailablePackages();
+                setCurrencyField(kind, value) {
+                    const digits = String(value || '').replace(/\D/g, '');
+                    const base = `passThrough${kind}`;
 
-                    if (this.passThroughEnabled !== shouldEnable) {
-                        this.passThroughEnabled = shouldEnable;
-                    }
+                    this[base] = digits;
+                    this[`${base}Display`] = digits ? this.formatNumber(digits) : '';
                 },
-                packageOptions() {
-                    const options = this.packagesByType[this.selectedCustomerType] || [];
-
-                    return Array.isArray(options) ? options : [];
-                },
-                ensureDefaultPackage() {
-                    const options = this.packageOptions();
-
-                    if (!options.length) {
-                        this.selectedPackageId = '';
-                        return;
-                    }
-
-                    const hasSelected = options.some((option) => option.id === this.selectedPackageId);
-
-                    if (!hasSelected) {
-                        this.selectedPackageId = options[0]?.id || '';
-                    }
-                },
-                selectedPackageData() {
-                    if (!this.selectedPackageId) {
-                        return null;
-                    }
-
-                    return this.packagesById[this.selectedPackageId] || null;
-                },
-                passThroughAmount() {
-                    const data = this.selectedPackageData();
-
-                    if (!data) {
-                        return 0;
-                    }
-
-                    let deductions = Number(data.maintenance_fee || 0) + Number(data.renewal_fee || 0);
-
-                    if (this.selectedCustomerType === 'new') {
-                        deductions += Number(data.account_creation_fee || 0);
-                    }
-
-                    const total = Number(data.package_price || 0) - deductions;
-
-                    return total > 0 ? total : 0;
+                formatNumber(value) {
+                    return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                 },
                 formatCurrency(value) {
-                    const number = Number(value || 0);
+                    const numeric = Number(value) || 0;
 
                     return new Intl.NumberFormat('id-ID', {
                         style: 'currency',
                         currency: 'IDR',
                         maximumFractionDigits: 0,
-                    }).format(number);
+                    }).format(numeric);
                 },
-                syncTransactionComponents() {
-                    const tabs = this.$refs.transactionTabs;
+                passThroughAmount() {
+                    const daily = Number(this.passThroughDailyBalance) || 0;
+                    const days = Number(this.passThroughEstimatedDays) || 0;
 
-                    if (!tabs) {
-                        return;
+                    return daily * days;
+                },
+                maintenanceFeeValue() {
+                    return Number(this.passThroughMaintenanceFee) || 0;
+                },
+                accountCreationFeeValue() {
+                    if (this.passThroughCustomerType !== 'new') {
+                        return 0;
                     }
 
-                    const itemsWrapper = tabs.querySelector('[data-items-wrapper]');
-
-                    if (itemsWrapper) {
-                        const shouldHideItems = this.passThroughEnabled || this.activeTab === 'settlement' || this.activeTab === 'pass_through';
-                        itemsWrapper.style.display = shouldHideItems ? 'none' : '';
-
-                        itemsWrapper.querySelectorAll('input, select, textarea').forEach((element) => {
-                            if (this.passThroughEnabled || this.activeTab === 'pass_through') {
-                                if (!element.dataset.passThroughDisabled) {
-                                    element.dataset.passThroughDisabled = '1';
-                                }
-
-                                element.disabled = true;
-                                element.required = false;
-                            } else if (element.dataset.passThroughDisabled === '1' && this.activeTab !== 'settlement') {
-                                element.disabled = false;
-                                delete element.dataset.passThroughDisabled;
-                            }
-                        });
-                    }
-
-                    const addItemButton = tabs.querySelector('[data-add-item]');
-
-                    if (addItemButton) {
-                        if (this.passThroughEnabled || this.activeTab === 'pass_through') {
-                            addItemButton.dataset.passThroughDisabled = '1';
-                            addItemButton.disabled = true;
-                            addItemButton.classList.add('hidden');
-                        } else if (addItemButton.dataset.passThroughDisabled === '1' && this.activeTab !== 'settlement') {
-                            addItemButton.disabled = false;
-                            addItemButton.classList.remove('hidden');
-                            delete addItemButton.dataset.passThroughDisabled;
-                        } else if (this.activeTab === 'settlement') {
-                            addItemButton.classList.add('hidden');
-                        } else {
-                            addItemButton.classList.remove('hidden');
-                        }
-                    }
-
-                    const totalWrapper = tabs.querySelector('[data-total-wrapper]');
-
-                    if (totalWrapper) {
-                        const shouldHideTotal = this.passThroughEnabled || this.activeTab === 'settlement' || this.activeTab === 'pass_through';
-                        totalWrapper.style.display = shouldHideTotal ? 'none' : '';
-                    }
-
-                    const downPaymentSection = tabs.querySelector('[data-down-payment-visible]');
-
-                    if (downPaymentSection) {
-                        if (this.passThroughEnabled) {
-                            downPaymentSection.style.display = 'none';
-
-                            downPaymentSection.querySelectorAll('input, select, textarea').forEach((element) => {
-                                if (!element.dataset.passThroughDisabled) {
-                                    element.dataset.passThroughDisabled = '1';
-                                }
-
-                                element.disabled = true;
-                                element.required = false;
-                            });
-                        } else {
-                            downPaymentSection.style.display = this.activeTab === 'down_payment' ? '' : 'none';
-
-                            downPaymentSection.querySelectorAll('input, select, textarea').forEach((element) => {
-                                if (element.dataset.passThroughDisabled === '1') {
-                                    element.disabled = false;
-                                    delete element.dataset.passThroughDisabled;
-                                }
-                            });
-                        }
-                    }
+                    return Number(this.passThroughAccountCreationFee) || 0;
+                },
+                totalPassThrough() {
+                    return this.passThroughAmount()
+                        + this.maintenanceFeeValue()
+                        + this.accountCreationFeeValue();
                 },
             };
         }

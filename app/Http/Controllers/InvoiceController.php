@@ -26,7 +26,6 @@ use Illuminate\View\View;
 use App\Models\User;
 use App\Services\InvoiceSettlementService;
 use App\Services\PassThroughInvoiceCreator;
-use App\Services\PassThroughPackageManager;
 use App\Support\PassThroughPackage;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -161,20 +160,9 @@ class InvoiceController extends Controller
         return view('invoices.create', compact('incomeCategories'));
     }
 
-    public function createPublic(Request $request, PassThroughPackageManager $packageManager): View
+    public function createPublic(Request $request): View
     {
         $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
-
-        $packages = $packageManager->all();
-        $packagesByType = $packages
-            ->groupBy(fn (PassThroughPackage $package) => $package->customerType)
-            ->map(fn ($group) => $group->map(fn (PassThroughPackage $package) => $package->toArray())->values())
-            ->toArray();
-        $packagesById = $packages
-            ->mapWithKeys(fn (PassThroughPackage $package) => [
-                $package->id => $package->toArray(),
-            ])
-            ->toArray();
 
         /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
         $passphrase = $request->attributes->get('invoicePortalPassphrase');
@@ -206,8 +194,6 @@ class InvoiceController extends Controller
             'passphraseSession' => $passphrase ? $sessionData : null,
             'allowedTransactionTypes' => $allowedTransactionTypes,
             'passphraseToken' => $passphraseToken,
-            'passThroughPackagesByType' => $packagesByType,
-            'passThroughPackagesById' => $packagesById,
         ]);
 
     }
@@ -218,7 +204,30 @@ class InvoiceController extends Controller
         $transactionType = $data['transaction_type'] ?? 'down_payment';
         $ownerId = auth()->id();
 
-        if ($transactionType === 'settlement') {
+        if ($transactionType === 'pass_through') {
+            try {
+                $this->passThroughInvoiceCreator->create([
+                    'customer_type' => $data['pass_through_customer_type'] ?? PassThroughPackage::CUSTOMER_TYPE_NEW,
+                    'daily_balance' => $data['pass_through_daily_balance'] ?? 0,
+                    'estimated_duration' => $data['pass_through_estimated_days'] ?? 0,
+                    'maintenance_fee' => $data['pass_through_maintenance_fee'] ?? 0,
+                    'account_creation_fee' => $data['pass_through_account_creation_fee'] ?? 0,
+                    'owner_id' => $ownerId,
+                    'created_by' => auth()->id(),
+                    'customer_service_id' => null,
+                    'customer_service_name' => auth()->user()?->name,
+                    'client_name' => $data['client_name'],
+                    'client_whatsapp' => $data['client_whatsapp'],
+                    'client_address' => $data['client_address'] ?? null,
+                    'due_date' => $data['due_date'] ?? null,
+                    'debt_user_id' => $ownerId,
+                ]);
+            } catch (\RuntimeException $exception) {
+                return back()
+                    ->withErrors(['pass_through_daily_balance' => $exception->getMessage()])
+                    ->withInput();
+            }
+        } elseif ($transactionType === 'settlement') {
             $referenceInvoice = $request->referenceInvoice()
                 ?? Invoice::where('number', $data['settlement_invoice_number'])->firstOrFail();
 
@@ -232,8 +241,7 @@ class InvoiceController extends Controller
     }
 
     public function storePublic(
-        PublicStoreInvoiceRequest $request,
-        PassThroughPackageManager $packageManager
+        PublicStoreInvoiceRequest $request
     )
     {
         $data = $request->validated();
@@ -264,30 +272,16 @@ class InvoiceController extends Controller
 
         $data['created_by'] = $passphrase->created_by;
 
-        $isPassThroughInvoice = (bool) ($data['pass_through_enabled'] ?? false);
+        $transactionType = $data['transaction_type'] ?? 'down_payment';
 
-        if ($isPassThroughInvoice) {
-            $packageId = $data['pass_through_package_id'] ?? null;
-            $customerType = $data['pass_through_customer_type'] ?? null;
-
-            $package = $packageId ? $packageManager->find($packageId) : null;
-
-            if (! $package || $package->customerType !== $customerType) {
-                return back()
-                    ->withErrors(['pass_through_package_id' => 'Paket pass through tidak valid untuk jenis pelanggan yang dipilih.'])
-                    ->withInput();
-            }
-
-            $remaining = $package->remainingPassThroughAmount();
-
-            if ($remaining <= 0) {
-                return back()
-                    ->withErrors(['pass_through_package_id' => 'Konfigurasi paket menghasilkan nilai pass through yang tidak valid.'])
-                    ->withInput();
-            }
-
+        if ($transactionType === 'pass_through') {
             try {
-                $invoice = $this->passThroughInvoiceCreator->create($package, [
+                $invoice = $this->passThroughInvoiceCreator->create([
+                    'customer_type' => $data['pass_through_customer_type'] ?? PassThroughPackage::CUSTOMER_TYPE_NEW,
+                    'daily_balance' => $data['pass_through_daily_balance'] ?? 0,
+                    'estimated_duration' => $data['pass_through_estimated_days'] ?? 0,
+                    'maintenance_fee' => $data['pass_through_maintenance_fee'] ?? 0,
+                    'account_creation_fee' => $data['pass_through_account_creation_fee'] ?? 0,
                     'owner_id' => $ownerId,
                     'created_by' => $passphrase->created_by,
                     'customer_service_id' => $customerServiceId,
@@ -300,7 +294,7 @@ class InvoiceController extends Controller
                 ]);
             } catch (\RuntimeException $exception) {
                 return back()
-                    ->withErrors(['pass_through_package_id' => $exception->getMessage()])
+                    ->withErrors(['pass_through_daily_balance' => $exception->getMessage()])
                     ->withInput();
             }
         } elseif ($data['transaction_type'] === 'settlement') {
