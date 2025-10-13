@@ -86,7 +86,18 @@ class InvoicePortalPassphrase extends Model
      */
     public function allowedTransactionTypes(): array
     {
-        return $this->access_type?->allowedTransactionTypes() ?? [];
+        $raw = $this->access_type?->allowedTransactionTypes() ?? [];
+
+        return collect($raw)
+            ->map(function ($type) {
+                $normalized = str_replace('-', '_', (string) $type);
+
+                return trim($normalized);
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function markAsUsed(?string $ipAddress = null, ?string $userAgent = null, string $action = 'verified'): void
