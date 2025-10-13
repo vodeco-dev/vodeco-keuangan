@@ -55,6 +55,7 @@
                     @else
                         @php
                             $allowedTransactions = array_values(array_intersect(['down_payment', 'full_payment', 'pass_through', 'settlement'], $allowedTransactionTypes));
+                            // Gemini Debug
                             $defaultTransaction = old('transaction_type');
 
                             if (! $defaultTransaction || ! in_array($defaultTransaction, $allowedTransactions, true)) {
