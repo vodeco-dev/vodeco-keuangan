@@ -13,22 +13,20 @@ class PassThroughPackage implements Arrayable
     public string $id;
     public string $name;
     public string $customerType;
-    public float $packagePrice;
-    public float $dailyDeduction;
+    public float $dailyBalance;
+    public int $durationDays;
     public float $maintenanceFee;
     public float $accountCreationFee;
-    public float $renewalFee;
 
     public function __construct(array $attributes)
     {
         $this->id = (string) ($attributes['id'] ?? Str::uuid());
         $this->name = (string) ($attributes['name'] ?? '');
         $this->customerType = (string) ($attributes['customer_type'] ?? self::CUSTOMER_TYPE_NEW);
-        $this->packagePrice = (float) ($attributes['package_price'] ?? 0);
-        $this->dailyDeduction = (float) ($attributes['daily_deduction'] ?? 0);
+        $this->dailyBalance = (float) ($attributes['daily_balance'] ?? 0);
+        $this->durationDays = (int) ($attributes['duration_days'] ?? 0);
         $this->maintenanceFee = (float) ($attributes['maintenance_fee'] ?? 0);
         $this->accountCreationFee = (float) ($attributes['account_creation_fee'] ?? 0);
-        $this->renewalFee = (float) ($attributes['renewal_fee'] ?? 0);
     }
 
     public static function fromArray(array $attributes): self
@@ -42,11 +40,10 @@ class PassThroughPackage implements Arrayable
             'id' => $this->id,
             'name' => $this->name,
             'customer_type' => $this->customerType,
-            'package_price' => $this->packagePrice,
-            'daily_deduction' => $this->dailyDeduction,
+            'daily_balance' => $this->dailyBalance,
+            'duration_days' => $this->durationDays,
             'maintenance_fee' => $this->maintenanceFee,
             'account_creation_fee' => $this->accountCreationFee,
-            'renewal_fee' => $this->renewalFee,
         ];
     }
 
@@ -59,12 +56,11 @@ class PassThroughPackage implements Arrayable
 
     public function remainingPassThroughAmount(): float
     {
-        $deductions = $this->maintenanceFee + $this->renewalFee;
+        return max($this->dailyBalance * $this->durationDays, 0);
+    }
 
-        if ($this->customerType === self::CUSTOMER_TYPE_NEW) {
-            $deductions += $this->accountCreationFee;
-        }
-
-        return max($this->packagePrice - $deductions, 0);
+    public function totalAdBudget(): float
+    {
+        return $this->remainingPassThroughAmount();
     }
 }

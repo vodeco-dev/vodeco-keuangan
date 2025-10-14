@@ -230,7 +230,7 @@
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <h3 class="text-2xl font-bold mb-2">Pengaturan Paket Invoices Iklan</h3>
-                    <p class="text-sm text-gray-600">Kelola paket Invoices Iklan untuk pelanggan baru maupun lama. Paket digunakan ketika membuat Invoices Iklan.</p>
+                    <p class="text-sm text-gray-600">Kelola paket Invoices Iklan untuk pelanggan baru maupun lama. Total dana iklan dihitung dari saldo harian dikalikan waktu tayang, sedangkan biaya maintenance dan jasa pembuatan akun akan ditagihkan otomatis sesuai pilihan pelanggan.</p>
                 </div>
                 <button type="button" @click="passThroughModal = false" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -268,40 +268,36 @@
             @if ($passThroughPackageRoutesAvailable)
                 <div class="mt-6">
                     <h4 class="text-lg font-semibold text-gray-800">Tambah Paket Baru</h4>
-                    <form method="POST" action="{{ route('pass-through.packages.store') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form x-data="{ customerType: '{{ old('customer_type', \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW) }}' }" x-effect="if (customerType !== '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}' && $refs.accountCreation) { $refs.accountCreation.value = '0'; }" method="POST" action="{{ route('pass-through.packages.store') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         @csrf
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700">Nama Paket</label>
                             <input type="text" name="name" value="{{ old('name') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Jenis Pelanggan</label>
-                            <select name="customer_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            <label class="block text-sm font-medium text-gray-700">Pilihan Pelanggan</label>
+                            <select name="customer_type" x-model="customerType" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                                 <option value="new" @selected(old('customer_type', 'new') === 'new')>Pelanggan Baru</option>
                                 <option value="existing" @selected(old('customer_type') === 'existing')>Pelanggan Lama</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Harga Paket</label>
-                            <input type="text" name="package_price" value="{{ old('package_price') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 10.000.000" required>
+                            <label class="block text-sm font-medium text-gray-700">Saldo Harian</label>
+                            <input type="text" name="daily_balance" value="{{ old('daily_balance') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000" required>
+                            <p class="mt-1 text-xs text-gray-500">Nilai ini akan digunakan sebagai referensi saldo harian pada menu Invoices Iklan.</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Saldo Harian Terpotong</label>
-                            <input type="text" name="daily_deduction" value="{{ old('daily_deduction') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000" required>
-                            <p class="mt-1 text-xs text-gray-500">Nilai ini digunakan sebagai referensi pemotongan saldo harian di menu Invoices Iklan.</p>
+                            <label class="block text-sm font-medium text-gray-700">Waktu Tayang (hari)</label>
+                            <input type="number" name="duration_days" value="{{ old('duration_days') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 30" min="1" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
                             <input type="text" name="maintenance_fee" value="{{ old('maintenance_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 1.500.000" required>
                         </div>
-                        <div>
+                        <div x-show="customerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'" x-cloak>
                             <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
-                            <input type="text" name="account_creation_fee" value="{{ old('account_creation_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000">
-                            <p class="mt-1 text-xs text-gray-500">Untuk pelanggan lama, biaya ini akan diabaikan otomatis.</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Biaya Perpanjangan</label>
-                            <input type="text" name="renewal_fee" value="{{ old('renewal_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 1.000.000">
+                            <input x-ref="accountCreation" type="text" name="account_creation_fee" value="{{ old('account_creation_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000">
+                            <p class="mt-1 text-xs text-gray-500">Biaya ini hanya ditagihkan untuk pelanggan baru.</p>
                         </div>
                         <div class="md:col-span-2 flex justify-end">
                             <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Simpan Paket</button>
@@ -318,7 +314,7 @@
                                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                     <div>
                                         <h5 class="text-lg font-semibold text-gray-900">{{ $package->name }}</h5>
-                                        <p class="text-sm text-gray-500">{{ $package->customerLabel() }} &bull; Harga Paket: Rp{{ number_format($package->packagePrice, 0, ',', '.') }}</p>
+                                        <p class="text-sm text-gray-500">{{ $package->customerLabel() }} &bull; Saldo Harian: Rp{{ number_format($package->dailyBalance, 0, ',', '.') }} &bull; Waktu Tayang: {{ $package->durationDays }} hari &bull; Dana Iklan: Rp{{ number_format($package->totalAdBudget(), 0, ',', '.') }}</p>
                                     </div>
                                     <form method="POST" action="{{ route('pass-through.packages.destroy', $package->id) }}" onsubmit="return confirm('Hapus paket {{ $package->name }}?');">
                                         @csrf
@@ -326,7 +322,7 @@
                                         <button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Hapus</button>
                                     </form>
                                 </div>
-                                <form method="POST" action="{{ route('pass-through.packages.update', $package->id) }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <form x-data="{ customerType: '{{ $package->customerType }}' }" x-effect="if (customerType !== '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}' && $refs.accountCreation) { $refs.accountCreation.value = '0'; }" method="POST" action="{{ route('pass-through.packages.update', $package->id) }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     @csrf
                                     @method('PUT')
                                     <div class="md:col-span-2">
@@ -334,31 +330,27 @@
                                         <input type="text" name="name" value="{{ $package->name }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700">Jenis Pelanggan</label>
-                                        <select name="customer_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                        <label class="block text-sm font-medium text-gray-700">Pilihan Pelanggan</label>
+                                        <select name="customer_type" x-model="customerType" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                                             <option value="new" @selected($package->customerType === 'new')>Pelanggan Baru</option>
                                             <option value="existing" @selected($package->customerType === 'existing')>Pelanggan Lama</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700">Harga Paket</label>
-                                        <input type="text" name="package_price" value="{{ number_format($package->packagePrice, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                        <label class="block text-sm font-medium text-gray-700">Saldo Harian</label>
+                                        <input type="text" name="daily_balance" value="{{ number_format($package->dailyBalance, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700">Saldo Harian Terpotong</label>
-                                        <input type="text" name="daily_deduction" value="{{ number_format($package->dailyDeduction, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                        <label class="block text-sm font-medium text-gray-700">Waktu Tayang (hari)</label>
+                                        <input type="number" name="duration_days" value="{{ $package->durationDays }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" min="1" required>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
                                         <input type="text" name="maintenance_fee" value="{{ number_format($package->maintenanceFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                                     </div>
-                                    <div>
+                                    <div x-show="customerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'" x-cloak>
                                         <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
-                                        <input type="text" name="account_creation_fee" value="{{ number_format($package->accountCreationFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Biaya Perpanjangan</label>
-                                        <input type="text" name="renewal_fee" value="{{ number_format($package->renewalFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                        <input x-ref="accountCreation" type="text" name="account_creation_fee" value="{{ number_format($package->accountCreationFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                                     </div>
                                     <div class="md:col-span-2 flex justify-end">
                                         <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Simpan Perubahan</button>

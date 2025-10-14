@@ -25,22 +25,19 @@ class StorePassThroughPackageRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'customer_type' => ['required', Rule::in($customerTypes)],
-            'package_price' => ['required', 'numeric', 'min:0'],
-            'daily_deduction' => ['required', 'numeric', 'min:0'],
+            'daily_balance' => ['required', 'numeric', 'min:0'],
+            'duration_days' => ['required', 'integer', 'min:1'],
             'maintenance_fee' => ['required', 'numeric', 'min:0'],
             'account_creation_fee' => ['nullable', 'numeric', 'min:0'],
-            'renewal_fee' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
         $numericFields = [
-            'package_price',
-            'daily_deduction',
+            'daily_balance',
             'maintenance_fee',
             'account_creation_fee',
-            'renewal_fee',
         ];
 
         $mutated = [];
@@ -57,6 +54,17 @@ class StorePassThroughPackageRequest extends FormRequest
                 $normalized = str_replace('.', '', $normalized);
                 $normalized = str_replace(',', '.', $normalized);
                 $mutated[$field] = $normalized === '' ? null : $normalized;
+            }
+        }
+
+        $duration = $this->input('duration_days');
+
+        if ($duration !== null) {
+            if (is_string($duration)) {
+                $normalizedDuration = preg_replace('/\D/', '', $duration);
+                $mutated['duration_days'] = $normalizedDuration === '' ? null : (int) $normalizedDuration;
+            } elseif (is_float($duration)) {
+                $mutated['duration_days'] = (int) round($duration);
             }
         }
 
