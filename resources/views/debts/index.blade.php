@@ -243,6 +243,7 @@
             @php($passThroughPackageRoutesAvailable = \Illuminate\Support\Facades\Route::has('pass-through.packages.store')
                 && \Illuminate\Support\Facades\Route::has('pass-through.packages.update')
                 && \Illuminate\Support\Facades\Route::has('pass-through.packages.destroy'))
+            @php($passThroughInvoiceCategoryRouteAvailable = \Illuminate\Support\Facades\Route::has('pass-through.invoice-category.update'))
 
             @if ($errors->hasBag('passThroughPackage'))
                 <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -266,7 +267,41 @@
                 </div>
             @endif
 
+            @if ($errors->hasBag('passThroughInvoiceCategory'))
+                <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <h4 class="font-semibold">Gagal menyimpan pengaturan kategori:</h4>
+                    <ul class="mt-2 list-disc list-inside space-y-1">
+                        @foreach ($errors->getBag('passThroughInvoiceCategory')->all() as $message)
+                            <li>{{ $message }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             @if ($passThroughPackageRoutesAvailable)
+                @if ($passThroughInvoiceCategoryRouteAvailable)
+                    <div class="mt-6">
+                        <h4 class="text-lg font-semibold text-gray-800">Kategori Pendapatan Default</h4>
+                        <p class="text-sm text-gray-500">Pilih kategori pendapatan yang akan otomatis digunakan pada item dan transaksi Invoices Iklan.</p>
+                        <form method="POST" action="{{ route('pass-through.invoice-category.update') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @csrf
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Kategori Pendapatan</label>
+                                <select name="category_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    <option value="">-- Pilih kategori --</option>
+                                    @foreach ($selectableIncomeCategories as $category)
+                                        <option value="{{ $category->id }}" @selected((int) old('category_id', $passThroughInvoiceCategoryId) === $category->id)>{{ $category->name }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="mt-1 text-xs text-gray-500">Biarkan kosong bila ingin menggunakan fallback "Penjualan Iklan".</p>
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Simpan Pengaturan</button>
+                            </div>
+                        </form>
+                    </div>
+                @endif
+
                 <div class="mt-6">
                     <h4 class="text-lg font-semibold text-gray-800">Tambah Paket Baru</h4>
                     <form x-data="{ customerType: '{{ old('customer_type', \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW) }}' }" x-effect="if (customerType !== '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}' && $refs.accountCreation) { $refs.accountCreation.value = '0'; }" method="POST" action="{{ route('pass-through.packages.store') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
