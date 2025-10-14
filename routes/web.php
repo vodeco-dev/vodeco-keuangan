@@ -11,7 +11,6 @@ use App\Http\Controllers\InvoicePortalPassphraseVerificationController;
 use App\Http\Controllers\InvoiceSettlementController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\PassThroughInvoiceController;
 use App\Http\Controllers\PassThroughPackageController;
 
 
@@ -76,12 +75,6 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::post('debts/category-preferences', [DebtController::class, 'updateCategoryPreferences'])->name('debts.category-preferences.update');
     Route::resource('debts', DebtController::class);
-    Route::get('pass-through/invoices/create', [PassThroughInvoiceController::class, 'create'])
-        ->middleware('role:staff')
-        ->name('pass-through.invoices.create');
-    Route::post('pass-through/invoices', [PassThroughInvoiceController::class, 'store'])
-        ->middleware('role:staff')
-        ->name('pass-through.invoices.store');
     Route::post('pass-through/packages', [PassThroughPackageController::class, 'store'])
         ->middleware('role:staff')
         ->name('pass-through.packages.store');

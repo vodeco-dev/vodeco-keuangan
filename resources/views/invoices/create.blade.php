@@ -19,8 +19,23 @@
                         'id' => $category->id,
                         'name' => $category->name,
                     ])->values();
+                    $defaultPassThroughCustomerType = old('pass_through_customer_type', \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW);
+                    $defaultPassThroughDailyBalance = old('pass_through_daily_balance');
+                    $defaultPassThroughEstimatedDays = old('pass_through_estimated_days', 1);
+                    $defaultPassThroughMaintenanceFee = old('pass_through_maintenance_fee');
+                    $defaultPassThroughAccountCreationFee = old('pass_through_account_creation_fee');
                 @endphp
-                <form action="{{ route('invoices.store') }}" method="POST" class="p-6" id="invoice-form">
+                <form action="{{ route('invoices.store') }}" method="POST" class="p-6" id="invoice-form"
+                    x-data="invoicePortalForm({
+                        defaultTransaction: @json(old('transaction_type', 'down_payment')),
+                        passThroughDefaults: {
+                            customerType: @json($defaultPassThroughCustomerType),
+                            dailyBalance: @json($defaultPassThroughDailyBalance),
+                            estimatedDays: @json($defaultPassThroughEstimatedDays),
+                            maintenanceFee: @json($defaultPassThroughMaintenanceFee),
+                            accountCreationFee: @json($defaultPassThroughAccountCreationFee),
+                        },
+                    })">
                     @csrf
 
                     {{-- Informasi Klien --}}
@@ -68,7 +83,7 @@
                             form-id="invoice-form"
                             :items="$oldItems"
                             :category-options="$categoryOptions"
-                            :allowed-transactions="['down_payment', 'full_payment', 'settlement']"
+                            :allowed-transactions="['down_payment', 'full_payment', 'pass_through', 'settlement']"
                             :default-transaction="old('transaction_type', 'down_payment')"
                             variant="internal"
                             down-payment-field-label="Nominal Down Payment"
@@ -86,6 +101,101 @@
                         />
                     </div>
 
+                    <div class="mt-8 space-y-6" x-show="activeTab === 'pass_through'" x-cloak>
+                        <div class="rounded-2xl border border-gray-200 bg-gray-50 p-6">
+                            <div class="flex flex-col gap-2">
+                                <h3 class="text-lg font-semibold text-gray-900">Invoice Pass Through</h3>
+                                <p class="text-sm text-gray-600">Isi saldo harian, estimasi hari, serta biaya tambahan untuk menghitung total invoice secara otomatis.</p>
+                            </div>
+
+                            <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Jenis Pelanggan</label>
+                                    <select name="pass_through_customer_type" x-model="passThroughCustomerType"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                        <option value="{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}">Pelanggan Baru</option>
+                                        <option value="{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_EXISTING }}">Pelanggan Lama</option>
+                                    </select>
+                                    @error('pass_through_customer_type')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Saldo Harian</label>
+                                    <input type="hidden" name="pass_through_daily_balance" :value="passThroughDailyBalance">
+                                    <input type="text" x-model="passThroughDailyBalanceDisplay"
+                                        @input="updateCurrencyField('DailyBalance', $event.target.value)"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        placeholder="Contoh: 30.000">
+                                    <p class="mt-1 text-xs text-gray-500">Nominal otomatis diformat menjadi ribuan.</p>
+                                    @error('pass_through_daily_balance')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Estimasi Waktu (Hari)</label>
+                                    <input type="number" name="pass_through_estimated_days" min="1"
+                                        x-model.number="passThroughEstimatedDays"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        placeholder="Contoh: 30">
+                                    @error('pass_through_estimated_days')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Jasa Maintenance</label>
+                                    <input type="hidden" name="pass_through_maintenance_fee" :value="passThroughMaintenanceFee">
+                                    <input type="text" x-model="passThroughMaintenanceFeeDisplay"
+                                        @input="updateCurrencyField('MaintenanceFee', $event.target.value)"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        placeholder="Contoh: 10.000">
+                                    @error('pass_through_maintenance_fee')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div x-show="passThroughCustomerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'" x-cloak>
+                                    <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun</label>
+                                    <input type="hidden" name="pass_through_account_creation_fee"
+                                        :value="passThroughCustomerType === 'new' ? passThroughAccountCreationFee : 0">
+                                    <input type="text" x-model="passThroughAccountCreationFeeDisplay"
+                                        @input="updateCurrencyField('AccountCreationFee', $event.target.value)"
+                                        :disabled="passThroughCustomerType !== 'new'"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                        placeholder="Contoh: 20.000">
+                                    @error('pass_through_account_creation_fee')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm">
+                            <h4 class="text-base font-semibold text-gray-900">Ringkasan Perhitungan</h4>
+                            <dl class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
+                                <div>
+                                    <dt class="font-medium text-gray-600">Dana Pass Through</dt>
+                                    <dd class="mt-1 text-base font-semibold text-purple-600" x-text="formatCurrency(passThroughAmount())"></dd>
+                                </div>
+                                <div>
+                                    <dt class="font-medium text-gray-600">Jasa Maintenance</dt>
+                                    <dd class="mt-1" x-text="formatCurrency(maintenanceFeeValue())"></dd>
+                                </div>
+                                <div x-show="passThroughCustomerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'">
+                                    <dt class="font-medium text-gray-600">Biaya Pembuatan Akun</dt>
+                                    <dd class="mt-1" x-text="formatCurrency(accountCreationFeeValue())"></dd>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <dt class="font-medium text-gray-600">Total Invoice</dt>
+                                    <dd class="mt-1 text-lg font-semibold text-green-600" x-text="formatCurrency(totalPassThrough())"></dd>
+                                </div>
+                            </dl>
+                            <p class="mt-4 text-xs text-gray-500">Dana pass through dicatat sebagai hutang sebesar saldo harian dikalikan estimasi hari. Biaya lainnya otomatis masuk transaksi pemasukan.</p>
+                        </div>
+                    </div>
 
                     <div class="mt-6 flex justify-end">
                         <button type="submit" class="px-6 py-3 text-base font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">Simpan Invoice</button>
