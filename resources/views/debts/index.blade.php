@@ -13,7 +13,8 @@
     $oldAmount = old('amount');
     $rawOldAmount = $oldAmount !== null ? preg_replace('/\D/', '', (string) $oldAmount) : '';
     $formattedOldAmount = $rawOldAmount !== '' ? number_format((int) $rawOldAmount, 0, ',', '.') : '';
-    $shouldOpenPassThroughModal = session('open_pass_through_modal')
+    $shouldOpenPassThroughModal = request()->boolean('open_pass_through_modal')
+        || session('open_pass_through_modal')
         || $errors->hasBag('passThroughPackage')
         || $errors->hasBag('passThroughPackageUpdate');
 @endphp
