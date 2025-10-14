@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
 window.invoicePortalForm = function invoicePortalForm(config = {}) {
     const passThroughConfig = config.passThrough || {};
     const packages = Array.isArray(passThroughConfig.packages) ? passThroughConfig.packages : [];
+    console.log('Invoice Portal Form Packages:', packages);
     const defaults = passThroughConfig.defaults || {};
 
     const defaultQuantity = Number.parseInt(defaults.quantity, 10);
