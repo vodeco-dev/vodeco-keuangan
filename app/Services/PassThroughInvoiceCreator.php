@@ -16,9 +16,9 @@ class PassThroughInvoiceCreator
     /**
      * Membuat Invoices Iklan beserta catatan hutang terkait berdasarkan paket yang dipilih.
      */
-    public function create(array $attributes): Invoice
+    public function create(PassThroughPackage $package, int $quantity, array $attributes): Invoice
     {
-        return DB::transaction(function () use ($attributes) {
+        return DB::transaction(function () use ($package, $quantity, $attributes) {
             $ownerId = $attributes['owner_id'] ?? null;
             $createdBy = $attributes['created_by'] ?? null;
             $customerServiceId = $attributes['customer_service_id'] ?? null;
@@ -30,23 +30,44 @@ class PassThroughInvoiceCreator
             $issueDate = $attributes['issue_date'] ?? now();
             $issueDateCarbon = $issueDate instanceof Carbon ? $issueDate : Carbon::parse($issueDate);
 
-            $customerType = $attributes['customer_type'] ?? PassThroughPackage::CUSTOMER_TYPE_NEW;
-            $dailyBalance = (float) ($attributes['daily_balance'] ?? 0);
-            $estimatedDuration = (int) ($attributes['estimated_duration'] ?? 0);
-            $maintenanceFee = (float) ($attributes['maintenance_fee'] ?? 0);
-            $accountCreationFee = (float) ($attributes['account_creation_fee'] ?? 0);
+            $normalizedQuantity = max($quantity, 1);
+            $customerType = $package->customerType;
+            $description = trim((string) ($attributes['description'] ?? ''));
 
-            if ($customerType !== PassThroughPackage::CUSTOMER_TYPE_NEW) {
-                $accountCreationFee = 0;
+            $durationDays = (int) ($attributes['duration_days'] ?? $package->durationDays ?? 0);
+            if ($durationDays <= 0 && $package->durationDays > 0) {
+                $durationDays = $package->durationDays;
             }
 
-            $passThroughAmount = round($dailyBalance * $estimatedDuration, 2);
+            $dailyBalanceUnit = (float) ($attributes['daily_balance_unit'] ?? $package->dailyBalance ?? 0);
+            if ($dailyBalanceUnit <= 0 && $package->dailyBalance > 0) {
+                $dailyBalanceUnit = $package->dailyBalance;
+            }
 
-            if ($passThroughAmount <= 0) {
+            $maintenanceUnit = (float) ($attributes['maintenance_unit'] ?? $package->maintenanceFee ?? 0);
+            if ($maintenanceUnit < 0) {
+                $maintenanceUnit = 0;
+            }
+
+            $accountCreationUnit = (float) ($attributes['account_creation_unit'] ?? $package->accountCreationFee ?? 0);
+            if ($customerType !== PassThroughPackage::CUSTOMER_TYPE_NEW) {
+                $accountCreationUnit = 0;
+            }
+
+            $adBudgetUnit = (float) ($attributes['ad_budget_unit'] ?? round($dailyBalanceUnit * $durationDays, 2));
+            if ($adBudgetUnit <= 0) {
+                $adBudgetUnit = round($dailyBalanceUnit * $durationDays, 2);
+            }
+
+            $adBudgetTotal = round($adBudgetUnit * $normalizedQuantity, 2);
+            $maintenanceTotal = round($maintenanceUnit * $normalizedQuantity, 2);
+            $accountCreationTotal = round($accountCreationUnit * $normalizedQuantity, 2);
+
+            if ($adBudgetTotal <= 0) {
                 throw new \RuntimeException('Nilai Invoices Iklan tidak boleh 0.');
             }
 
-            $total = round($passThroughAmount + $maintenanceFee + $accountCreationFee, 2);
+            $total = round($adBudgetTotal + $maintenanceTotal + $accountCreationTotal, 2);
 
             $invoice = Invoice::create([
                 'user_id' => $ownerId,
@@ -70,13 +91,13 @@ class PassThroughInvoiceCreator
                 'payment_date' => null,
             ]);
 
-            foreach ($this->makeInvoiceItems($passThroughAmount, $maintenanceFee, $accountCreationFee, $customerType, $dailyBalance, $estimatedDuration) as $item) {
+            foreach ($this->makeInvoiceItems($package, $normalizedQuantity, $description, $dailyBalanceUnit, $durationDays, $adBudgetUnit, $maintenanceUnit, $accountCreationUnit) as $item) {
                 InvoiceItem::create([
                     'invoice_id' => $invoice->id,
                     'category_id' => null,
                     'description' => $item['description'],
-                    'quantity' => 1,
-                    'price' => $item['amount'],
+                    'quantity' => $item['quantity'],
+                    'price' => $item['unit_amount'],
                 ]);
             }
 
@@ -84,58 +105,66 @@ class PassThroughInvoiceCreator
                 ?? $createdBy
                 ?? $ownerId;
 
+            $dailyBalanceTotal = round($dailyBalanceUnit * $normalizedQuantity, 2);
+            $debtDescription = $this->makeDebtDescription($package, $description, $normalizedQuantity);
+
             Debt::create([
                 'user_id' => $debtUserId,
                 'invoice_id' => $invoice->id,
-                'description' => $invoice->transactionDescription(),
+                'description' => $debtDescription,
                 'related_party' => $clientName ?: $clientWhatsapp,
                 'type' => Debt::TYPE_PASS_THROUGH,
-                'amount' => $passThroughAmount,
+                'amount' => $adBudgetTotal,
                 'due_date' => $dueDate,
                 'status' => Debt::STATUS_BELUM_LUNAS,
-                'daily_deduction' => $dailyBalance,
+                'daily_deduction' => $dailyBalanceTotal,
             ]);
 
-            $this->recordTransactions($maintenanceFee, $accountCreationFee, $invoice, $ownerId ?? $createdBy, $issueDateCarbon);
+            $this->recordTransactions($maintenanceTotal, $accountCreationTotal, $normalizedQuantity, $invoice, $ownerId ?? $createdBy, $issueDateCarbon);
 
             return $invoice->load('items', 'customerService');
         });
     }
 
     protected function makeInvoiceItems(
-        float $passThroughAmount,
-        float $maintenanceFee,
-        float $accountCreationFee,
-        string $customerType,
-        float $dailyBalance,
-        int $estimatedDuration
+        PassThroughPackage $package,
+        int $quantity,
+        string $customDescription,
+        float $dailyBalanceUnit,
+        int $durationDays,
+        float $adBudgetUnit,
+        float $maintenanceUnit,
+        float $accountCreationUnit
     ): array
     {
         $items = [];
 
-        if ($customerType === PassThroughPackage::CUSTOMER_TYPE_NEW && $accountCreationFee > 0) {
+        if ($package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW && $accountCreationUnit > 0) {
             $items[] = [
                 'description' => 'Biaya Pembuatan Akun Iklan',
-                'amount' => $accountCreationFee,
+                'quantity' => $quantity,
+                'unit_amount' => $accountCreationUnit,
             ];
         }
 
-        if ($maintenanceFee > 0) {
+        if ($maintenanceUnit > 0) {
             $items[] = [
                 'description' => 'Jasa Maintenance',
-                'amount' => $maintenanceFee,
+                'quantity' => $quantity,
+                'unit_amount' => $maintenanceUnit,
             ];
         }
 
         $items[] = [
-            'description' => 'Dana Invoices Iklan (' . $this->formatCurrency($dailyBalance) . ' x ' . max($estimatedDuration, 0) . ' hari)',
-            'amount' => $passThroughAmount,
+            'description' => $this->makeAdBudgetDescription($package, $customDescription, $dailyBalanceUnit, $durationDays),
+            'quantity' => $quantity,
+            'unit_amount' => $adBudgetUnit,
         ];
 
         return $items;
     }
 
-    protected function recordTransactions(float $maintenanceFee, float $accountCreationFee, Invoice $invoice, ?int $userId, Carbon $issueDate): void
+    protected function recordTransactions(float $maintenanceTotal, float $accountCreationTotal, int $quantity, Invoice $invoice, ?int $userId, Carbon $issueDate): void
     {
         $category = Category::query()
             ->where('name', 'Penjualan Iklan')
@@ -148,17 +177,17 @@ class PassThroughInvoiceCreator
 
         $transactions = [];
 
-        if ($maintenanceFee > 0) {
+        if ($maintenanceTotal > 0) {
             $transactions[] = [
-                'amount' => $maintenanceFee,
-                'description' => 'Jasa Maintenance - ' . ($invoice->client_name ?: $invoice->client_whatsapp ?: $invoice->number),
+                'amount' => $maintenanceTotal,
+                'description' => 'Jasa Maintenance' . ($quantity > 1 ? ' (x' . $quantity . ')' : '') . ' - ' . ($invoice->client_name ?: $invoice->client_whatsapp ?: $invoice->number),
             ];
         }
 
-        if ($accountCreationFee > 0 && $invoice->type === Invoice::TYPE_PASS_THROUGH_NEW) {
+        if ($accountCreationTotal > 0 && $invoice->type === Invoice::TYPE_PASS_THROUGH_NEW) {
             $transactions[] = [
-                'amount' => $accountCreationFee,
-                'description' => 'Biaya Pembuatan Akun - ' . ($invoice->client_name ?: $invoice->client_whatsapp ?: $invoice->number),
+                'amount' => $accountCreationTotal,
+                'description' => 'Biaya Pembuatan Akun' . ($quantity > 1 ? ' (x' . $quantity . ')' : '') . ' - ' . ($invoice->client_name ?: $invoice->client_whatsapp ?: $invoice->number),
             ];
         }
 
@@ -187,6 +216,39 @@ class PassThroughInvoiceCreator
         $rounded = (int) round($value);
 
         return number_format($rounded, 0, ',', '.');
+    }
+
+    protected function makeAdBudgetDescription(PassThroughPackage $package, string $customDescription, float $dailyBalance, int $durationDays): string
+    {
+        $parts = [];
+
+        $customDescription = trim($customDescription);
+
+        if ($customDescription !== '') {
+            $parts[] = $customDescription;
+        } elseif ($package->name !== '') {
+            $parts[] = $package->name;
+        }
+
+        $dailyLabel = $this->formatCurrency($dailyBalance);
+        $durationLabel = max($durationDays, 0);
+
+        $parts[] = 'Dana Invoices Iklan (' . $dailyLabel . ' x ' . $durationLabel . ' hari)';
+
+        return implode(' – ', $parts);
+    }
+
+    protected function makeDebtDescription(PassThroughPackage $package, string $customDescription, int $quantity): string
+    {
+        $label = trim($customDescription);
+
+        if ($label === '') {
+            $label = $package->name;
+        }
+
+        $quantityLabel = $quantity > 1 ? ' (x' . $quantity . ')' : '';
+
+        return trim('Invoices Iklan ' . ($label !== '' ? $label : '')) . $quantityLabel;
     }
 }
 

@@ -32,12 +32,18 @@ class PassThroughInvoiceCreatorTest extends TestCase
 
         $service = app(PassThroughInvoiceCreator::class);
 
-        $invoice = $service->create([
+        $package = new PassThroughPackage([
+            'id' => 'pkg-new',
+            'name' => 'Paket Startup',
             'customer_type' => PassThroughPackage::CUSTOMER_TYPE_NEW,
             'daily_balance' => 30000,
-            'estimated_duration' => 10,
+            'duration_days' => 10,
             'maintenance_fee' => 50000,
             'account_creation_fee' => 75000,
+        ]);
+
+        $invoice = $service->create($package, 1, [
+            'description' => 'Kampanye Marketplace',
             'owner_id' => $owner->id,
             'created_by' => $creator->id,
             'customer_service_id' => null,
@@ -60,18 +66,21 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'invoice_id' => $invoice->id,
             'description' => 'Biaya Pembuatan Akun Iklan',
             'price' => 75000,
+            'quantity' => 1,
         ]);
 
         $this->assertDatabaseHas('invoice_items', [
             'invoice_id' => $invoice->id,
             'description' => 'Jasa Maintenance',
             'price' => 50000,
+            'quantity' => 1,
         ]);
 
         $this->assertDatabaseHas('invoice_items', [
             'invoice_id' => $invoice->id,
-            'description' => 'Dana Invoices Iklan (30.000 x 10 hari)',
+            'description' => 'Kampanye Marketplace – Dana Invoices Iklan (30.000 x 10 hari)',
             'price' => 300000,
+            'quantity' => 1,
         ]);
 
         $this->assertDatabaseHas('debts', [
@@ -81,6 +90,7 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'amount' => 300000,
             'daily_deduction' => 30000,
             'status' => Debt::STATUS_BELUM_LUNAS,
+            'description' => 'Invoices Iklan Kampanye Marketplace',
         ]);
 
         $this->assertDatabaseHas('transactions', [
@@ -114,12 +124,18 @@ class PassThroughInvoiceCreatorTest extends TestCase
 
         $service = app(PassThroughInvoiceCreator::class);
 
-        $invoice = $service->create([
+        $package = new PassThroughPackage([
+            'id' => 'pkg-existing',
+            'name' => 'Paket Reguler',
             'customer_type' => PassThroughPackage::CUSTOMER_TYPE_EXISTING,
             'daily_balance' => 20000,
-            'estimated_duration' => 5,
+            'duration_days' => 5,
             'maintenance_fee' => 30000,
             'account_creation_fee' => 50000,
+        ]);
+
+        $invoice = $service->create($package, 2, [
+            'description' => 'Promo Ramadhan',
             'owner_id' => $owner->id,
             'created_by' => $creator->id,
             'customer_service_id' => null,
@@ -134,7 +150,7 @@ class PassThroughInvoiceCreatorTest extends TestCase
         $invoice = $invoice->fresh(['items', 'debt']);
 
         $this->assertSame(Invoice::TYPE_PASS_THROUGH_EXISTING, $invoice->type);
-        $this->assertSame(130000.0, (float) $invoice->total);
+        $this->assertSame(260000.0, (float) $invoice->total);
         $this->assertCount(2, $invoice->items);
 
         $this->assertDatabaseMissing('invoice_items', [
@@ -146,26 +162,29 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'invoice_id' => $invoice->id,
             'description' => 'Jasa Maintenance',
             'price' => 30000,
+            'quantity' => 2,
         ]);
 
         $this->assertDatabaseHas('invoice_items', [
             'invoice_id' => $invoice->id,
-            'description' => 'Dana Invoices Iklan (20.000 x 5 hari)',
+            'description' => 'Promo Ramadhan – Dana Invoices Iklan (20.000 x 5 hari)',
             'price' => 100000,
+            'quantity' => 2,
         ]);
 
         $this->assertDatabaseHas('debts', [
             'invoice_id' => $invoice->id,
             'user_id' => $owner->id,
-            'amount' => 100000,
-            'daily_deduction' => 20000,
+            'amount' => 200000,
+            'daily_deduction' => 40000,
+            'description' => 'Invoices Iklan Promo Ramadhan (x2)',
         ]);
 
         $this->assertDatabaseHas('transactions', [
             'category_id' => $category->id,
-            'amount' => 30000,
+            'amount' => 60000,
             'user_id' => $owner->id,
-            'description' => 'Jasa Maintenance - CV Lancar',
+            'description' => 'Jasa Maintenance (x2) - CV Lancar',
         ]);
 
         $this->assertDatabaseMissing('transactions', [

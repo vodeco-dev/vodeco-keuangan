@@ -26,13 +26,17 @@ use Illuminate\View\View;
 use App\Models\User;
 use App\Services\InvoiceSettlementService;
 use App\Services\PassThroughInvoiceCreator;
+use App\Services\PassThroughPackageManager;
 use App\Support\PassThroughPackage;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 class InvoiceController extends Controller
 {
-    public function __construct(private PassThroughInvoiceCreator $passThroughInvoiceCreator)
+    public function __construct(
+        private PassThroughInvoiceCreator $passThroughInvoiceCreator,
+        private PassThroughPackageManager $passThroughPackageManager
+    )
     {
         $this->authorizeResource(Invoice::class, 'invoice');
     }
@@ -156,13 +160,15 @@ class InvoiceController extends Controller
     public function create(): View
     {
         $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
+        $passThroughPackages = $this->passThroughPackageManager->all();
 
-        return view('invoices.create', compact('incomeCategories'));
+        return view('invoices.create', compact('incomeCategories', 'passThroughPackages'));
     }
 
     public function createPublic(Request $request): View
     {
         $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
+        $passThroughPackages = $this->passThroughPackageManager->all();
 
         /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
         $passphrase = $request->attributes->get('invoicePortalPassphrase');
@@ -194,6 +200,7 @@ class InvoiceController extends Controller
             'passphraseSession' => $passphrase ? $sessionData : null,
             'allowedTransactionTypes' => $allowedTransactionTypes,
             'passphraseToken' => $passphraseToken,
+            'passThroughPackages' => $passThroughPackages,
         ]);
 
     }
@@ -205,26 +212,62 @@ class InvoiceController extends Controller
         $ownerId = auth()->id();
 
         if ($transactionType === 'pass_through') {
+            $packageId = $data['pass_through_package_id'] ?? null;
+            $package = $packageId ? $this->passThroughPackageManager->find($packageId) : null;
+
+            if (! $package) {
+                return back()
+                    ->withErrors(['pass_through_package_id' => 'Paket Invoices Iklan tidak ditemukan.'])
+                    ->withInput();
+            }
+
+            $quantity = max((int) ($data['pass_through_quantity'] ?? 1), 1);
+            $description = trim((string) ($data['pass_through_description'] ?? ''));
+            $durationDays = (int) ($data['pass_through_duration_days'] ?? $package->durationDays ?? 0);
+            if ($durationDays <= 0) {
+                $durationDays = $package->durationDays;
+            }
+
+            $adBudgetUnit = round($package->dailyBalance * $durationDays, 2);
+            $maintenanceUnit = round($package->maintenanceFee, 2);
+            $accountCreationUnit = $package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW
+                ? round($package->accountCreationFee, 2)
+                : 0.0;
+
+            $adBudgetTotal = round($adBudgetUnit * $quantity, 2);
+            $maintenanceTotal = round($maintenanceUnit * $quantity, 2);
+            $accountCreationTotal = round($accountCreationUnit * $quantity, 2);
+            $dailyBalanceTotal = round($package->dailyBalance * $quantity, 2);
+
             try {
-                $this->passThroughInvoiceCreator->create([
-                    'customer_type' => $data['pass_through_customer_type'] ?? PassThroughPackage::CUSTOMER_TYPE_NEW,
-                    'daily_balance' => $data['pass_through_daily_balance'] ?? 0,
-                    'estimated_duration' => $data['pass_through_estimated_days'] ?? 0,
-                    'maintenance_fee' => $data['pass_through_maintenance_fee'] ?? 0,
-                    'account_creation_fee' => $data['pass_through_account_creation_fee'] ?? 0,
-                    'owner_id' => $ownerId,
-                    'created_by' => auth()->id(),
-                    'customer_service_id' => null,
-                    'customer_service_name' => auth()->user()?->name,
-                    'client_name' => $data['client_name'],
-                    'client_whatsapp' => $data['client_whatsapp'],
-                    'client_address' => $data['client_address'] ?? null,
-                    'due_date' => $data['due_date'] ?? null,
-                    'debt_user_id' => $ownerId,
-                ]);
+                $this->passThroughInvoiceCreator->create(
+                    $package,
+                    $quantity,
+                    [
+                        'description' => $description,
+                        'ad_budget_unit' => $adBudgetUnit,
+                        'ad_budget_total' => $adBudgetTotal,
+                        'maintenance_unit' => $maintenanceUnit,
+                        'maintenance_total' => $maintenanceTotal,
+                        'account_creation_unit' => $accountCreationUnit,
+                        'account_creation_total' => $accountCreationTotal,
+                        'daily_balance_unit' => $package->dailyBalance,
+                        'daily_balance_total' => $dailyBalanceTotal,
+                        'duration_days' => $durationDays,
+                        'owner_id' => $ownerId,
+                        'created_by' => auth()->id(),
+                        'customer_service_id' => null,
+                        'customer_service_name' => auth()->user()?->name,
+                        'client_name' => $data['client_name'],
+                        'client_whatsapp' => $data['client_whatsapp'],
+                        'client_address' => $data['client_address'] ?? null,
+                        'due_date' => $data['due_date'] ?? null,
+                        'debt_user_id' => $ownerId,
+                    ]
+                );
             } catch (\RuntimeException $exception) {
                 return back()
-                    ->withErrors(['pass_through_daily_balance' => $exception->getMessage()])
+                    ->withErrors(['pass_through_package_id' => $exception->getMessage()])
                     ->withInput();
             }
         } elseif ($transactionType === 'settlement') {
@@ -275,26 +318,62 @@ class InvoiceController extends Controller
         $transactionType = $data['transaction_type'] ?? 'down_payment';
 
         if ($transactionType === 'pass_through') {
+            $packageId = $data['pass_through_package_id'] ?? null;
+            $package = $packageId ? $this->passThroughPackageManager->find($packageId) : null;
+
+            if (! $package) {
+                return back()
+                    ->withErrors(['pass_through_package_id' => 'Paket Invoices Iklan tidak ditemukan.'])
+                    ->withInput();
+            }
+
+            $quantity = max((int) ($data['pass_through_quantity'] ?? 1), 1);
+            $description = trim((string) ($data['pass_through_description'] ?? ''));
+            $durationDays = (int) ($data['pass_through_duration_days'] ?? $package->durationDays ?? 0);
+            if ($durationDays <= 0) {
+                $durationDays = $package->durationDays;
+            }
+
+            $adBudgetUnit = round($package->dailyBalance * $durationDays, 2);
+            $maintenanceUnit = round($package->maintenanceFee, 2);
+            $accountCreationUnit = $package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW
+                ? round($package->accountCreationFee, 2)
+                : 0.0;
+
+            $adBudgetTotal = round($adBudgetUnit * $quantity, 2);
+            $maintenanceTotal = round($maintenanceUnit * $quantity, 2);
+            $accountCreationTotal = round($accountCreationUnit * $quantity, 2);
+            $dailyBalanceTotal = round($package->dailyBalance * $quantity, 2);
+
             try {
-                $invoice = $this->passThroughInvoiceCreator->create([
-                    'customer_type' => $data['pass_through_customer_type'] ?? PassThroughPackage::CUSTOMER_TYPE_NEW,
-                    'daily_balance' => $data['pass_through_daily_balance'] ?? 0,
-                    'estimated_duration' => $data['pass_through_estimated_days'] ?? 0,
-                    'maintenance_fee' => $data['pass_through_maintenance_fee'] ?? 0,
-                    'account_creation_fee' => $data['pass_through_account_creation_fee'] ?? 0,
-                    'owner_id' => $ownerId,
-                    'created_by' => $passphrase->created_by,
-                    'customer_service_id' => $customerServiceId,
-                    'customer_service_name' => $data['customer_service_name'],
-                    'client_name' => $data['client_name'],
-                    'client_whatsapp' => $data['client_whatsapp'],
-                    'client_address' => $data['client_address'] ?? null,
-                    'due_date' => $data['due_date'] ?? null,
-                    'debt_user_id' => $passphrase->created_by ?: $ownerId,
-                ]);
+                $invoice = $this->passThroughInvoiceCreator->create(
+                    $package,
+                    $quantity,
+                    [
+                        'description' => $description,
+                        'ad_budget_unit' => $adBudgetUnit,
+                        'ad_budget_total' => $adBudgetTotal,
+                        'maintenance_unit' => $maintenanceUnit,
+                        'maintenance_total' => $maintenanceTotal,
+                        'account_creation_unit' => $accountCreationUnit,
+                        'account_creation_total' => $accountCreationTotal,
+                        'daily_balance_unit' => $package->dailyBalance,
+                        'daily_balance_total' => $dailyBalanceTotal,
+                        'duration_days' => $durationDays,
+                        'owner_id' => $ownerId,
+                        'created_by' => $passphrase->created_by,
+                        'customer_service_id' => $customerServiceId,
+                        'customer_service_name' => $data['customer_service_name'],
+                        'client_name' => $data['client_name'],
+                        'client_whatsapp' => $data['client_whatsapp'],
+                        'client_address' => $data['client_address'] ?? null,
+                        'due_date' => $data['due_date'] ?? null,
+                        'debt_user_id' => $passphrase->created_by ?: $ownerId,
+                    ]
+                );
             } catch (\RuntimeException $exception) {
                 return back()
-                    ->withErrors(['pass_through_daily_balance' => $exception->getMessage()])
+                    ->withErrors(['pass_through_package_id' => $exception->getMessage()])
                     ->withInput();
             }
         } elseif ($data['transaction_type'] === 'settlement') {

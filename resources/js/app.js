@@ -44,24 +44,27 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 window.invoicePortalForm = function invoicePortalForm(config = {}) {
-    const passThroughDefaults = config.passThroughDefaults || {};
+    const passThroughConfig = config.passThrough || {};
+    const packages = Array.isArray(passThroughConfig.packages) ? passThroughConfig.packages : [];
+    const defaults = passThroughConfig.defaults || {};
+
+    const defaultQuantity = Number.parseInt(defaults.quantity, 10);
+    const initialQuantity = Number.isFinite(defaultQuantity) && defaultQuantity > 0
+        ? String(Math.floor(defaultQuantity))
+        : '1';
 
     return {
         activeTab: config.defaultTransaction || 'down_payment',
-        passThroughCustomerType: passThroughDefaults.customerType || 'new',
-        passThroughDailyBalance: '',
-        passThroughDailyBalanceDisplay: '',
-        passThroughEstimatedDays: Number(passThroughDefaults.estimatedDays) > 0
-            ? Number(passThroughDefaults.estimatedDays)
-            : 1,
-        passThroughMaintenanceFee: '',
-        passThroughMaintenanceFeeDisplay: '',
-        passThroughAccountCreationFee: '',
-        passThroughAccountCreationFeeDisplay: '',
+        passThroughPackages: packages,
+        passThroughPackageId: defaults.packageId || (packages[0]?.id ?? null),
+        passThroughDescription: defaults.description || '',
+        passThroughQuantityInput: initialQuantity,
         init() {
-            this.setCurrencyField('DailyBalance', passThroughDefaults.dailyBalance || '');
-            this.setCurrencyField('MaintenanceFee', passThroughDefaults.maintenanceFee || '');
-            this.setCurrencyField('AccountCreationFee', passThroughDefaults.accountCreationFee || '');
+            if (!this.passThroughPackageId && this.passThroughPackages.length > 0) {
+                this.passThroughPackageId = this.passThroughPackages[0].id;
+            }
+
+            this.normalizePassThroughQuantity();
 
             window.addEventListener('invoice-transaction-tab-changed', (event) => {
                 if (!event.detail || !event.detail.tab) {
@@ -70,22 +73,6 @@ window.invoicePortalForm = function invoicePortalForm(config = {}) {
 
                 this.activeTab = event.detail.tab;
             });
-
-            this.$watch('passThroughCustomerType', (value) => {
-                if (value !== 'new') {
-                    this.setCurrencyField('AccountCreationFee', '');
-                }
-            });
-        },
-        updateCurrencyField(kind, value) {
-            this.setCurrencyField(kind, value);
-        },
-        setCurrencyField(kind, value) {
-            const digits = String(value || '').replace(/\D/g, '');
-            const base = `passThrough${kind}`;
-
-            this[base] = digits;
-            this[`${base}Display`] = digits ? this.formatNumber(digits) : '';
         },
         formatNumber(value) {
             return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -99,26 +86,90 @@ window.invoicePortalForm = function invoicePortalForm(config = {}) {
                 maximumFractionDigits: 0,
             }).format(numeric);
         },
-        passThroughAmount() {
-            const daily = Number(this.passThroughDailyBalance) || 0;
-            const days = Number(this.passThroughEstimatedDays) || 0;
+        formatPackageOption(pkg) {
+            if (!pkg || typeof pkg !== 'object') {
+                return '';
+            }
 
-            return daily * days;
+            const label = pkg.customer_label || '';
+            const name = pkg.name || '';
+
+            return label ? `${name} — ${label}` : name;
         },
-        maintenanceFeeValue() {
-            return Number(this.passThroughMaintenanceFee) || 0;
+        updatePassThroughQuantity(value) {
+            this.passThroughQuantityInput = String(value ?? '').replace(/[^0-9]/g, '');
         },
-        accountCreationFeeValue() {
-            if (this.passThroughCustomerType !== 'new') {
+        normalizePassThroughQuantity() {
+            this.passThroughQuantityInput = String(this.passThroughQuantity());
+        },
+        passThroughQuantity() {
+            const digits = (this.passThroughQuantityInput || '').replace(/[^0-9]/g, '');
+            const numeric = Number(digits);
+
+            if (!Number.isFinite(numeric) || numeric < 1) {
+                return 1;
+            }
+
+            return Math.max(Math.floor(numeric), 1);
+        },
+        selectedPackage() {
+            if (!this.passThroughPackageId) {
+                return null;
+            }
+
+            return this.passThroughPackages.find((pkg) => pkg.id === this.passThroughPackageId) || null;
+        },
+        hasPassThroughPackageSelected() {
+            return !!this.selectedPackage();
+        },
+        showsAccountCreationFee() {
+            const pkg = this.selectedPackage();
+
+            return pkg ? pkg.customer_type === 'new' : false;
+        },
+        passThroughDailyBalanceUnit() {
+            const pkg = this.selectedPackage();
+
+            return pkg ? Number(pkg.daily_balance) || 0 : 0;
+        },
+        passThroughDailyBalanceTotal() {
+            return this.passThroughDailyBalanceUnit() * this.passThroughQuantity();
+        },
+        passThroughDurationDays() {
+            const pkg = this.selectedPackage();
+
+            return pkg ? Number(pkg.duration_days) || 0 : 0;
+        },
+        passThroughAdBudgetUnit() {
+            return this.passThroughDailyBalanceUnit() * this.passThroughDurationDays();
+        },
+        passThroughAdBudgetTotal() {
+            return this.passThroughAdBudgetUnit() * this.passThroughQuantity();
+        },
+        passThroughMaintenanceUnit() {
+            const pkg = this.selectedPackage();
+
+            return pkg ? Number(pkg.maintenance_fee) || 0 : 0;
+        },
+        passThroughMaintenanceTotal() {
+            return this.passThroughMaintenanceUnit() * this.passThroughQuantity();
+        },
+        passThroughAccountCreationUnit() {
+            const pkg = this.selectedPackage();
+
+            if (!pkg || pkg.customer_type !== 'new') {
                 return 0;
             }
 
-            return Number(this.passThroughAccountCreationFee) || 0;
+            return Number(pkg.account_creation_fee) || 0;
         },
-        totalPassThrough() {
-            return this.passThroughAmount()
-                + this.maintenanceFeeValue()
-                + this.accountCreationFeeValue();
+        passThroughAccountCreationTotal() {
+            return this.passThroughAccountCreationUnit() * this.passThroughQuantity();
+        },
+        passThroughTotalPrice() {
+            return this.passThroughAdBudgetTotal()
+                + this.passThroughMaintenanceTotal()
+                + this.passThroughAccountCreationTotal();
         },
     };
 };
