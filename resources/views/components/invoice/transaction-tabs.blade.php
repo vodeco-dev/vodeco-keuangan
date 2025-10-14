@@ -243,9 +243,14 @@ $forwardedAttributes = $attributes->except([
                     @error('settlement_payment_status')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                </div>
             </div>
         </div>
+
+        @isset($passThrough)
+            <div x-show="activeTab === 'pass_through'" data-tab-visible="pass_through" x-cloak>
+                {{ $passThrough }}
+            </div>
+        @endisset
     </div>
 
     @if ($showTotal)
