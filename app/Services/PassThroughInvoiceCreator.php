@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Debt;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Setting;
 use App\Models\Transaction;
 use App\Support\PassThroughPackage;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,8 @@ use Carbon\Carbon;
 
 class PassThroughInvoiceCreator
 {
+    private const CATEGORY_SETTING_KEY = 'pass_through_invoice_category_id';
+
     /**
      * Membuat Invoices Iklan beserta catatan hutang terkait berdasarkan paket yang dipilih.
      */
@@ -91,10 +94,13 @@ class PassThroughInvoiceCreator
                 'payment_date' => null,
             ]);
 
+            $incomeCategory = $this->resolveIncomeCategory();
+            $incomeCategoryId = $incomeCategory?->id;
+
             foreach ($this->makeInvoiceItems($package, $normalizedQuantity, $description, $dailyBalanceUnit, $durationDays, $adBudgetUnit, $maintenanceUnit, $accountCreationUnit) as $item) {
                 InvoiceItem::create([
                     'invoice_id' => $invoice->id,
-                    'category_id' => null,
+                    'category_id' => $incomeCategoryId,
                     'description' => $item['description'],
                     'quantity' => $item['quantity'],
                     'price' => $item['unit_amount'],
@@ -120,7 +126,15 @@ class PassThroughInvoiceCreator
                 'daily_deduction' => $dailyBalanceTotal,
             ]);
 
-            $this->recordTransactions($maintenanceTotal, $accountCreationTotal, $normalizedQuantity, $invoice, $ownerId ?? $createdBy, $issueDateCarbon);
+            $this->recordTransactions(
+                $maintenanceTotal,
+                $accountCreationTotal,
+                $normalizedQuantity,
+                $invoice,
+                $ownerId ?? $createdBy,
+                $issueDateCarbon,
+                $incomeCategoryId
+            );
 
             return $invoice->load('items', 'customerService');
         });
@@ -164,14 +178,9 @@ class PassThroughInvoiceCreator
         return $items;
     }
 
-    protected function recordTransactions(float $maintenanceTotal, float $accountCreationTotal, int $quantity, Invoice $invoice, ?int $userId, Carbon $issueDate): void
+    protected function recordTransactions(float $maintenanceTotal, float $accountCreationTotal, int $quantity, Invoice $invoice, ?int $userId, Carbon $issueDate, ?int $categoryId): void
     {
-        $category = Category::query()
-            ->where('name', 'Penjualan Iklan')
-            ->where('type', 'pemasukan')
-            ->first();
-
-        if (! $category) {
+        if (! $categoryId) {
             return;
         }
 
@@ -193,13 +202,34 @@ class PassThroughInvoiceCreator
 
         foreach ($transactions as $transaction) {
             Transaction::create([
-                'category_id' => $category->id,
+                'category_id' => $categoryId,
                 'user_id' => $userId,
                 'amount' => $transaction['amount'],
                 'description' => $transaction['description'],
                 'date' => $issueDate->toDateString(),
             ]);
         }
+    }
+
+    protected function resolveIncomeCategory(): ?Category
+    {
+        $configuredId = Setting::get(self::CATEGORY_SETTING_KEY);
+
+        if ($configuredId !== null && $configuredId !== '') {
+            $category = Category::query()
+                ->whereKey($configuredId)
+                ->where('type', 'pemasukan')
+                ->first();
+
+            if ($category) {
+                return $category;
+            }
+        }
+
+        return Category::query()
+            ->where('name', 'Penjualan Iklan')
+            ->where('type', 'pemasukan')
+            ->first();
     }
 
     protected function generateInvoiceNumber(): string

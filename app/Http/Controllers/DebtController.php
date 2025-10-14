@@ -69,6 +69,17 @@ class DebtController extends Controller
 
         $passThroughPackages = $this->passThroughPackageManager->all();
 
+        $storedPassThroughCategoryId = Setting::get('pass_through_invoice_category_id');
+        $passThroughInvoiceCategoryId = null;
+
+        if (is_numeric($storedPassThroughCategoryId)) {
+            $storedPassThroughCategoryId = (int) $storedPassThroughCategoryId;
+
+            if ($selectableIncomeCategories->contains('id', $storedPassThroughCategoryId)) {
+                $passThroughInvoiceCategoryId = $storedPassThroughCategoryId;
+            }
+        }
+
         return view('debts.index', array_merge([
             'title' => 'Hutang & Piutang',
             'debts' => $debts,
@@ -81,6 +92,7 @@ class DebtController extends Controller
             'defaultIncomeCategoryId' => optional($selectableIncomeCategories->first())->id,
             'defaultExpenseCategoryId' => optional($selectableExpenseCategories->first())->id,
             'passThroughPackages' => $passThroughPackages,
+            'passThroughInvoiceCategoryId' => $passThroughInvoiceCategoryId,
         ], $summary));
     }
 
