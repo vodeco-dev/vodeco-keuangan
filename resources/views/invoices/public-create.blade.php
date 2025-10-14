@@ -96,7 +96,6 @@
                             $firstPassThroughPackage = $passThroughPackagesCollection->first();
                             $defaultPassThroughPackageId = old('pass_through_package_id', $firstPassThroughPackage['id'] ?? null);
                             $defaultPassThroughQuantity = old('pass_through_quantity', 1);
-                            $defaultPassThroughDescription = old('pass_through_description');
                         @endphp
 
                         <div class="rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-indigo-800">
@@ -160,7 +159,6 @@
                                                     defaults: {
                                                         packageId: @json($defaultPassThroughPackageId),
                                                         quantity: @json((int) $defaultPassThroughQuantity),
-                                                        description: @json($defaultPassThroughDescription),
                                                         adBudgetTotal: @json(old('pass_through_ad_budget_total')),
                                                         maintenanceTotal: @json(old('pass_through_maintenance_total')),
                                                         accountCreationTotal: @json(old('pass_through_account_creation_total')),
@@ -247,22 +245,6 @@
                                                 @endif
 
                                                 <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                                    <div class="md:col-span-2">
-                                                        <label for="pass_through_description_public" class="block text-sm font-medium text-gray-700">Deskripsi</label>
-                                                        <input
-                                                            type="text"
-                                                            name="pass_through_description"
-                                                            id="pass_through_description_public"
-                                                            x-model="passThroughDescription"
-                                                            class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
-                                                            placeholder="Contoh: Paket Iklan Musim Liburan"
-                                                            @if ($passThroughPackagesCollection->isEmpty()) disabled @endif
-                                                        >
-                                                        @error('pass_through_description')
-                                                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                                        @enderror
-                                                    </div>
-
                                                     <div>
                                                         <label class="block text-sm font-medium text-gray-700" for="pass_through_package_id_public">Pilihan Paket</label>
                                                         <select

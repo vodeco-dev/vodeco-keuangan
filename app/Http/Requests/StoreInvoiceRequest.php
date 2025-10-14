@@ -45,7 +45,6 @@ class StoreInvoiceRequest extends FormRequest
                 Rule::exists('categories', 'id')->where('type', 'pemasukan'),
             ],
             'pass_through_package_id' => ['required_if:transaction_type,pass_through', 'nullable', 'string'],
-            'pass_through_description' => ['required_if:transaction_type,pass_through', 'nullable', 'string'],
             'pass_through_quantity' => ['required_if:transaction_type,pass_through', 'nullable', 'integer', 'min:1'],
             'pass_through_ad_budget_total' => ['nullable', 'numeric', 'min:0'],
             'pass_through_maintenance_total' => ['nullable', 'numeric', 'min:0'],
@@ -94,7 +93,6 @@ class StoreInvoiceRequest extends FormRequest
             'items.*.category_id.required_unless' => 'Kategori item wajib dipilih.',
             'items.*.category_id.exists' => 'Kategori item tidak valid.',
             'pass_through_package_id.required_if' => 'Paket Invoices Iklan wajib dipilih.',
-            'pass_through_description.required_if' => 'Deskripsi Invoices Iklan wajib diisi.',
             'pass_through_quantity.required_if' => 'Kuantitas paket wajib diisi.',
             'pass_through_quantity.integer' => 'Kuantitas paket harus berupa angka bulat.',
             'pass_through_quantity.min' => 'Kuantitas paket minimal 1.',
@@ -177,17 +175,8 @@ class StoreInvoiceRequest extends FormRequest
             }
         }
 
-        $passThroughDescription = $this->input('pass_through_description');
-        if (is_string($passThroughDescription)) {
-            $passThroughDescription = trim($passThroughDescription);
-            if ($passThroughDescription === '') {
-                $passThroughDescription = null;
-            }
-        }
-
         $passThroughFields = [
             'pass_through_package_id' => $passThroughPackageId,
-            'pass_through_description' => $passThroughDescription,
             'pass_through_quantity' => $this->sanitizeInteger($this->input('pass_through_quantity')),
             'pass_through_ad_budget_total' => $this->sanitizeCurrency($this->input('pass_through_ad_budget_total')),
             'pass_through_maintenance_total' => $this->sanitizeCurrency($this->input('pass_through_maintenance_total')),
