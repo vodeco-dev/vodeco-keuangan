@@ -35,10 +35,90 @@ document.addEventListener('DOMContentLoaded', function () {
             // toggle the type attribute
             const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
             password.setAttribute('type', type);
-            
+
             // toggle the eye icon
             this.querySelectorAll('.eye-open').forEach(icon => icon.classList.toggle('hidden'));
             this.querySelectorAll('.eye-closed').forEach(icon => icon.classList.toggle('hidden'));
         });
     }
 });
+
+window.invoicePortalForm = function invoicePortalForm(config = {}) {
+    const passThroughDefaults = config.passThroughDefaults || {};
+
+    return {
+        activeTab: config.defaultTransaction || 'down_payment',
+        passThroughCustomerType: passThroughDefaults.customerType || 'new',
+        passThroughDailyBalance: '',
+        passThroughDailyBalanceDisplay: '',
+        passThroughEstimatedDays: Number(passThroughDefaults.estimatedDays) > 0
+            ? Number(passThroughDefaults.estimatedDays)
+            : 1,
+        passThroughMaintenanceFee: '',
+        passThroughMaintenanceFeeDisplay: '',
+        passThroughAccountCreationFee: '',
+        passThroughAccountCreationFeeDisplay: '',
+        init() {
+            this.setCurrencyField('DailyBalance', passThroughDefaults.dailyBalance || '');
+            this.setCurrencyField('MaintenanceFee', passThroughDefaults.maintenanceFee || '');
+            this.setCurrencyField('AccountCreationFee', passThroughDefaults.accountCreationFee || '');
+
+            window.addEventListener('invoice-transaction-tab-changed', (event) => {
+                if (!event.detail || !event.detail.tab) {
+                    return;
+                }
+
+                this.activeTab = event.detail.tab;
+            });
+
+            this.$watch('passThroughCustomerType', (value) => {
+                if (value !== 'new') {
+                    this.setCurrencyField('AccountCreationFee', '');
+                }
+            });
+        },
+        updateCurrencyField(kind, value) {
+            this.setCurrencyField(kind, value);
+        },
+        setCurrencyField(kind, value) {
+            const digits = String(value || '').replace(/\D/g, '');
+            const base = `passThrough${kind}`;
+
+            this[base] = digits;
+            this[`${base}Display`] = digits ? this.formatNumber(digits) : '';
+        },
+        formatNumber(value) {
+            return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        },
+        formatCurrency(value) {
+            const numeric = Number(value) || 0;
+
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                maximumFractionDigits: 0,
+            }).format(numeric);
+        },
+        passThroughAmount() {
+            const daily = Number(this.passThroughDailyBalance) || 0;
+            const days = Number(this.passThroughEstimatedDays) || 0;
+
+            return daily * days;
+        },
+        maintenanceFeeValue() {
+            return Number(this.passThroughMaintenanceFee) || 0;
+        },
+        accountCreationFeeValue() {
+            if (this.passThroughCustomerType !== 'new') {
+                return 0;
+            }
+
+            return Number(this.passThroughAccountCreationFee) || 0;
+        },
+        totalPassThrough() {
+            return this.passThroughAmount()
+                + this.maintenanceFeeValue()
+                + this.accountCreationFeeValue();
+        },
+    };
+};
