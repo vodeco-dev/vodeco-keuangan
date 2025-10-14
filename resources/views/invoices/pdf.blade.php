@@ -147,6 +147,8 @@
                 <thead>
                     <tr class="bg-gray-200 border-b border-gray-300">
                         <th class="py-1.5 px-3">Deskripsi produk yang dipesan</th>
+                        <th class="py-1.5 px-3 text-center">Qty</th>
+                        <th class="py-1.5 px-3 text-right">Harga Satuan</th>
                         <th class="py-1.5 px-3 text-right">Total</th>
                     </tr>
                 </thead>
@@ -154,18 +156,20 @@
                     @foreach($invoice->items as $item)
                     <tr class="border-b border-gray-300">
                         <td class="px-3 py-2 align-top">{{ $item->description }}</td>
+                        <td class="px-3 py-2 text-center align-top">{{ $item->quantity }}</td>
+                        <td class="px-3 py-2 text-right align-top">Rp. {{ number_format($item->price, 2, ',', '.') }}</td>
                         <td class="px-3 py-2 text-right align-top">Rp. {{ number_format($item->price * $item->quantity, 2, ',', '.') }}</td>
                     </tr>
                     @endforeach
 
                     <!-- Spacer -->
                     <tr class="border-b border-gray-300">
-                        <td class="px-3 h-5" colspan="2"></td>
+                        <td class="px-3 h-5" colspan="4"></td>
                     </tr>
 
                     <!-- Summary Panel -->
                     <tr class="bg-gray-100 border-t border-gray-300">
-                        <td class="px-3 py-3" colspan="2">
+                        <td class="px-3 py-3" colspan="4">
                             <div class="flex flex-col items-end text-right text-red-600 space-y-1">
                                 <p><strong>Sub Total:</strong> <span class="ml-2">Rp. {{ number_format($invoice->total, 2, ',', '.') }}</span></p>
                                 @if($invoice->type !== InvoiceModel::TYPE_SETTLEMENT)

@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Models\Invoice;
-use App\Support\PassThroughPackage;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -45,24 +44,15 @@ class StoreInvoiceRequest extends FormRequest
                 'integer',
                 Rule::exists('categories', 'id')->where('type', 'pemasukan'),
             ],
-            'pass_through_customer_type' => [
-                'required_if:transaction_type,pass_through',
-                'nullable',
-                Rule::in([
-                    PassThroughPackage::CUSTOMER_TYPE_NEW,
-                    PassThroughPackage::CUSTOMER_TYPE_EXISTING,
-                ]),
-            ],
-            'pass_through_daily_balance' => ['required_if:transaction_type,pass_through', 'nullable', 'numeric', 'min:0'],
-            'pass_through_estimated_days' => ['required_if:transaction_type,pass_through', 'nullable', 'integer', 'min:1'],
-            'pass_through_maintenance_fee' => ['required_if:transaction_type,pass_through', 'nullable', 'numeric', 'min:0'],
-            'pass_through_account_creation_fee' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                Rule::requiredIf(fn () => $this->input('transaction_type') === 'pass_through'
-                    && $this->input('pass_through_customer_type') === PassThroughPackage::CUSTOMER_TYPE_NEW),
-            ],
+            'pass_through_package_id' => ['required_if:transaction_type,pass_through', 'nullable', 'string'],
+            'pass_through_description' => ['required_if:transaction_type,pass_through', 'nullable', 'string'],
+            'pass_through_quantity' => ['required_if:transaction_type,pass_through', 'nullable', 'integer', 'min:1'],
+            'pass_through_ad_budget_total' => ['nullable', 'numeric', 'min:0'],
+            'pass_through_maintenance_total' => ['nullable', 'numeric', 'min:0'],
+            'pass_through_account_creation_total' => ['nullable', 'numeric', 'min:0'],
+            'pass_through_total_price' => ['nullable', 'numeric', 'min:0'],
+            'pass_through_daily_balance_total' => ['nullable', 'numeric', 'min:0'],
+            'pass_through_duration_days' => ['nullable', 'integer', 'min:0'],
             'settlement_invoice_number' => ['required_if:transaction_type,settlement', 'nullable', 'string'],
             'settlement_remaining_balance' => ['required_if:transaction_type,settlement', 'nullable', 'numeric', 'min:0'],
             'settlement_payment_status' => [
@@ -103,17 +93,17 @@ class StoreInvoiceRequest extends FormRequest
             'items.*.price.numeric' => 'Harga item harus berupa angka.',
             'items.*.category_id.required_unless' => 'Kategori item wajib dipilih.',
             'items.*.category_id.exists' => 'Kategori item tidak valid.',
-            'pass_through_customer_type.required_if' => 'Pilih jenis pelanggan untuk Invoices Iklan.',
-            'pass_through_customer_type.in' => 'Jenis pelanggan Invoices Iklan tidak dikenal.',
-            'pass_through_daily_balance.required_if' => 'Saldo harian wajib diisi untuk Invoices Iklan.',
-            'pass_through_daily_balance.numeric' => 'Saldo harian Invoices Iklan harus berupa angka.',
-            'pass_through_estimated_days.required_if' => 'Estimasi waktu wajib diisi untuk Invoices Iklan.',
-            'pass_through_estimated_days.integer' => 'Estimasi waktu Invoices Iklan harus berupa angka bulat.',
-            'pass_through_estimated_days.min' => 'Estimasi waktu Invoices Iklan minimal 1 hari.',
-            'pass_through_maintenance_fee.required_if' => 'Nominal jasa maintenance wajib diisi.',
-            'pass_through_maintenance_fee.numeric' => 'Nominal jasa maintenance harus berupa angka.',
-            'pass_through_account_creation_fee.required' => 'Biaya pembuatan akun wajib diisi untuk pelanggan baru.',
-            'pass_through_account_creation_fee.numeric' => 'Biaya pembuatan akun harus berupa angka.',
+            'pass_through_package_id.required_if' => 'Paket Invoices Iklan wajib dipilih.',
+            'pass_through_description.required_if' => 'Deskripsi Invoices Iklan wajib diisi.',
+            'pass_through_quantity.required_if' => 'Kuantitas paket wajib diisi.',
+            'pass_through_quantity.integer' => 'Kuantitas paket harus berupa angka bulat.',
+            'pass_through_quantity.min' => 'Kuantitas paket minimal 1.',
+            'pass_through_ad_budget_total.numeric' => 'Total dana iklan harus berupa angka.',
+            'pass_through_maintenance_total.numeric' => 'Total jasa maintenance harus berupa angka.',
+            'pass_through_account_creation_total.numeric' => 'Total biaya pembuatan akun harus berupa angka.',
+            'pass_through_total_price.numeric' => 'Total invoice Invoices Iklan harus berupa angka.',
+            'pass_through_daily_balance_total.numeric' => 'Total saldo harian harus berupa angka.',
+            'pass_through_duration_days.integer' => 'Durasi paket harus berupa angka bulat.',
             'settlement_invoice_number.required_if' => 'Nomor invoice referensi wajib diisi untuk pelunasan.',
             'settlement_remaining_balance.required_if' => 'Sisa tagihan wajib diisi untuk pelunasan.',
             'settlement_remaining_balance.numeric' => 'Sisa tagihan harus berupa angka.',
@@ -179,14 +169,32 @@ class StoreInvoiceRequest extends FormRequest
             $settlementPaidAmount = $normalized === '' ? null : $normalized;
         }
 
-        $passThroughCustomerType = $this->input('pass_through_customer_type');
+        $passThroughPackageId = $this->input('pass_through_package_id');
+        if (is_string($passThroughPackageId)) {
+            $passThroughPackageId = trim($passThroughPackageId);
+            if ($passThroughPackageId === '') {
+                $passThroughPackageId = null;
+            }
+        }
+
+        $passThroughDescription = $this->input('pass_through_description');
+        if (is_string($passThroughDescription)) {
+            $passThroughDescription = trim($passThroughDescription);
+            if ($passThroughDescription === '') {
+                $passThroughDescription = null;
+            }
+        }
 
         $passThroughFields = [
-            'pass_through_daily_balance' => $this->sanitizeCurrency($this->input('pass_through_daily_balance')),
-            'pass_through_maintenance_fee' => $this->sanitizeCurrency($this->input('pass_through_maintenance_fee')),
-            'pass_through_account_creation_fee' => $this->sanitizeCurrency($this->input('pass_through_account_creation_fee')),
-            'pass_through_estimated_days' => $this->sanitizeInteger($this->input('pass_through_estimated_days')),
-            'pass_through_customer_type' => $passThroughCustomerType,
+            'pass_through_package_id' => $passThroughPackageId,
+            'pass_through_description' => $passThroughDescription,
+            'pass_through_quantity' => $this->sanitizeInteger($this->input('pass_through_quantity')),
+            'pass_through_ad_budget_total' => $this->sanitizeCurrency($this->input('pass_through_ad_budget_total')),
+            'pass_through_maintenance_total' => $this->sanitizeCurrency($this->input('pass_through_maintenance_total')),
+            'pass_through_account_creation_total' => $this->sanitizeCurrency($this->input('pass_through_account_creation_total')),
+            'pass_through_total_price' => $this->sanitizeCurrency($this->input('pass_through_total_price')),
+            'pass_through_daily_balance_total' => $this->sanitizeCurrency($this->input('pass_through_daily_balance_total')),
+            'pass_through_duration_days' => $this->sanitizeInteger($this->input('pass_through_duration_days')),
         ];
 
         $merged = [

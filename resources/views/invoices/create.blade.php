@@ -19,21 +19,37 @@
                         'id' => $category->id,
                         'name' => $category->name,
                     ])->values();
-                    $defaultPassThroughCustomerType = old('pass_through_customer_type', \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW);
-                    $defaultPassThroughDailyBalance = old('pass_through_daily_balance');
-                    $defaultPassThroughEstimatedDays = old('pass_through_estimated_days', 1);
-                    $defaultPassThroughMaintenanceFee = old('pass_through_maintenance_fee');
-                    $defaultPassThroughAccountCreationFee = old('pass_through_account_creation_fee');
+                    $passThroughPackagesCollection = ($passThroughPackages ?? collect())->map(function ($package) {
+                        return [
+                            'id' => $package->id,
+                            'name' => $package->name,
+                            'customer_type' => $package->customerType,
+                            'customer_label' => $package->customerLabel(),
+                            'daily_balance' => $package->dailyBalance,
+                            'duration_days' => $package->durationDays,
+                            'maintenance_fee' => $package->maintenanceFee,
+                            'account_creation_fee' => $package->accountCreationFee,
+                        ];
+                    });
+                    $firstPassThroughPackage = $passThroughPackagesCollection->first();
+                    $defaultPassThroughPackageId = old('pass_through_package_id', $firstPassThroughPackage['id'] ?? null);
+                    $defaultPassThroughQuantity = old('pass_through_quantity', 1);
+                    $defaultPassThroughDescription = old('pass_through_description');
                 @endphp
                 <form action="{{ route('invoices.store') }}" method="POST" class="p-6" id="invoice-form"
                     x-data="invoicePortalForm({
                         defaultTransaction: @json(old('transaction_type', 'down_payment')),
-                        passThroughDefaults: {
-                            customerType: @json($defaultPassThroughCustomerType),
-                            dailyBalance: @json($defaultPassThroughDailyBalance),
-                            estimatedDays: @json($defaultPassThroughEstimatedDays),
-                            maintenanceFee: @json($defaultPassThroughMaintenanceFee),
-                            accountCreationFee: @json($defaultPassThroughAccountCreationFee),
+                        passThrough: {
+                            packages: @json($passThroughPackagesCollection->values()),
+                            defaults: {
+                                packageId: @json($defaultPassThroughPackageId),
+                                quantity: @json((int) $defaultPassThroughQuantity),
+                                description: @json($defaultPassThroughDescription),
+                                adBudgetTotal: @json(old('pass_through_ad_budget_total')),
+                                maintenanceTotal: @json(old('pass_through_maintenance_total')),
+                                accountCreationTotal: @json(old('pass_through_account_creation_total')),
+                                totalPrice: @json(old('pass_through_total_price')),
+                            },
                         },
                     })">
                     @csrf
@@ -102,98 +118,149 @@
                     </div>
 
                     <div class="mt-8 space-y-6" x-show="activeTab === 'pass_through'" x-cloak>
-                        <div class="rounded-2xl border border-gray-200 bg-gray-50 p-6">
+                        <div class="space-y-6 rounded-2xl border border-gray-200 bg-gray-50 p-6">
                             <div class="flex flex-col gap-2">
                                 <h3 class="text-lg font-semibold text-gray-900">Invoices Iklan</h3>
-                                <p class="text-sm text-gray-600">Isi saldo harian, estimasi hari, serta biaya tambahan untuk menghitung total Invoices Iklan secara otomatis.</p>
+                                <p class="text-sm text-gray-600">Pilih paket yang tersedia untuk menghitung biaya secara otomatis dan lengkapi deskripsi pesanan.</p>
                             </div>
 
-                            <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Jenis Pelanggan</label>
-                                    <select name="pass_through_customer_type" x-model="passThroughCustomerType"
-                                        class="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                        <option value="{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}">Pelanggan Baru</option>
-                                        <option value="{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_EXISTING }}">Pelanggan Lama</option>
-                                    </select>
-                                    @error('pass_through_customer_type')
-                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
+                            @if ($passThroughPackagesCollection->isEmpty())
+                                <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+                                    Belum ada paket Invoices Iklan yang tersedia. Tambahkan paket terlebih dahulu melalui menu pengaturan agar perhitungan otomatis dapat digunakan.
                                 </div>
+                            @endif
 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Saldo Harian</label>
-                                    <input type="hidden" name="pass_through_daily_balance" :value="passThroughDailyBalance">
-                                    <input type="text" x-model="passThroughDailyBalanceDisplay"
-                                        @input="updateCurrencyField('DailyBalance', $event.target.value)"
-                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                        placeholder="Contoh: 30.000">
-                                    <p class="mt-1 text-xs text-gray-500">Nominal otomatis diformat menjadi ribuan.</p>
-                                    @error('pass_through_daily_balance')
-                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Estimasi Waktu (Hari)</label>
-                                    <input type="number" name="pass_through_estimated_days" min="1"
-                                        x-model.number="passThroughEstimatedDays"
-                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                        placeholder="Contoh: 30">
-                                    @error('pass_through_estimated_days')
-                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Jasa Maintenance</label>
-                                    <input type="hidden" name="pass_through_maintenance_fee" :value="passThroughMaintenanceFee">
-                                    <input type="text" x-model="passThroughMaintenanceFeeDisplay"
-                                        @input="updateCurrencyField('MaintenanceFee', $event.target.value)"
-                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                        placeholder="Contoh: 10.000">
-                                    @error('pass_through_maintenance_fee')
-                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div x-show="passThroughCustomerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'" x-cloak>
-                                    <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun</label>
-                                    <input type="hidden" name="pass_through_account_creation_fee"
-                                        :value="passThroughCustomerType === 'new' ? passThroughAccountCreationFee : 0">
-                                    <input type="text" x-model="passThroughAccountCreationFeeDisplay"
-                                        @input="updateCurrencyField('AccountCreationFee', $event.target.value)"
-                                        :disabled="passThroughCustomerType !== 'new'"
+                            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <div class="md:col-span-2">
+                                    <label for="pass_through_description" class="block text-sm font-medium text-gray-700">Deskripsi</label>
+                                    <input
+                                        type="text"
+                                        name="pass_through_description"
+                                        id="pass_through_description"
+                                        x-model="passThroughDescription"
                                         class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
-                                        placeholder="Contoh: 20.000">
-                                    @error('pass_through_account_creation_fee')
+                                        placeholder="Contoh: Kampanye Iklan Marketplace"
+                                        @if ($passThroughPackagesCollection->isEmpty()) disabled @endif
+                                    >
+                                    @error('pass_through_description')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700" for="pass_through_package_id">Pilihan Paket</label>
+                                    <select
+                                        name="pass_through_package_id"
+                                        id="pass_through_package_id"
+                                        x-model="passThroughPackageId"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                        @if ($passThroughPackagesCollection->isEmpty()) disabled @endif
+                                    >
+                                        <option value="" disabled>Pilih paket</option>
+                                        <template x-for="pkg in passThroughPackages" :key="pkg.id">
+                                            <option :value="pkg.id" x-text="formatPackageOption(pkg)"></option>
+                                        </template>
+                                    </select>
+                                    @error('pass_through_package_id')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700" for="pass_through_quantity">Kuantitas</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        id="pass_through_quantity"
+                                        x-model="passThroughQuantityInput"
+                                        @input="updatePassThroughQuantity($event.target.value)"
+                                        @blur="normalizePassThroughQuantity()"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                        placeholder="1"
+                                        @if ($passThroughPackagesCollection->isEmpty()) disabled @endif
+                                    >
+                                    @error('pass_through_quantity')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700" for="pass_through_total_display">Harga Total</label>
+                                    <input
+                                        type="text"
+                                        id="pass_through_total_display"
+                                        :value="formatCurrency(passThroughTotalPrice())"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 bg-gray-100 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        readonly
+                                    >
+                                    @error('pass_through_total_price')
                                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
                             </div>
+
+                            <input type="hidden" name="pass_through_quantity" :value="passThroughQuantity()">
+                            <input type="hidden" name="pass_through_ad_budget_total" :value="passThroughAdBudgetTotal()">
+                            <input type="hidden" name="pass_through_maintenance_total" :value="passThroughMaintenanceTotal()">
+                            <input type="hidden" name="pass_through_account_creation_total" :value="passThroughAccountCreationTotal()">
+                            <input type="hidden" name="pass_through_total_price" :value="passThroughTotalPrice()">
+                            <input type="hidden" name="pass_through_daily_balance_total" :value="passThroughDailyBalanceTotal()">
+                            <input type="hidden" name="pass_through_duration_days" :value="passThroughDurationDays()">
                         </div>
 
-                        <div class="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm">
-                            <h4 class="text-base font-semibold text-gray-900">Ringkasan Perhitungan</h4>
-                            <dl class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
+                        <div class="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm" x-show="hasPassThroughPackageSelected()" x-cloak>
+                            <h4 class="text-base font-semibold text-gray-900">Ringkasan Paket</h4>
+                            <dl class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 md:grid-cols-2">
                                 <div>
-                                    <dt class="font-medium text-gray-600">Dana Invoices Iklan</dt>
-                                    <dd class="mt-1 text-base font-semibold text-purple-600" x-text="formatCurrency(passThroughAmount())"></dd>
+                                    <dt class="font-medium text-gray-600">Nama Paket</dt>
+                                    <dd class="mt-1" x-text="selectedPackage()?.name || '-'">-</dd>
                                 </div>
                                 <div>
-                                    <dt class="font-medium text-gray-600">Jasa Maintenance</dt>
-                                    <dd class="mt-1" x-text="formatCurrency(maintenanceFeeValue())"></dd>
+                                    <dt class="font-medium text-gray-600">Jenis Pelanggan</dt>
+                                    <dd class="mt-1" x-text="selectedPackage()?.customer_label || '-'">-</dd>
                                 </div>
-                                <div x-show="passThroughCustomerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'">
-                                    <dt class="font-medium text-gray-600">Biaya Pembuatan Akun</dt>
-                                    <dd class="mt-1" x-text="formatCurrency(accountCreationFeeValue())"></dd>
+                                <div>
+                                    <dt class="font-medium text-gray-600">Saldo Harian</dt>
+                                    <dd class="mt-1" x-text="formatCurrency(passThroughDailyBalanceUnit())"></dd>
                                 </div>
-                                <div class="sm:col-span-2">
+                                <div>
+                                    <dt class="font-medium text-gray-600">Durasi Tayang</dt>
+                                    <dd class="mt-1" x-text="passThroughDurationDays() + ' hari'"></dd>
+                                </div>
+                                <div>
+                                    <dt class="font-medium text-gray-600">Dana Iklan / Paket</dt>
+                                    <dd class="mt-1" x-text="formatCurrency(passThroughAdBudgetUnit())"></dd>
+                                </div>
+                                <div>
+                                    <dt class="font-medium text-gray-600">Jasa Maintenance / Paket</dt>
+                                    <dd class="mt-1" x-text="formatCurrency(passThroughMaintenanceUnit())"></dd>
+                                </div>
+                                <div x-show="showsAccountCreationFee()">
+                                    <dt class="font-medium text-gray-600">Biaya Pembuatan Akun / Paket</dt>
+                                    <dd class="mt-1" x-text="formatCurrency(passThroughAccountCreationUnit())"></dd>
+                                </div>
+                                <div>
+                                    <dt class="font-medium text-gray-600">Kuantitas</dt>
+                                    <dd class="mt-1" x-text="passThroughQuantity() + ' paket'"></dd>
+                                </div>
+                                <div>
+                                    <dt class="font-medium text-gray-600">Total Dana Iklan</dt>
+                                    <dd class="mt-1 text-base font-semibold text-purple-600" x-text="formatCurrency(passThroughAdBudgetTotal())"></dd>
+                                </div>
+                                <div>
+                                    <dt class="font-medium text-gray-600">Total Maintenance</dt>
+                                    <dd class="mt-1" x-text="formatCurrency(passThroughMaintenanceTotal())"></dd>
+                                </div>
+                                <div x-show="showsAccountCreationFee()">
+                                    <dt class="font-medium text-gray-600">Total Pembuatan Akun</dt>
+                                    <dd class="mt-1" x-text="formatCurrency(passThroughAccountCreationTotal())"></dd>
+                                </div>
+                                <div class="md:col-span-2">
                                     <dt class="font-medium text-gray-600">Total Invoice</dt>
-                                    <dd class="mt-1 text-lg font-semibold text-green-600" x-text="formatCurrency(totalPassThrough())"></dd>
+                                    <dd class="mt-1 text-lg font-semibold text-green-600" x-text="formatCurrency(passThroughTotalPrice())"></dd>
                                 </div>
                             </dl>
-                            <p class="mt-4 text-xs text-gray-500">Dana Invoices Iklan dicatat sebagai hutang sebesar saldo harian dikalikan estimasi hari. Biaya lainnya otomatis masuk transaksi pemasukan.</p>
+                            <p class="mt-4 text-xs text-gray-500">Dana Invoices Iklan dicatat sebagai hutang sebesar saldo harian dikalikan waktu tayang. Biaya maintenance dan pembuatan akun otomatis tercatat sebagai pemasukan.</p>
                         </div>
                     </div>
 
