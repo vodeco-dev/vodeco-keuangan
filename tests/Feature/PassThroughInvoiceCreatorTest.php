@@ -70,7 +70,7 @@ class PassThroughInvoiceCreatorTest extends TestCase
 
         $this->assertDatabaseHas('invoice_items', [
             'invoice_id' => $invoice->id,
-            'description' => 'Dana Pass Through (30.000 x 10 hari)',
+            'description' => 'Dana Invoices Iklan (30.000 x 10 hari)',
             'price' => 300000,
         ]);
 
@@ -150,7 +150,7 @@ class PassThroughInvoiceCreatorTest extends TestCase
 
         $this->assertDatabaseHas('invoice_items', [
             'invoice_id' => $invoice->id,
-            'description' => 'Dana Pass Through (20.000 x 5 hari)',
+            'description' => 'Dana Invoices Iklan (20.000 x 5 hari)',
             'price' => 100000,
         ]);
 
