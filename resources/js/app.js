@@ -57,7 +57,6 @@ window.invoicePortalForm = function invoicePortalForm(config = {}) {
         activeTab: config.defaultTransaction || 'down_payment',
         passThroughPackages: packages,
         passThroughPackageId: defaults.packageId || (packages[0]?.id ?? null),
-        passThroughDescription: defaults.description || '',
         passThroughQuantityInput: initialQuantity,
         init() {
             if (!this.passThroughPackageId && this.passThroughPackages.length > 0) {

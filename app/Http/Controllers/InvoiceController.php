@@ -222,7 +222,10 @@ class InvoiceController extends Controller
             }
 
             $quantity = max((int) ($data['pass_through_quantity'] ?? 1), 1);
-            $description = trim((string) ($data['pass_through_description'] ?? ''));
+            $description = trim((string) ($data['pass_through_description'] ?? $package->name ?? ''));
+            if ($description === '') {
+                $description = $package->name;
+            }
             $durationDays = (int) ($data['pass_through_duration_days'] ?? $package->durationDays ?? 0);
             if ($durationDays <= 0) {
                 $durationDays = $package->durationDays;
@@ -328,7 +331,10 @@ class InvoiceController extends Controller
             }
 
             $quantity = max((int) ($data['pass_through_quantity'] ?? 1), 1);
-            $description = trim((string) ($data['pass_through_description'] ?? ''));
+            $description = trim((string) ($data['pass_through_description'] ?? $package->name ?? ''));
+            if ($description === '') {
+                $description = $package->name;
+            }
             $durationDays = (int) ($data['pass_through_duration_days'] ?? $package->durationDays ?? 0);
             if ($durationDays <= 0) {
                 $durationDays = $package->durationDays;
