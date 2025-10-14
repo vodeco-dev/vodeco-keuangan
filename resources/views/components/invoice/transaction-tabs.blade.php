@@ -112,7 +112,7 @@ $forwardedAttributes = $attributes->except([
             </div>
         @endif
 
-        <div x-show="activeTab !== 'settlement'" data-items-wrapper x-cloak>
+        <div x-show="! ['settlement', 'pass_through'].includes(activeTab)" data-items-wrapper x-cloak>
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-medium text-gray-900">Daftar Item</h3>
                 <button type="button" data-add-item class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
