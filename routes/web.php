@@ -84,6 +84,9 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::delete('pass-through/packages/{package}', [PassThroughPackageController::class, 'destroy'])
         ->middleware('role:staff')
         ->name('pass-through.packages.destroy');
+    Route::post('pass-through/invoice-category', [PassThroughPackageController::class, 'updateInvoiceCategory'])
+        ->middleware('role:staff')
+        ->name('pass-through.invoice-category.update');
     Route::get('invoices/{invoice}/payment-proof', [InvoiceController::class, 'showPaymentProof'])
         ->name('invoices.payment-proof.show');
     Route::resource('invoices', InvoiceController::class);

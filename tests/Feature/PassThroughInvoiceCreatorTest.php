@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\Category;
 use App\Models\Debt;
 use App\Models\Invoice;
+use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\PassThroughInvoiceCreator;
@@ -29,6 +30,11 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'name' => 'Penjualan Iklan',
             'type' => 'pemasukan',
         ]);
+
+        Setting::updateOrCreate(
+            ['key' => 'pass_through_invoice_category_id'],
+            ['value' => $category->id]
+        );
 
         $service = app(PassThroughInvoiceCreator::class);
 
@@ -67,6 +73,7 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'description' => 'Biaya Pembuatan Akun Iklan',
             'price' => 75000,
             'quantity' => 1,
+            'category_id' => $category->id,
         ]);
 
         $this->assertDatabaseHas('invoice_items', [
@@ -74,6 +81,7 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'description' => 'Jasa Maintenance',
             'price' => 50000,
             'quantity' => 1,
+            'category_id' => $category->id,
         ]);
 
         $this->assertDatabaseHas('invoice_items', [
@@ -81,6 +89,7 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'description' => 'Kampanye Marketplace – Dana Invoices Iklan (30.000 x 10 hari)',
             'price' => 300000,
             'quantity' => 1,
+            'category_id' => $category->id,
         ]);
 
         $this->assertDatabaseHas('debts', [
@@ -121,6 +130,11 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'name' => 'Penjualan Iklan',
             'type' => 'pemasukan',
         ]);
+
+        Setting::updateOrCreate(
+            ['key' => 'pass_through_invoice_category_id'],
+            ['value' => $category->id]
+        );
 
         $service = app(PassThroughInvoiceCreator::class);
 
@@ -163,6 +177,7 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'description' => 'Jasa Maintenance',
             'price' => 30000,
             'quantity' => 2,
+            'category_id' => $category->id,
         ]);
 
         $this->assertDatabaseHas('invoice_items', [
@@ -170,6 +185,7 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'description' => 'Promo Ramadhan – Dana Invoices Iklan (20.000 x 5 hari)',
             'price' => 100000,
             'quantity' => 2,
+            'category_id' => $category->id,
         ]);
 
         $this->assertDatabaseHas('debts', [
