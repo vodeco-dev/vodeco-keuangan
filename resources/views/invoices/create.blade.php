@@ -35,6 +35,10 @@
                     $defaultPassThroughPackageId = old('pass_through_package_id', $firstPassThroughPackage['id'] ?? null);
                     $defaultPassThroughQuantity = old('pass_through_quantity', 1);
                     $defaultPassThroughDescription = old('pass_through_description');
+                    $passThroughSettingsUrl = route('debts.index', [
+                        'type_filter' => \App\Models\Debt::TYPE_PASS_THROUGH,
+                        'open_pass_through_modal' => 1,
+                    ]);
                 @endphp
                 <form action="{{ route('invoices.store') }}" method="POST" class="p-6" id="invoice-form"
                     x-data="invoicePortalForm({
@@ -125,8 +129,20 @@
                             </div>
 
                             @if ($passThroughPackagesCollection->isEmpty())
-                                <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-                                    Belum ada paket Invoices Iklan yang tersedia. Tambahkan paket terlebih dahulu melalui menu pengaturan agar perhitungan otomatis dapat digunakan.
+                                <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 space-y-3">
+                                    <p>Belum ada paket Invoices Iklan yang tersedia. Tambahkan paket terlebih dahulu melalui menu pengaturan agar perhitungan otomatis dapat digunakan.</p>
+                                    <a
+                                        href="{{ $passThroughSettingsUrl }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                                    >
+                                        Buka Pengaturan Paket
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 3h7m0 0v7m0-7L10 14" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5v14h14" />
+                                        </svg>
+                                    </a>
                                 </div>
                             @endif
 
