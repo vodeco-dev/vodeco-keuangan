@@ -22,7 +22,7 @@ class PassThroughPackageController extends Controller
 
         return redirect()
             ->route('debts.index')
-            ->with('success', 'Paket pass through berhasil ditambahkan.')
+            ->with('success', 'Paket Invoices Iklan berhasil ditambahkan.')
             ->with('open_pass_through_modal', true);
     }
 
@@ -37,7 +37,7 @@ class PassThroughPackageController extends Controller
             return redirect()
                 ->route('debts.index')
                 ->withErrors([
-                    'package_id' => 'Paket pass through tidak ditemukan.',
+                    'package_id' => 'Paket Invoices Iklan tidak ditemukan.',
                 ], 'passThroughPackageUpdate')
                 ->with('open_pass_through_modal', true)
                 ->withInput();
@@ -50,7 +50,7 @@ class PassThroughPackageController extends Controller
 
         return redirect()
             ->route('debts.index')
-            ->with('success', 'Paket pass through berhasil diperbarui.')
+            ->with('success', 'Paket Invoices Iklan berhasil diperbarui.')
             ->with('open_pass_through_modal', true);
     }
 
@@ -60,7 +60,7 @@ class PassThroughPackageController extends Controller
 
         return redirect()
             ->route('debts.index')
-            ->with('success', 'Paket pass through berhasil dihapus.')
+            ->with('success', 'Paket Invoices Iklan berhasil dihapus.')
             ->with('open_pass_through_modal', true);
     }
 }

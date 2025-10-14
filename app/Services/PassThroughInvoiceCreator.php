@@ -14,7 +14,7 @@ use Carbon\Carbon;
 class PassThroughInvoiceCreator
 {
     /**
-     * Membuat invoice pass through beserta catatan hutang terkait berdasarkan paket yang dipilih.
+     * Membuat Invoices Iklan beserta catatan hutang terkait berdasarkan paket yang dipilih.
      */
     public function create(array $attributes): Invoice
     {
@@ -43,7 +43,7 @@ class PassThroughInvoiceCreator
             $passThroughAmount = round($dailyBalance * $estimatedDuration, 2);
 
             if ($passThroughAmount <= 0) {
-                throw new \RuntimeException('Nilai pass through tidak boleh 0.');
+                throw new \RuntimeException('Nilai Invoices Iklan tidak boleh 0.');
             }
 
             $total = round($passThroughAmount + $maintenanceFee + $accountCreationFee, 2);
@@ -128,7 +128,7 @@ class PassThroughInvoiceCreator
         }
 
         $items[] = [
-            'description' => 'Dana Pass Through (' . $this->formatCurrency($dailyBalance) . ' x ' . max($estimatedDuration, 0) . ' hari)',
+            'description' => 'Dana Invoices Iklan (' . $this->formatCurrency($dailyBalance) . ' x ' . max($estimatedDuration, 0) . ' hari)',
             'amount' => $passThroughAmount,
         ];
 

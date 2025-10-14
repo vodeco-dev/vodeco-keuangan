@@ -4,7 +4,7 @@ use Illuminate\Support\Str;
 $tabLabels = [
     'down_payment' => 'Down Payment',
     'full_payment' => 'Bayar Lunas',
-    'pass_through' => 'Pass Through',
+    'pass_through' => 'Invoices Iklan',
     'settlement' => 'Pelunasan',
 ];
 

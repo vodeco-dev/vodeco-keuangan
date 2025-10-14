@@ -220,8 +220,8 @@
                                                 x-cloak
                                             >
                                                 <div class="space-y-2">
-                                                    <h3 class="text-lg font-semibold text-gray-900">Invoice Pass Through</h3>
-                                                    <p class="text-sm text-gray-600">Isi nilai saldo harian, estimasi waktu, serta biaya tambahan secara manual untuk menghitung total invoice pass through.</p>
+                                                    <h3 class="text-lg font-semibold text-gray-900">Invoices Iklan</h3>
+                                                    <p class="text-sm text-gray-600">Isi nilai saldo harian, estimasi waktu, serta biaya tambahan secara manual untuk menghitung total Invoices Iklan.</p>
                                                 </div>
 
                                                 <div class="space-y-6">
@@ -300,7 +300,7 @@
                                                         <h4 class="text-base font-semibold text-gray-900">Ringkasan Perhitungan</h4>
                                                         <dl class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
                                                             <div>
-                                                                <dt class="font-medium text-gray-600">Dana Pass Through</dt>
+                                                                <dt class="font-medium text-gray-600">Dana Invoices Iklan</dt>
                                                                 <dd class="mt-1 text-base font-semibold text-purple-600" x-text="formatCurrency(passThroughAmount())"></dd>
                                                             </div>
                                                             <div>
@@ -316,7 +316,7 @@
                                                                 <dd class="mt-1 text-lg font-semibold text-green-600" x-text="formatCurrency(totalPassThrough())"></dd>
                                                             </div>
                                                         </dl>
-                                                        <p class="mt-4 text-xs text-gray-500">Dana pass through akan dicatat sebagai hutang sebesar saldo harian dikalikan estimasi hari. Biaya lainnya otomatis masuk transaksi pemasukan.</p>
+                                                        <p class="mt-4 text-xs text-gray-500">Dana Invoices Iklan akan dicatat sebagai hutang sebesar saldo harian dikalikan estimasi hari. Biaya lainnya otomatis masuk transaksi pemasukan.</p>
                                                     </div>
                                                 </div>
                                             </div>

@@ -23,7 +23,7 @@
                         @if ($debt->type == 'down_payment')
                             <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Down Payment</span>
                         @else
-                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Pass Through</span>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Invoices Iklan</span>
                         @endif
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-500">Rp{{ number_format($debt->amount, 0, ',', '.') }}</td>

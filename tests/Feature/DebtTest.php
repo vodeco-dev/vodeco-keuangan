@@ -24,7 +24,7 @@ class DebtTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)->post('/debts', [
-            'description' => 'Pass Through Expense',
+            'description' => 'Invoices Iklan Expense',
             'related_party' => 'Budi',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,
@@ -35,7 +35,7 @@ class DebtTest extends TestCase
         $response->assertRedirect('/debts');
 
         $this->assertDatabaseHas('debts', [
-            'description' => 'Pass Through Expense',
+            'description' => 'Invoices Iklan Expense',
             'related_party' => 'Budi',
             'type' => Debt::TYPE_PASS_THROUGH,
             'amount' => 1000,

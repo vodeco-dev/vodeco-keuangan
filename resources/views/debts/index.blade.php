@@ -88,7 +88,7 @@
 
     {{-- Header --}}
     <div class="flex justify-between items-center mb-8">
-        <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Pass Through & Down Payment</h2>
+        <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Invoices Iklan & Down Payment</h2>
         <div class="flex items-center gap-3">
             <button @click="addModal = true" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -100,7 +100,7 @@
                 <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4H6a2 2 0 00-2 2v5m11-7h5a2 2 0 012 2v5M9 20h6m-3-3v3m-7-8h16" />
                 </svg>
-                <span>Pengaturan Pass Through</span>
+                <span>Pengaturan Invoices Iklan</span>
             </button>
             <button @click="categoryModal = true" type="button" class="p-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100" title="Pengaturan pilihan kategori">
                 <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -140,7 +140,7 @@
             <p class="text-2xl font-semibold text-blue-600">Rp{{ number_format($totalDownPayment, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <p class="text-sm text-gray-500">Total Pass Through</p>
+            <p class="text-sm text-gray-500">Total Invoices Iklan</p>
             <p class="text-2xl font-semibold text-red-600">Rp{{ number_format($totalPassThrough, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
@@ -199,7 +199,7 @@
                     @click="activeTab = '{{ \App\Models\Debt::TYPE_PASS_THROUGH }}'"
                     :class="activeTab === '{{ \App\Models\Debt::TYPE_PASS_THROUGH }}' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
                     class="px-3 py-2 text-sm font-medium border-b-2 transition">
-                    Pass Through
+                    Invoices Iklan
                 </button>
             </nav>
         </div>
@@ -214,7 +214,7 @@
         <div x-cloak x-show="activeTab === '{{ \App\Models\Debt::TYPE_PASS_THROUGH }}'">
             @include('debts.partials.debt-table', [
                 'debts' => $passThroughDebts,
-                'emptyMessage' => 'Belum ada catatan pass through pada halaman ini.',
+                'emptyMessage' => 'Belum ada catatan Invoices Iklan pada halaman ini.',
             ])
         </div>
 
@@ -224,13 +224,13 @@
     </div>
 
     {{-- Modal Pengaturan Kategori --}}
-    {{-- Modal Pengaturan Pass Through --}}
+    {{-- Modal Pengaturan Invoices Iklan --}}
     <div x-show="passThroughModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start overflow-y-auto py-10 px-4 z-50" style="display: none;">
         <div @click.away="passThroughModal = false" class="bg-white rounded-lg p-8 w-full max-w-4xl max-h-[calc(100vh-5rem)] overflow-y-auto">
             <div class="flex items-start justify-between gap-4">
                 <div>
-                    <h3 class="text-2xl font-bold mb-2">Pengaturan Paket Pass Through</h3>
-                    <p class="text-sm text-gray-600">Kelola paket pass through untuk pelanggan baru maupun lama. Paket digunakan ketika membuat invoice pass through.</p>
+                    <h3 class="text-2xl font-bold mb-2">Pengaturan Paket Invoices Iklan</h3>
+                    <p class="text-sm text-gray-600">Kelola paket Invoices Iklan untuk pelanggan baru maupun lama. Paket digunakan ketika membuat Invoices Iklan.</p>
                 </div>
                 <button type="button" @click="passThroughModal = false" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -288,7 +288,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Saldo Harian Terpotong</label>
                             <input type="text" name="daily_deduction" value="{{ old('daily_deduction') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000" required>
-                            <p class="mt-1 text-xs text-gray-500">Nilai ini digunakan sebagai referensi pemotongan saldo harian di menu Pass Through.</p>
+                            <p class="mt-1 text-xs text-gray-500">Nilai ini digunakan sebagai referensi pemotongan saldo harian di menu Invoices Iklan.</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
@@ -366,14 +366,14 @@
                                 </form>
                             </div>
                         @empty
-                            <p class="text-sm text-gray-500">Belum ada paket pass through yang tersedia.</p>
+                            <p class="text-sm text-gray-500">Belum ada paket Invoices Iklan yang tersedia.</p>
                         @endforelse
                     </div>
                 </div>
             @else
                 <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                     <h4 class="font-semibold">Fitur tidak tersedia</h4>
-                    <p>Pengelolaan paket pass through sementara tidak dapat digunakan karena rute aplikasi belum diaktifkan.</p>
+                    <p>Pengelolaan paket Invoices Iklan sementara tidak dapat digunakan karena rute aplikasi belum diaktifkan.</p>
                 </div>
             @endif
 
@@ -442,7 +442,7 @@
                         <label class="block text-sm font-medium text-gray-700">Tipe</label>
                         <select name="type" x-model="selectedType" @change="ensureAddFormCategory()" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                             <option value="down_payment">Down Payment (Orang lain berhutang ke saya)</option>
-                            <option value="pass_through">Pass Through (Saya berhutang ke orang lain)</option>
+                            <option value="pass_through">Invoices Iklan (Saya berhutang ke orang lain)</option>
                         </select>
                     </div>
                     <div>
