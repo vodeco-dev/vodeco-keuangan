@@ -22,12 +22,9 @@
                 Finance App By Vodeco
                 </p>
                 <div class="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
-                <a href="{{ route('login') }}" class="w-full sm:w-auto inline-block px-6 py-3 sm:px-8 sm:py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 text-center text-base sm:text-lg">
-                    Log in
-                </a>
-                <a href="{{ route('invoices.public.create') }}" class="w-full sm:w-auto inline-block px-6 py-3 sm:px-8 sm:py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 text-center text-base sm:text-lg">
-                    Buat Invoice
-                </a>
+                    <a href="{{ route('login') }}" class="w-full sm:w-auto inline-block px-6 py-3 sm:px-8 sm:py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 text-center text-base sm:text-lg">
+                        Log in
+                    </a>
                 </div>
             </div>
             </div>

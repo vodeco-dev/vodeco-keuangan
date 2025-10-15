@@ -13,7 +13,7 @@ class DebtTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_add_pass_through_debt(): void
+    public function test_user_can_add_down_payment_debt(): void
     {
         Carbon::setTestNow('2024-01-01');
 
@@ -24,9 +24,9 @@ class DebtTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)->post('/debts', [
-            'description' => 'Invoices Iklan Expense',
+            'description' => 'Down Payment Project',
             'related_party' => 'Budi',
-            'type' => Debt::TYPE_PASS_THROUGH,
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 1000,
             'due_date' => now()->addMonth()->toDateString(),
             'category_id' => $category->id,
@@ -35,9 +35,9 @@ class DebtTest extends TestCase
         $response->assertRedirect('/debts');
 
         $this->assertDatabaseHas('debts', [
-            'description' => 'Invoices Iklan Expense',
+            'description' => 'Down Payment Project',
             'related_party' => 'Budi',
-            'type' => Debt::TYPE_PASS_THROUGH,
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 1000,
             'status' => Debt::STATUS_BELUM_LUNAS,
             'category_id' => $category->id,
@@ -60,7 +60,7 @@ class DebtTest extends TestCase
             'user_id' => $user->id,
             'description' => 'Test Debt',
             'related_party' => 'Budi',
-            'type' => Debt::TYPE_PASS_THROUGH,
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 1000,
             'status' => Debt::STATUS_BELUM_LUNAS,
             'due_date' => now()->addWeek(),
@@ -88,10 +88,10 @@ class DebtTest extends TestCase
                 'user_id' => $user->id,
                 'description' => 'Debt ' . $i,
                 'related_party' => 'Budi',
-                'type' => Debt::TYPE_PASS_THROUGH,
-                'amount' => 1000,
-                'status' => Debt::STATUS_BELUM_LUNAS,
-            ]);
+            'type' => Debt::TYPE_DOWN_PAYMENT,
+            'amount' => 1000,
+            'status' => Debt::STATUS_BELUM_LUNAS,
+        ]);
         }
 
         $response = $this->actingAs($user)->get('/debts');
@@ -119,7 +119,7 @@ class DebtTest extends TestCase
         $this->actingAs($user)->post('/debts', [
             'description' => 'Default Due Date Debt',
             'related_party' => 'Ani',
-            'type' => Debt::TYPE_PASS_THROUGH,
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 5000,
             'category_id' => $category->id,
         ]);
@@ -146,7 +146,7 @@ class DebtTest extends TestCase
             'user_id' => $user->id,
             'description' => 'Overdue Debt',
             'related_party' => 'Andi',
-            'type' => Debt::TYPE_PASS_THROUGH,
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 1500,
             'status' => Debt::STATUS_BELUM_LUNAS,
             'due_date' => Carbon::now()->subDay(),

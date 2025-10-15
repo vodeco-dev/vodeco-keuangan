@@ -23,7 +23,7 @@ class DebtServiceTest extends TestCase
             'user_id' => $user->id,
             'description' => 'Laptop purchase',
             'related_party' => 'Alice',
-            'type' => Debt::TYPE_PASS_THROUGH,
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 1000,
             'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
@@ -33,19 +33,9 @@ class DebtServiceTest extends TestCase
             'user_id' => $user->id,
             'description' => 'Laptop purchase',
             'related_party' => 'Alice',
-            'type' => Debt::TYPE_PASS_THROUGH,
-            'amount' => 1000,
-            'status' => Debt::STATUS_LUNAS,
-        ]);
-
-        // Different type
-        Debt::create([
-            'user_id' => $user->id,
-            'description' => 'Laptop purchase',
-            'related_party' => 'Alice',
             'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 1000,
-            'status' => Debt::STATUS_BELUM_LUNAS,
+            'status' => Debt::STATUS_LUNAS,
         ]);
 
         // Different search
@@ -53,7 +43,7 @@ class DebtServiceTest extends TestCase
             'user_id' => $user->id,
             'description' => 'Phone purchase',
             'related_party' => 'Alice',
-            'type' => Debt::TYPE_PASS_THROUGH,
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 1000,
             'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
@@ -63,13 +53,12 @@ class DebtServiceTest extends TestCase
             'user_id' => $otherUser->id,
             'description' => 'Laptop purchase',
             'related_party' => 'Alice',
-            'type' => Debt::TYPE_PASS_THROUGH,
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 1000,
             'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
 
         $request = new Request([
-            'type_filter' => Debt::TYPE_PASS_THROUGH,
             'status_filter' => Debt::STATUS_BELUM_LUNAS,
             'search' => 'Laptop',
         ]);
@@ -85,21 +74,21 @@ class DebtServiceTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $ptBelumLunas = Debt::create([
+        $downPaymentBelumLunas = Debt::create([
             'user_id' => $user->id,
             'description' => 'Project A',
             'related_party' => 'Alice',
-            'type' => Debt::TYPE_PASS_THROUGH,
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 200,
             'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
         Payment::create([
-            'debt_id' => $ptBelumLunas->id,
+            'debt_id' => $downPaymentBelumLunas->id,
             'amount' => 50,
             'payment_date' => now(),
         ]);
 
-        $dpBelumLunas = Debt::create([
+        $downPaymentBelumLunasDua = Debt::create([
             'user_id' => $user->id,
             'description' => 'Project B',
             'related_party' => 'Bob',
@@ -108,16 +97,16 @@ class DebtServiceTest extends TestCase
             'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
 
-        $ptLunas = Debt::create([
+        $downPaymentLunas = Debt::create([
             'user_id' => $user->id,
             'description' => 'Project C',
             'related_party' => 'Carol',
-            'type' => Debt::TYPE_PASS_THROUGH,
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => 100,
             'status' => Debt::STATUS_LUNAS,
         ]);
         Payment::create([
-            'debt_id' => $ptLunas->id,
+            'debt_id' => $downPaymentLunas->id,
             'amount' => 100,
             'payment_date' => now(),
         ]);
@@ -125,8 +114,7 @@ class DebtServiceTest extends TestCase
         $service = new DebtService();
         $summary = $service->getSummary($user);
 
-        $this->assertEquals(300, $summary['totalPassThrough']);
-        $this->assertEquals(300, $summary['totalDownPayment']);
+        $this->assertEquals(500, $summary['totalDownPayment']);
         $this->assertEquals(450, $summary['totalBelumLunas']);
         $this->assertEquals(100, $summary['totalLunas']);
     }

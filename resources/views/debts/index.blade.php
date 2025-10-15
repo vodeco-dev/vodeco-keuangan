@@ -13,10 +13,6 @@
     $oldAmount = old('amount');
     $rawOldAmount = $oldAmount !== null ? preg_replace('/\D/', '', (string) $oldAmount) : '';
     $formattedOldAmount = $rawOldAmount !== '' ? number_format((int) $rawOldAmount, 0, ',', '.') : '';
-    $shouldOpenPassThroughModal = request()->boolean('open_pass_through_modal')
-        || session('open_pass_through_modal')
-        || $errors->hasBag('passThroughPackage')
-        || $errors->hasBag('passThroughPackageUpdate');
 @endphp
 {{-- Tambahkan 'detailModal' ke dalam x-data untuk mengontrol modal baru --}}
 <div x-data="{
@@ -24,7 +20,6 @@
         paymentModal: false,
         detailModal: false,
         categoryModal: false,
-        passThroughModal: {{ $shouldOpenPassThroughModal ? 'true' : 'false' }},
         selectedDebt: {},
         paymentCategoryId: null,
         selectableIncomeCategories: @js($selectableIncomeCategories->map(fn ($category) => ['id' => $category->id, 'name' => $category->name])->values()),
@@ -35,9 +30,7 @@
         defaultExpenseCategoryId: '{{ $defaultExpenseCategoryId ?? '' }}',
         formattedAmount: @js($formattedOldAmount),
         rawAmount: @js($rawOldAmount),
-        activeTab: @js(request('type_filter') === \App\Models\Debt::TYPE_PASS_THROUGH
-            ? \App\Models\Debt::TYPE_PASS_THROUGH
-            : \App\Models\Debt::TYPE_DOWN_PAYMENT),
+        activeTab: '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}',
         openPaymentModal(debt) {
             this.selectedDebt = debt;
             const categories = debt.type === '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}'
@@ -89,19 +82,13 @@
 
     {{-- Header --}}
     <div class="flex justify-between items-center mb-8">
-        <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Invoices Iklan & Down Payment</h2>
+        <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Down Payment</h2>
         <div class="flex items-center gap-3">
             <button @click="addModal = true" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                 </svg>
                 <span>Tambah Catatan Baru</span>
-            </button>
-            <button @click="passThroughModal = true" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center gap-2">
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4H6a2 2 0 00-2 2v5m11-7h5a2 2 0 012 2v5M9 20h6m-3-3v3m-7-8h16" />
-                </svg>
-                <span>Pengaturan Invoices Iklan</span>
             </button>
             <button @click="categoryModal = true" type="button" class="p-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100" title="Pengaturan pilihan kategori">
                 <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -139,10 +126,6 @@
         <div class="bg-white rounded-lg shadow-sm p-6">
             <p class="text-sm text-gray-500">Total Down Payment</p>
             <p class="text-2xl font-semibold text-blue-600">Rp{{ number_format($totalDownPayment, 0, ',', '.') }}</p>
-        </div>
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <p class="text-sm text-gray-500">Total Invoices Iklan</p>
-            <p class="text-2xl font-semibold text-red-600">Rp{{ number_format($totalPassThrough, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
             <p class="text-sm text-gray-500">Belum Lunas</p>
@@ -183,41 +166,13 @@
 
         {{-- Table Tabs --}}
         @php
-            $groupedDebts = $debts->getCollection()->groupBy('type');
-            $downPaymentDebts = $groupedDebts->get(\App\Models\Debt::TYPE_DOWN_PAYMENT) ?? collect();
-            $passThroughDebts = $groupedDebts->get(\App\Models\Debt::TYPE_PASS_THROUGH) ?? collect();
+            $downPaymentDebts = $debts->getCollection();
         @endphp
 
-        <div class="border-b border-gray-200 mb-4">
-            <nav class="flex space-x-6" aria-label="Tabs">
-                <button type="button"
-                    @click="activeTab = '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}'"
-                    :class="activeTab === '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
-                    class="px-3 py-2 text-sm font-medium border-b-2 transition">
-                    Down Payment
-                </button>
-                <button type="button"
-                    @click="activeTab = '{{ \App\Models\Debt::TYPE_PASS_THROUGH }}'"
-                    :class="activeTab === '{{ \App\Models\Debt::TYPE_PASS_THROUGH }}' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
-                    class="px-3 py-2 text-sm font-medium border-b-2 transition">
-                    Invoices Iklan
-                </button>
-            </nav>
-        </div>
-
-        <div x-cloak x-show="activeTab === '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}'">
-            @include('debts.partials.debt-table', [
-                'debts' => $downPaymentDebts,
-                'emptyMessage' => 'Belum ada catatan down payment pada halaman ini.',
-            ])
-        </div>
-
-        <div x-cloak x-show="activeTab === '{{ \App\Models\Debt::TYPE_PASS_THROUGH }}'">
-            @include('debts.partials.debt-table', [
-                'debts' => $passThroughDebts,
-                'emptyMessage' => 'Belum ada catatan Invoices Iklan pada halaman ini.',
-            ])
-        </div>
+        @include('debts.partials.debt-table', [
+            'debts' => $downPaymentDebts,
+            'emptyMessage' => 'Belum ada catatan down payment pada halaman ini.',
+        ])
 
         <div class="mt-4">
             {{ $debts->links() }}
@@ -225,381 +180,4 @@
     </div>
 
     {{-- Modal Pengaturan Kategori --}}
-    {{-- Modal Pengaturan Invoices Iklan --}}
-    <div x-show="passThroughModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start overflow-y-auto py-10 px-4 z-50" style="display: none;">
-        <div @click.away="passThroughModal = false" class="bg-white rounded-lg p-8 w-full max-w-4xl max-h-[calc(100vh-5rem)] overflow-y-auto">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <h3 class="text-2xl font-bold mb-2">Pengaturan Paket Invoices Iklan</h3>
-                    <p class="text-sm text-gray-600">Kelola paket Invoices Iklan untuk pelanggan baru maupun lama. Total dana iklan dihitung dari saldo harian dikalikan waktu tayang, sedangkan biaya maintenance dan jasa pembuatan akun akan ditagihkan otomatis sesuai pilihan pelanggan.</p>
-                </div>
-                <button type="button" @click="passThroughModal = false" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-
-            @php($passThroughPackageRoutesAvailable = \Illuminate\Support\Facades\Route::has('pass-through.packages.store')
-                && \Illuminate\Support\Facades\Route::has('pass-through.packages.update')
-                && \Illuminate\Support\Facades\Route::has('pass-through.packages.destroy'))
-            @php($passThroughInvoiceCategoryRouteAvailable = \Illuminate\Support\Facades\Route::has('pass-through.invoice-category.update'))
-
-            @if ($errors->hasBag('passThroughPackage'))
-                <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                    <h4 class="font-semibold">Gagal menambahkan paket:</h4>
-                    <ul class="mt-2 list-disc list-inside space-y-1">
-                        @foreach ($errors->getBag('passThroughPackage')->all() as $message)
-                            <li>{{ $message }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            @if ($errors->hasBag('passThroughPackageUpdate'))
-                <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                    <h4 class="font-semibold">Gagal memperbarui paket:</h4>
-                    <ul class="mt-2 list-disc list-inside space-y-1">
-                        @foreach ($errors->getBag('passThroughPackageUpdate')->all() as $message)
-                            <li>{{ $message }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            @if ($errors->hasBag('passThroughInvoiceCategory'))
-                <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                    <h4 class="font-semibold">Gagal menyimpan pengaturan kategori:</h4>
-                    <ul class="mt-2 list-disc list-inside space-y-1">
-                        @foreach ($errors->getBag('passThroughInvoiceCategory')->all() as $message)
-                            <li>{{ $message }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            @if ($passThroughPackageRoutesAvailable)
-                @if ($passThroughInvoiceCategoryRouteAvailable)
-                    <div class="mt-6">
-                        <h4 class="text-lg font-semibold text-gray-800">Kategori Pendapatan Default</h4>
-                        <p class="text-sm text-gray-500">Pilih kategori pendapatan yang akan otomatis digunakan pada item dan transaksi Invoices Iklan.</p>
-                        <form method="POST" action="{{ route('pass-through.invoice-category.update') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            @csrf
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Kategori Pendapatan</label>
-                                <select name="category_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    <option value="">-- Pilih kategori --</option>
-                                    @foreach ($selectableIncomeCategories as $category)
-                                        <option value="{{ $category->id }}" @selected((int) old('category_id', $passThroughInvoiceCategoryId) === $category->id)>{{ $category->name }}</option>
-                                    @endforeach
-                                </select>
-                                <p class="mt-1 text-xs text-gray-500">Biarkan kosong bila ingin menggunakan fallback "Penjualan Iklan".</p>
-                            </div>
-                            <div class="flex items-end">
-                                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Simpan Pengaturan</button>
-                            </div>
-                        </form>
-                    </div>
-                @endif
-
-                <div class="mt-6">
-                    <h4 class="text-lg font-semibold text-gray-800">Tambah Paket Baru</h4>
-                    <form x-data="{ customerType: '{{ old('customer_type', 'new') }}' }" x-effect="if (customerType !== 'new' && $refs.accountCreation) { $refs.accountCreation.value = '0'; }" method="POST" action="{{ route('pass-through.packages.store') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        @csrf
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700">Nama Paket</label>
-                            <input type="text" name="name" value="{{ old('name') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Pilihan Pelanggan</label>
-                            <select name="customer_type" x-model="customerType" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="new" @selected(old('customer_type', 'new') === 'new')>Pelanggan Baru</option>
-                                <option value="existing" @selected(old('customer_type') === 'existing')>Pelanggan Lama</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Saldo Harian</label>
-                            <input type="text" name="daily_balance" value="{{ old('daily_balance') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000" required>
-                            <p class="mt-1 text-xs text-gray-500">Nilai ini akan digunakan sebagai referensi saldo harian pada menu Invoices Iklan.</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Waktu Tayang (hari)</label>
-                            <input type="number" name="duration_days" value="{{ old('duration_days') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 30" min="1" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
-                            <input type="text" name="maintenance_fee" value="{{ old('maintenance_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 1.500.000" required>
-                        </div>
-                        <div x-show="customerType === 'new'" x-cloak>
-                            <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
-                            <input x-ref="accountCreation" type="text" name="account_creation_fee" value="{{ old('account_creation_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000">
-                            <p class="mt-1 text-xs text-gray-500">Biaya ini hanya ditagihkan untuk pelanggan baru.</p>
-                        </div>
-                        <div class="md:col-span-2 flex justify-end">
-                            <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Simpan Paket</button>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="mt-8">
-                    <h4 class="text-lg font-semibold text-gray-800">Daftar Paket</h4>
-                    <p class="text-sm text-gray-500">Ubah detail paket yang sudah tersedia atau hapus jika tidak lagi digunakan.</p>
-                    <div class="mt-4 space-y-6">
-                        @forelse ($passThroughPackages as $package)
-                            <div class="rounded-lg border border-gray-200 p-5 shadow-sm">
-                                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                                    <div>
-                                        <h5 class="text-lg font-semibold text-gray-900">{{ $package->name }}</h5>
-                                        <p class="text-sm text-gray-500">{{ $package->customerLabel() }} &bull; Saldo Harian: Rp{{ number_format($package->dailyBalance, 0, ',', '.') }} &bull; Waktu Tayang: {{ $package->durationDays }} hari &bull; Dana Iklan: Rp{{ number_format($package->totalAdBudget(), 0, ',', '.') }}</p>
-                                    </div>
-                                    <form method="POST" action="{{ route('pass-through.packages.destroy', $package->uuid) }}" onsubmit="return confirm('Hapus paket {{ $package->name }}?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Hapus</button>
-                                    </form>
-                                </div>
-                                <form x-data="{ customerType: '{{ $package->customerType }}' }" x-effect="if (customerType !== 'new' && $refs.accountCreation) { $refs.accountCreation.value = '0'; }" method="POST" action="{{ route('pass-through.packages.update', $package->uuid) }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    @csrf
-                                    @method('PUT')
-                                    <div class="md:col-span-2">
-                                        <label class="block text-sm font-medium text-gray-700">Nama Paket</label>
-                                        <input type="text" name="name" value="{{ $package->name }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Pilihan Pelanggan</label>
-                                        <select name="customer_type" x-model="customerType" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                            <option value="new" @selected($package->customerType === 'new')>Pelanggan Baru</option>
-                                            <option value="existing" @selected($package->customerType === 'existing')>Pelanggan Lama</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Saldo Harian</label>
-                                        <input type="text" name="daily_balance" value="{{ number_format($package->dailyBalance, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Waktu Tayang (hari)</label>
-                                        <input type="number" name="duration_days" value="{{ $package->durationDays }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" min="1" required>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
-                                        <input type="text" name="maintenance_fee" value="{{ number_format($package->maintenanceFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                                    </div>
-                                    <div x-show="customerType === 'new'" x-cloak>
-                                        <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
-                                        <input x-ref="accountCreation" type="text" name="account_creation_fee" value="{{ number_format($package->accountCreationFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    </div>
-                                    <div class="md:col-span-2 flex justify-end">
-                                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Simpan Perubahan</button>
-                                    </div>
-                                </form>
-                            </div>
-                        @empty
-                            <p class="text-sm text-gray-500">Belum ada paket Invoices Iklan yang tersedia.</p>
-                        @endforelse
-                    </div>
-                </div>
-            @else
-                <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                    <h4 class="font-semibold">Fitur tidak tersedia</h4>
-                    <p>Pengelolaan paket Invoices Iklan sementara tidak dapat digunakan karena rute aplikasi belum diaktifkan.</p>
-                </div>
-            @endif
-
-            <div class="mt-6 flex justify-end">
-                <button type="button" @click="passThroughModal = false" class="px-4 py-2 bg-gray-200 rounded-lg">Tutup</button>
-            </div>
-        </div>
-    </div>
-
-    <div x-show="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
-        <div @click.away="categoryModal = false" class="bg-white rounded-lg p-8 w-full max-w-2xl mx-4 my-10 max-h-[calc(100vh-5rem)] overflow-y-auto">
-            <h3 class="text-2xl font-bold mb-2">Pengaturan Pilihan Kategori</h3>
-            <p class="text-sm text-gray-600 mb-6">Pilih kategori yang ingin ditampilkan ketika membuat atau melunasi catatan. Biarkan semua checkbox kosong untuk menampilkan seluruh kategori.</p>
-            <form method="POST" action="{{ route('debts.category-preferences.update') }}" class="space-y-6">
-                @csrf
-                <div>
-                    <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Kategori Pemasukan</h4>
-                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                        @forelse ($incomeCategories as $category)
-                            <label class="flex items-start gap-2 text-sm text-gray-700">
-                                <input type="checkbox" name="allowed_income_categories[]" value="{{ $category->id }}" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {{ $allowedIncomeCategoryIds->contains($category->id) ? 'checked' : '' }}>
-                                <span>{{ $category->name }}</span>
-                            </label>
-                        @empty
-                            <p class="text-sm text-gray-500">Belum ada kategori pemasukan.</p>
-                        @endforelse
-                    </div>
-                </div>
-                <div>
-                    <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Kategori Pengeluaran</h4>
-                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                        @forelse ($expenseCategories as $category)
-                            <label class="flex items-start gap-2 text-sm text-gray-700">
-                                <input type="checkbox" name="allowed_expense_categories[]" value="{{ $category->id }}" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {{ $allowedExpenseCategoryIds->contains($category->id) ? 'checked' : '' }}>
-                                <span>{{ $category->name }}</span>
-                            </label>
-                        @empty
-                            <p class="text-sm text-gray-500">Belum ada kategori pengeluaran.</p>
-                        @endforelse
-                    </div>
-                </div>
-                <div class="flex justify-end gap-4">
-                    <button type="button" @click="categoryModal = false" class="px-4 py-2 bg-gray-200 rounded-lg">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- Modal Tambah Catatan Baru --}}
-    <div x-show="addModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
-        <div @click.away="addModal = false" class="bg-white rounded-lg p-8 w-full max-w-md">
-            <h3 class="text-2xl font-bold mb-6">Tambah Catatan Baru</h3>
-            <form action="{{ route('debts.store') }}" method="POST">
-                @csrf
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Deskripsi</label>
-                        <input type="text" name="description" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Pihak Terkait</label>
-                        <input type="text" name="related_party" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Tipe</label>
-                        <select name="type" x-model="selectedType" @change="ensureAddFormCategory()" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                            <option value="down_payment">Down Payment (Orang lain berhutang ke saya)</option>
-                            <option value="pass_through">Invoices Iklan (Saya berhutang ke orang lain)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Kategori</label>
-                        <select name="category_id" x-model="selectedCategoryId" :disabled="addFormCategories().length === 0" :required="addFormCategories().length > 0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                            <option value="" disabled x-show="addFormCategories().length === 0">Tidak ada kategori tersedia</option>
-                            <template x-for="category in addFormCategories()" :key="'add-' + category.id">
-                                <option :value="category.id" x-text="category.name"></option>
-                            </template>
-                        </select>
-                        <p class="mt-1 text-xs text-gray-500">Kategori akan digunakan saat pelunasan dicatat.</p>
-                        @error('category_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Total Nilai</label>
-                        <input type="text" x-model="formattedAmount" @input="formatCurrencyInput($event.target.value)" inputmode="numeric" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" autocomplete="off" required>
-                        <input type="hidden" name="amount" :value="rawAmount">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Jatuh Tempo (Opsional)</label>
-                        <input type="date" name="due_date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                    </div>
-                </div>
-                <div class="mt-6 flex justify-end gap-4">
-                    <button type="button" @click="addModal = false" class="px-4 py-2 bg-gray-200 rounded-lg">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- Modal Catat Pembayaran --}}
-    <div x-show="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
-        <div @click.away="paymentModal = false" class="bg-white rounded-lg p-8 w-full max-w-md">
-            <h3 class="text-2xl font-bold mb-2">Catat Pembayaran</h3>
-            <p class="text-gray-600 mb-6" x-text="selectedDebt.description"></p>
-            <form :action="`/debts/${selectedDebt.id}/pay`" method="POST">
-                @csrf
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Jumlah Pembayaran</label>
-                        <input type="number" name="payment_amount" step="any" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Kategori Pelunasan</label>
-                        <select name="category_id" x-model="paymentCategoryId" :disabled="paymentCategories().length === 0" :required="paymentCategories().length > 0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                            <option value="" disabled x-show="paymentCategories().length === 0">Tidak ada kategori tersedia</option>
-                            <template x-for="category in paymentCategories()" :key="'payment-' + category.id">
-                                <option :value="category.id" x-text="category.name"></option>
-                            </template>
-                        </select>
-                        <p class="mt-1 text-xs text-gray-500">Kategori mengikuti tipe catatan yang dipilih.</p>
-                        @if ($errors->has('category_id'))
-                            <p class="mt-1 text-sm text-red-600">{{ $errors->first('category_id') }}</p>
-                        @endif
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Tanggal Pembayaran</label>
-                        <input type="date" name="payment_date" value="{{ date('Y-m-d') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Catatan (Opsional)</label>
-                        <textarea name="notes" rows="2" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"></textarea>
-                    </div>
-                </div>
-                <div class="mt-6 flex justify-end gap-4">
-                    <button type="button" @click="paymentModal = false" class="px-4 py-2 bg-gray-200 rounded-lg">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div x-show="detailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
-        <div @click.away="detailModal = false" class="bg-white rounded-lg p-8 w-full max-w-2xl">
-            <h3 class="text-2xl font-bold mb-2">Riwayat Pembayaran</h3>
-            <p class="text-gray-600 mb-6" x-text="selectedDebt.description"></p>
-
-            {{-- Info Ringkas --}}
-            <div class="grid grid-cols-3 gap-4 mb-6 text-center">
-                <div>
-                    <p class="text-sm text-gray-500">Total Nilai</p>
-                    <p class="font-semibold" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(selectedDebt.amount)"></p>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">Telah Dibayar</p>
-                    <p class="font-semibold text-green-600" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(selectedDebt.paid_amount)"></p>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">Sisa Tagihan</p>
-                    <p class="font-semibold text-red-600" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(selectedDebt.remaining_amount)"></p>
-                </div>
-            </div>
-
-            {{-- Tabel Riwayat Cicilan --}}
-            <div class="overflow-y-auto max-h-64 border rounded-lg">
-                <table class="w-full text-left">
-                    <thead class="bg-gray-50 sticky top-0">
-                        <tr>
-                            <th class="px-4 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">Tanggal</th>
-                            <th class="px-4 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">Jumlah</th>
-                            <th class="px-4 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">Catatan</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y bg-white">
-                        <template x-if="selectedDebt.payments && selectedDebt.payments.length > 0">
-                            <template x-for="payment in selectedDebt.payments" :key="payment.id">
-                                <tr>
-                                    <td class="px-4 py-3 text-sm text-gray-500" x-text="new Date(payment.payment_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })"></td>
-                                    <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(payment.amount)"></td>
-                                    <td class="px-4 py-3 text-sm text-gray-500" x-text="payment.notes || '-'"></td>
-                                </tr>
-                            </template>
-                        </template>
-                        <template x-if="!selectedDebt.payments || selectedDebt.payments.length === 0">
-                            <tr>
-                                <td colspan="3" class="text-center py-6 text-gray-500">Belum ada pembayaran yang tercatat.</td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="mt-6 flex justify-end">
-                <button type="button" @click="detailModal = false" class="px-4 py-2 bg-gray-200 rounded-lg">Tutup</button>
-            </div>
-        </div>
-    </div>
-</div>
-@endsection
+    

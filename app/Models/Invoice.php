@@ -14,8 +14,6 @@ class Invoice extends Model
 {
     public const TYPE_STANDARD = 'standard';
     public const TYPE_SETTLEMENT = 'settlement';
-    public const TYPE_PASS_THROUGH_NEW = 'pass_through_new';
-    public const TYPE_PASS_THROUGH_EXISTING = 'pass_through_existing';
 
     use HasFactory;
 

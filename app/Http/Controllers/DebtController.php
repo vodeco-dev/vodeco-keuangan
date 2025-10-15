@@ -10,7 +10,6 @@ use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\DebtService;
-use App\Services\PassThroughPackageManager;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -25,7 +24,6 @@ class DebtController extends Controller
 {
     protected DebtService $debtService;
     protected TransactionService $transactionService;
-    protected PassThroughPackageManager $passThroughPackageManager;
 
     /**
      * Terapkan authorization policy ke semua method resource controller.
@@ -33,13 +31,11 @@ class DebtController extends Controller
      */
     public function __construct(
         DebtService $debtService,
-        TransactionService $transactionService,
-        PassThroughPackageManager $passThroughPackageManager
+        TransactionService $transactionService
     )
     {
         $this->debtService = $debtService;
         $this->transactionService = $transactionService;
-        $this->passThroughPackageManager = $passThroughPackageManager;
         $this->authorizeResource(Debt::class, 'debt');
     }
 
@@ -67,19 +63,6 @@ class DebtController extends Controller
         $selectableIncomeCategories = $this->filterCategoriesByAllowed($incomeCategories, $allowedIncomeCategoryIds);
         $selectableExpenseCategories = $this->filterCategoriesByAllowed($expenseCategories, $allowedExpenseCategoryIds);
 
-        $passThroughPackages = $this->passThroughPackageManager->all();
-
-        $storedPassThroughCategoryId = Setting::get('pass_through_invoice_category_id');
-        $passThroughInvoiceCategoryId = null;
-
-        if (is_numeric($storedPassThroughCategoryId)) {
-            $storedPassThroughCategoryId = (int) $storedPassThroughCategoryId;
-
-            if ($selectableIncomeCategories->contains('id', $storedPassThroughCategoryId)) {
-                $passThroughInvoiceCategoryId = $storedPassThroughCategoryId;
-            }
-        }
-
         return view('debts.index', array_merge([
             'title' => 'Hutang & Piutang',
             'debts' => $debts,
@@ -91,8 +74,6 @@ class DebtController extends Controller
             'selectableExpenseCategories' => $selectableExpenseCategories,
             'defaultIncomeCategoryId' => optional($selectableIncomeCategories->first())->id,
             'defaultExpenseCategoryId' => optional($selectableExpenseCategories->first())->id,
-            'passThroughPackages' => $passThroughPackages,
-            'passThroughInvoiceCategoryId' => $passThroughInvoiceCategoryId,
         ], $summary));
     }
 

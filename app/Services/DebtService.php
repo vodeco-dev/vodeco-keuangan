@@ -16,11 +16,8 @@ class DebtService
     {
         $query = Debt::with(['payments', 'category'])
             ->where('user_id', $user->id)
+            ->where('type', Debt::TYPE_DOWN_PAYMENT)
             ->latest();
-
-        if ($request->filled('type_filter')) {
-            $query->where('type', $request->type_filter);
-        }
 
         if ($request->filled('status_filter')) {
             $query->where('status', $request->status_filter);
@@ -53,21 +50,18 @@ class DebtService
             ->where('type', Debt::TYPE_DOWN_PAYMENT)
             ->sum('amount');
 
-        $totalPassThrough = Debt::where('user_id', $user->id)
-            ->where('type', Debt::TYPE_PASS_THROUGH)
-            ->sum('amount');
-
         $totalBelumLunas = Debt::where('user_id', $user->id)
+            ->where('type', Debt::TYPE_DOWN_PAYMENT)
             ->where('status', Debt::STATUS_BELUM_LUNAS)
             ->get()
             ->sum('remaining_amount');
 
         $totalLunas = Debt::where('user_id', $user->id)
+            ->where('type', Debt::TYPE_DOWN_PAYMENT)
             ->where('status', Debt::STATUS_LUNAS)
             ->sum('amount');
 
         return [
-            'totalPassThrough' => $totalPassThrough,
             'totalDownPayment' => $totalDownPayment,
             'totalBelumLunas' => $totalBelumLunas,
             'totalLunas' => $totalLunas,

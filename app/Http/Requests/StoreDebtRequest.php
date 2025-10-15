@@ -26,7 +26,7 @@ class StoreDebtRequest extends FormRequest
         return [
             'description' => 'required|string|max:255',
             'related_party' => 'required|string|max:255',
-            'type' => 'required|in:' . Debt::TYPE_PASS_THROUGH . ',' . Debt::TYPE_DOWN_PAYMENT,
+            'type' => 'required|in:' . Debt::TYPE_DOWN_PAYMENT,
             'amount' => 'required|numeric|min:0',
             'due_date' => 'nullable|date',
             'category_id' => [

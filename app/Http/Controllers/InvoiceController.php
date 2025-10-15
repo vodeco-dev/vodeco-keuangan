@@ -3,17 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Role;
-use App\Http\Requests\PublicConfirmPaymentRequest;
-use App\Http\Requests\PublicStoreInvoiceRequest;
-use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Transaction;
 use App\Models\Category;
 use App\Models\Debt;
-use App\Models\CustomerService;
-use Illuminate\Support\Facades\Crypt;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Setting;
@@ -21,26 +15,19 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
-use App\Models\User;
-use App\Services\CategoryService;
 use App\Services\InvoiceSettlementService;
-use App\Services\PassThroughInvoiceCreator;
-use App\Services\PassThroughPackageManager;
-use App\Support\PassThroughPackage;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
+use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
 {
-    public function __construct(
-        private PassThroughInvoiceCreator $passThroughInvoiceCreator,
-        private PassThroughPackageManager $passThroughPackageManager
-    )
+    public function __construct()
     {
         $this->authorizeResource(Invoice::class, 'invoice');
     }
+
     public function index(): View
     {
         $user = auth()->user();
@@ -158,312 +145,6 @@ class InvoiceController extends Controller
         ));
     }
 
-    public function create(): View
-    {
-        $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
-        $passThroughPackages = $this->passThroughPackageManager->all();
-
-        return view('invoices.create', compact('incomeCategories', 'passThroughPackages'));
-    }
-
-    public function createPublic(Request $request, PassThroughPackageManager $passThroughPackageManager): View
-    {
-        $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
-        $passThroughPackages = $this->passThroughPackageManager->all();
-
-        /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
-        $passphrase = $request->attributes->get('invoicePortalPassphrase');
-        $sessionData = (array) session('invoice_portal_passphrase');
-
-        if ($passphrase) {
-            if ((int) ($sessionData['id'] ?? 0) !== $passphrase->id) {
-                $sessionData = [
-                    'id' => $passphrase->id,
-                    'token' => Crypt::encryptString((string) $passphrase->id),
-                    'access_type' => $passphrase->access_type->value,
-                    'access_label' => $passphrase->access_type->label(),
-                    'label' => $passphrase->label,
-                    'display_label' => $passphrase->displayLabel(),
-                    'verified_at' => $sessionData['verified_at'] ?? now()->toIso8601String(),
-                ];
-
-                session(['invoice_portal_passphrase' => $sessionData]);
-            }
-        } else {
-            $sessionData = [];
-        }
-
-        $allowedTransactionTypes = $passphrase?->allowedTransactionTypes() ?? [];
-        $passphraseToken = $sessionData['token'] ?? null;
-
-        \Illuminate\Support\Facades\Storage::put('debug_packages.json', json_encode($passThroughPackages));
-
-        return view('invoices.public-create', [
-            'incomeCategories' => $incomeCategories,
-            'passphraseSession' => $passphrase ? $sessionData : null,
-            'allowedTransactionTypes' => $allowedTransactionTypes,
-            'passphraseToken' => $passphraseToken,
-            'passThroughPackages' => $passThroughPackages,
-        ]);
-
-    }
-
-    public function store(StoreInvoiceRequest $request): RedirectResponse
-    {
-        $data = $request->validated();
-        $transactionType = $data['transaction_type'] ?? 'down_payment';
-        $ownerId = auth()->id();
-
-        if ($transactionType === 'pass_through') {
-            $packageId = $data['pass_through_package_id'] ?? null;
-            $package = $packageId ? $this->passThroughPackageManager->find($packageId) : null;
-
-            if (! $package) {
-                return back()
-                    ->withErrors(['pass_through_package_id' => 'Paket Invoices Iklan tidak ditemukan.'])
-                    ->withInput();
-            }
-
-            $quantity = max((int) ($data['pass_through_quantity'] ?? 1), 1);
-            $description = trim((string) ($data['pass_through_description'] ?? $package->name ?? ''));
-            if ($description === '') {
-                $description = $package->name;
-            }
-            $durationDays = (int) ($data['pass_through_duration_days'] ?? $package->durationDays ?? 0);
-            if ($durationDays <= 0) {
-                $durationDays = $package->durationDays;
-            }
-
-            $adBudgetUnit = round($package->dailyBalance * $durationDays, 2);
-            $maintenanceUnit = round($package->maintenanceFee, 2);
-            $accountCreationUnit = $package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW
-                ? round($package->accountCreationFee, 2)
-                : 0.0;
-
-            $adBudgetTotal = round($adBudgetUnit * $quantity, 2);
-            $maintenanceTotal = round($maintenanceUnit * $quantity, 2);
-            $accountCreationTotal = round($accountCreationUnit * $quantity, 2);
-            $dailyBalanceTotal = round($package->dailyBalance * $quantity, 2);
-
-            try {
-                $this->passThroughInvoiceCreator->create(
-                    $package,
-                    $quantity,
-                    [
-                        'description' => $description,
-                        'ad_budget_unit' => $adBudgetUnit,
-                        'ad_budget_total' => $adBudgetTotal,
-                        'maintenance_unit' => $maintenanceUnit,
-                        'maintenance_total' => $maintenanceTotal,
-                        'account_creation_unit' => $accountCreationUnit,
-                        'account_creation_total' => $accountCreationTotal,
-                        'daily_balance_unit' => $package->dailyBalance,
-                        'daily_balance_total' => $dailyBalanceTotal,
-                        'duration_days' => $durationDays,
-                        'owner_id' => $ownerId,
-                        'created_by' => auth()->id(),
-                        'customer_service_id' => null,
-                        'customer_service_name' => auth()->user()?->name,
-                        'client_name' => $data['client_name'],
-                        'client_whatsapp' => $data['client_whatsapp'],
-                        'client_address' => $data['client_address'] ?? null,
-                        'due_date' => $data['due_date'] ?? null,
-                        'debt_user_id' => $ownerId,
-                    ]
-                );
-            } catch (\RuntimeException $exception) {
-                return back()
-                    ->withErrors(['pass_through_package_id' => $exception->getMessage()])
-                    ->withInput();
-            }
-        } elseif ($transactionType === 'settlement') {
-            $referenceInvoice = $request->referenceInvoice()
-                ?? Invoice::where('number', $data['settlement_invoice_number'])->firstOrFail();
-
-            $this->persistSettlementInvoice($data, $referenceInvoice);
-        } else {
-            $data['customer_service_name'] = auth()->user()?->name;
-            $this->persistInvoice($data, $ownerId);
-        }
-
-        return redirect()->route('invoices.index');
-    }
-
-    public function storePublic(
-        PublicStoreInvoiceRequest $request
-    )
-    {
-        $data = $request->validated();
-
-        $passphrase = $request->passphrase();
-
-        if (! $passphrase) {
-            abort(403, 'Passphrase portal invoice tidak valid.');
-        }
-
-        $ownerId = User::where('role', Role::ADMIN)->orderBy('id')->value('id');
-
-        if (! $ownerId) {
-            return back()
-                ->withErrors(['transaction_type' => 'Invoice belum dapat dibuat saat ini.'])
-                ->withInput();
-        }
-
-        $data['customer_service_name'] = $passphrase->displayLabel();
-
-        $customerServiceId = CustomerService::query()
-            ->where('user_id', $passphrase->created_by)
-            ->value('id');
-
-        if ($customerServiceId) {
-            $data['customer_service_id'] = $customerServiceId;
-        }
-
-        $data['created_by'] = $passphrase->created_by;
-
-        $transactionType = $data['transaction_type'] ?? 'down_payment';
-
-        if ($transactionType === 'pass_through') {
-            $packageId = $data['pass_through_package_id'] ?? null;
-            $package = $packageId ? $this->passThroughPackageManager->find($packageId) : null;
-
-            if (! $package) {
-                return back()
-                    ->withErrors(['pass_through_package_id' => 'Paket Invoices Iklan tidak ditemukan.'])
-                    ->withInput();
-            }
-
-            $quantity = max((int) ($data['pass_through_quantity'] ?? 1), 1);
-            $description = trim((string) ($data['pass_through_description'] ?? $package->name ?? ''));
-            if ($description === '') {
-                $description = $package->name;
-            }
-            $durationDays = (int) ($data['pass_through_duration_days'] ?? $package->durationDays ?? 0);
-            if ($durationDays <= 0) {
-                $durationDays = $package->durationDays;
-            }
-
-            $adBudgetUnit = round($package->dailyBalance * $durationDays, 2);
-            $maintenanceUnit = round($package->maintenanceFee, 2);
-            $accountCreationUnit = $package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW
-                ? round($package->accountCreationFee, 2)
-                : 0.0;
-
-            $adBudgetTotal = round($adBudgetUnit * $quantity, 2);
-            $maintenanceTotal = round($maintenanceUnit * $quantity, 2);
-            $accountCreationTotal = round($accountCreationUnit * $quantity, 2);
-            $dailyBalanceTotal = round($package->dailyBalance * $quantity, 2);
-
-            try {
-                $invoice = $this->passThroughInvoiceCreator->create(
-                    $package,
-                    $quantity,
-                    [
-                        'description' => $description,
-                        'ad_budget_unit' => $adBudgetUnit,
-                        'ad_budget_total' => $adBudgetTotal,
-                        'maintenance_unit' => $maintenanceUnit,
-                        'maintenance_total' => $maintenanceTotal,
-                        'account_creation_unit' => $accountCreationUnit,
-                        'account_creation_total' => $accountCreationTotal,
-                        'daily_balance_unit' => $package->dailyBalance,
-                        'daily_balance_total' => $dailyBalanceTotal,
-                        'duration_days' => $durationDays,
-                        'owner_id' => $ownerId,
-                        'created_by' => $passphrase->created_by,
-                        'customer_service_id' => $customerServiceId,
-                        'customer_service_name' => $data['customer_service_name'],
-                        'client_name' => $data['client_name'],
-                        'client_whatsapp' => $data['client_whatsapp'],
-                        'client_address' => $data['client_address'] ?? null,
-                        'due_date' => $data['due_date'] ?? null,
-                        'debt_user_id' => $passphrase->created_by ?: $ownerId,
-                    ]
-                );
-            } catch (\RuntimeException $exception) {
-                return back()
-                    ->withErrors(['pass_through_package_id' => $exception->getMessage()])
-                    ->withInput();
-            }
-        } elseif ($data['transaction_type'] === 'settlement') {
-            $referenceInvoice = $request->referenceInvoice()
-                ?? Invoice::where('number', $data['settlement_invoice_number'])->firstOrFail();
-
-            $invoice = $this->persistSettlementInvoice($data, $referenceInvoice);
-        } else {
-            $invoice = $this->persistInvoice($data, $ownerId);
-        }
-
-        $settings = Setting::pluck('value', 'key')->all();
-
-        $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'submission');
-
-        return Pdf::loadView('invoices.pdf', [
-            'invoice' => $invoice,
-            'settings' => $settings,
-        ])
-            ->setPaper('a4')
-            ->download($invoice->number . '.pdf');
-    }
-
-    public function confirmPublicPayment(PublicConfirmPaymentRequest $request): RedirectResponse
-    {
-        $invoice = $request->invoice();
-        $passphrase = $request->passphrase();
-
-        if (! $invoice || ! $passphrase) {
-            abort(403, 'Permintaan tidak valid.');
-        }
-
-        $metadataUpdates = [];
-        $creatorId = $passphrase->created_by;
-
-        if (! $invoice->created_by && $creatorId) {
-            $metadataUpdates['created_by'] = $creatorId;
-        }
-
-        $customerServiceId = $passphrase->creatorCustomerServiceId();
-
-        if ($customerServiceId && ! $invoice->customer_service_id) {
-            $metadataUpdates['customer_service_id'] = $customerServiceId;
-        }
-
-        if (! $invoice->customer_service_name || $passphrase->labelMatches($invoice->customer_service_name)) {
-            $metadataUpdates['customer_service_name'] = $passphrase->displayLabel();
-        }
-
-        $proofFile = $request->file('payment_proof');
-
-        $disk = 'public';
-        $directory = 'invoice-proofs/' . now()->format('Y/m');
-        $extension = strtolower($proofFile->getClientOriginalExtension() ?: $proofFile->extension() ?: 'png');
-        $filename = 'payment-proof-' . Str::uuid()->toString() . '.' . $extension;
-        $path = trim($directory . '/' . $filename, '/');
-
-        if ($invoice->payment_proof_path && $invoice->payment_proof_disk) {
-            Storage::disk($invoice->payment_proof_disk)->delete($invoice->payment_proof_path);
-        }
-
-        Storage::disk($disk)->putFileAs($directory, $proofFile, $filename);
-
-        $invoice->forceFill(array_merge($metadataUpdates, [
-            'payment_proof_disk' => $disk,
-            'payment_proof_path' => $path,
-            'payment_proof_filename' => $filename,
-            'payment_proof_original_name' => $proofFile->getClientOriginalName(),
-            'payment_proof_uploaded_at' => now(),
-            'status' => 'belum lunas',
-        ]))->save();
-
-        $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'payment_confirmation');
-
-        return redirect()
-            ->route('invoices.public.create')
-            ->with('status', 'Bukti pembayaran berhasil dikirim. Tim akuntansi akan memverifikasi dalam waktu dekat.')
-            ->with('active_portal_tab', 'confirm_payment')
-            ->with('confirmed_invoice_summary', $this->makeInvoiceReferencePayload($invoice));
-    }
-
     public function showPaymentProof(Invoice $invoice): Response
     {
         $this->authorize('view', $invoice);
@@ -493,49 +174,6 @@ class InvoiceController extends Controller
             'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
             'Cache-Control' => 'private, max-age=300',
         ]);
-    }
-
-    public function publicReference(Request $request, string $number): JsonResponse
-    {
-        /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
-        $passphrase = $request->attributes->get('invoicePortalPassphrase');
-
-        if (! $passphrase || ! in_array('settlement', $passphrase->allowedTransactionTypes(), true)) {
-            return response()->json([
-                'message' => 'Passphrase tidak memiliki izin untuk melihat data invoice.',
-            ], Response::HTTP_FORBIDDEN);
-        }
-
-        $invoice = Invoice::query()
-            ->where('number', $number)
-            ->where('type', '!=', Invoice::TYPE_SETTLEMENT)
-            ->first();
-
-        if (! $invoice) {
-            return response()->json([
-                'message' => 'Invoice referensi tidak ditemukan.',
-            ], Response::HTTP_NOT_FOUND);
-        }
-
-        return response()->json($this->makeInvoiceReferencePayload($invoice));
-    }
-
-    public function reference(Request $request, string $number): JsonResponse
-    {
-        $invoice = Invoice::query()
-            ->where('number', $number)
-            ->where('type', '!=', Invoice::TYPE_SETTLEMENT)
-            ->first();
-
-        if (! $invoice) {
-            return response()->json([
-                'message' => 'Invoice referensi tidak ditemukan.',
-            ], Response::HTTP_NOT_FOUND);
-        }
-
-        $this->authorize('view', $invoice);
-
-        return response()->json($this->makeInvoiceReferencePayload($invoice));
     }
 
     public function send(Invoice $invoice): RedirectResponse
@@ -759,11 +397,54 @@ class InvoiceController extends Controller
         return view('invoices.edit', compact('invoice', 'incomeCategories'));
     }
 
-    public function update(StoreInvoiceRequest $request, Invoice $invoice)
+    public function update(Request $request, Invoice $invoice)
     {
         $this->authorize('update', $invoice);
 
-        $data = $request->validated();
+        $items = collect($request->input('items', []))->map(function ($item) {
+            if (isset($item['price'])) {
+                $normalizedPrice = preg_replace('/[^\d,.-]/', '', (string) $item['price']);
+                $normalizedPrice = str_replace('.', '', $normalizedPrice);
+                $normalizedPrice = str_replace(',', '.', $normalizedPrice);
+                $item['price'] = $normalizedPrice === '' ? null : $normalizedPrice;
+            }
+
+            if (isset($item['quantity']) && ! is_numeric($item['quantity'])) {
+                $digits = preg_replace('/\D/', '', (string) $item['quantity']);
+                $item['quantity'] = $digits !== '' ? (int) $digits : null;
+            }
+
+            return $item;
+        })->toArray();
+
+        $whatsapp = $request->input('client_whatsapp');
+        if (is_string($whatsapp)) {
+            $whatsapp = preg_replace('/[^\d+]/', '', $whatsapp);
+        }
+
+        $request->merge([
+            'items' => $items,
+            'client_whatsapp' => $whatsapp,
+            'down_payment_due' => $this->sanitizeCurrencyValue($request->input('down_payment_due')),
+        ]);
+
+        $data = $request->validate([
+            'client_name' => ['required', 'string', 'max:255'],
+            'client_whatsapp' => ['nullable', 'string', 'max:32'],
+            'client_address' => ['nullable', 'string'],
+            'issue_date' => ['nullable', 'date'],
+            'due_date' => ['nullable', 'date'],
+            'down_payment_due' => ['nullable', 'numeric', 'min:0'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.description' => ['required', 'string'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.price' => ['required', 'numeric'],
+            'items.*.category_id' => [
+                'required',
+                'integer',
+                Rule::exists('categories', 'id')->where('type', 'pemasukan'),
+            ],
+        ]);
 
         $ownerId = $invoice->user_id;
 
@@ -813,149 +494,17 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index');
     }
 
-    private function persistInvoice(array $data, ?int $ownerId = null): Invoice
+    private function sanitizeCurrencyValue($value): ?string
     {
-        return DB::transaction(function () use ($data, $ownerId) {
-            $transactionType = $data['transaction_type'] ?? 'down_payment';
-            $items = $this->mapInvoiceItems($data['items'] ?? []);
-            $invoiceNumber = $this->generateInvoiceNumber();
-            $total = $this->calculateInvoiceTotal($items);
-            $downPaymentDue = null;
+        if (! isset($value)) {
+            return null;
+        }
 
-            if ($transactionType === 'down_payment' && array_key_exists('down_payment_due', $data)) {
-                $downPaymentDue = isset($data['down_payment_due']) ? (float) $data['down_payment_due'] : null;
-            }
+        $normalized = preg_replace('/[^\d,.-]/', '', (string) $value);
+        $normalized = str_replace('.', '', $normalized);
+        $normalized = str_replace(',', '.', $normalized);
 
-            $status = match ($transactionType) {
-                'down_payment' => 'belum lunas',
-                'full_payment' => 'lunas',
-                default => 'belum bayar',
-            };
-
-            $downPayment = $transactionType === 'full_payment' ? $total : 0;
-            $paymentDate = $transactionType === 'full_payment' ? now() : null;
-
-            $invoice = Invoice::create([
-                'user_id' => $ownerId ?? auth()->id(),
-                'created_by' => $data['created_by'] ?? auth()->id(),
-                'customer_service_id' => $data['customer_service_id'] ?? null,
-                'customer_service_name' => $data['customer_service_name'] ?? auth()->user()?->name,
-                'client_name' => $data['client_name'],
-                'client_whatsapp' => $data['client_whatsapp'],
-                'client_address' => $data['client_address'],
-                'number' => $invoiceNumber,
-                'issue_date' => $data['issue_date'] ?? now(),
-                'due_date' => $data['due_date'] ?? null,
-                'status' => $status,
-                'total' => $total,
-                'type' => Invoice::TYPE_STANDARD,
-                'reference_invoice_id' => null,
-                'down_payment' => $downPayment,
-                'down_payment_due' => $downPaymentDue,
-                'payment_date' => $paymentDate,
-                'payment_proof_disk' => $data['payment_proof_disk'] ?? null,
-                'payment_proof_path' => $data['payment_proof_path'] ?? null,
-                'payment_proof_filename' => $data['payment_proof_filename'] ?? null,
-                'payment_proof_original_name' => $data['payment_proof_original_name'] ?? null,
-                'payment_proof_uploaded_at' => $data['payment_proof_uploaded_at'] ?? null,
-            ]);
-
-            foreach ($items as $item) {
-                InvoiceItem::create([
-                    'invoice_id' => $invoice->id,
-                    'category_id' => $item['category_id'],
-                    'description' => $item['description'],
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
-                ]);
-            }
-
-            return $invoice->load('items', 'customerService');
-        });
-    }
-
-    private function persistSettlementInvoice(array $data, Invoice $referenceInvoice): Invoice
-    {
-        return DB::transaction(function () use ($data, $referenceInvoice) {
-            $invoiceNumber = $this->generateInvoiceNumber();
-            $paidAmount = (float) $data['settlement_paid_amount'];
-            $isPaidFull = $data['settlement_payment_status'] === 'paid_full';
-            $now = now();
-
-            $invoice = Invoice::create([
-                'user_id' => $referenceInvoice->user_id,
-                'created_by' => $data['created_by'] ?? auth()->id(),
-                'customer_service_id' => $referenceInvoice->customer_service_id,
-                'customer_service_name' => $referenceInvoice->customer_service_name,
-                'client_name' => $referenceInvoice->client_name,
-                'client_whatsapp' => $referenceInvoice->client_whatsapp,
-                'client_address' => $referenceInvoice->client_address,
-                'number' => $invoiceNumber,
-                'issue_date' => $now,
-                'due_date' => null,
-                'status' => $isPaidFull ? 'lunas' : 'belum lunas',
-                'total' => $paidAmount,
-                'down_payment' => $paidAmount,
-                'payment_date' => $now,
-                'type' => Invoice::TYPE_SETTLEMENT,
-                'reference_invoice_id' => $referenceInvoice->id,
-                'payment_proof_disk' => $data['payment_proof_disk'] ?? null,
-                'payment_proof_path' => $data['payment_proof_path'] ?? null,
-                'payment_proof_filename' => $data['payment_proof_filename'] ?? null,
-                'payment_proof_original_name' => $data['payment_proof_original_name'] ?? null,
-                'payment_proof_uploaded_at' => $data['payment_proof_uploaded_at'] ?? null,
-            ]);
-
-            $referenceInvoice->loadMissing('items');
-            $firstItem = $referenceInvoice->items->first();
-
-            InvoiceItem::create([
-                'invoice_id' => $invoice->id,
-                'category_id' => $firstItem?->category_id,
-                'description' => 'Pelunasan Invoice #' . $referenceInvoice->number,
-                'quantity' => 1,
-                'price' => $paidAmount,
-            ]);
-
-            $updatedDownPayment = round((float) $referenceInvoice->down_payment, 2) + round($paidAmount, 2);
-            $newDownPayment = min((float) $referenceInvoice->total, $updatedDownPayment);
-
-            $referenceInvoice->forceFill([
-                'down_payment' => $newDownPayment,
-                'payment_date' => $now,
-                'status' => $isPaidFull || $newDownPayment >= (float) $referenceInvoice->total ? 'lunas' : 'belum lunas',
-            ])->save();
-
-            return $invoice->load('items', 'customerService', 'referenceInvoice');
-        });
-    }
-
-    private function makeInvoiceReferencePayload(Invoice $invoice): array
-    {
-        $remaining = max((float) $invoice->total - (float) $invoice->down_payment, 0);
-
-        return [
-            'number' => $invoice->number,
-            'client_name' => $invoice->client_name,
-            'client_whatsapp' => $invoice->client_whatsapp,
-            'client_address' => $invoice->client_address,
-            'due_date' => $invoice->due_date?->format('Y-m-d'),
-            'total' => (float) $invoice->total,
-            'down_payment' => (float) $invoice->down_payment,
-            'remaining_balance' => $remaining,
-            'status' => $invoice->status,
-            'customer_service_name' => $invoice->customer_service_name,
-            'payment_proof_uploaded_at' => $invoice->payment_proof_uploaded_at?->toIso8601String(),
-        ];
-    }
-
-    private function generateInvoiceNumber(): string
-    {
-        $date = now()->format('Ymd');
-        $count = Invoice::whereDate('created_at', today())->count();
-        $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-
-        return "{$date}-{$sequence}";
+        return $normalized === '' ? null : $normalized;
     }
 
     private function mapInvoiceItems(array $items): array
