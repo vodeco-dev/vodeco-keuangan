@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use App\Models\User;
+use App\Services\CategoryService;
 use App\Services\InvoiceSettlementService;
 use App\Services\PassThroughInvoiceCreator;
 use App\Services\PassThroughPackageManager;
@@ -165,7 +166,7 @@ class InvoiceController extends Controller
         return view('invoices.create', compact('incomeCategories', 'passThroughPackages'));
     }
 
-    public function createPublic(Request $request): View
+    public function createPublic(Request $request, PassThroughPackageManager $passThroughPackageManager): View
     {
         $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
         $passThroughPackages = $this->passThroughPackageManager->all();
@@ -194,6 +195,8 @@ class InvoiceController extends Controller
 
         $allowedTransactionTypes = $passphrase?->allowedTransactionTypes() ?? [];
         $passphraseToken = $sessionData['token'] ?? null;
+
+        \Illuminate\Support\Facades\Storage::put('debug_packages.json', json_encode($passThroughPackages));
 
         return view('invoices.public-create', [
             'incomeCategories' => $incomeCategories,

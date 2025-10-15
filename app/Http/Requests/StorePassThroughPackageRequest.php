@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Support\PassThroughPackage;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,10 +16,7 @@ class StorePassThroughPackageRequest extends FormRequest
 
     public function rules(): array
     {
-        $customerTypes = [
-            PassThroughPackage::CUSTOMER_TYPE_NEW,
-            PassThroughPackage::CUSTOMER_TYPE_EXISTING,
-        ];
+        $customerTypes = ['new', 'existing'];
 
         return [
             'name' => ['required', 'string', 'max:255'],

@@ -304,7 +304,7 @@
 
                 <div class="mt-6">
                     <h4 class="text-lg font-semibold text-gray-800">Tambah Paket Baru</h4>
-                    <form x-data="{ customerType: '{{ old('customer_type', \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW) }}' }" x-effect="if (customerType !== '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}' && $refs.accountCreation) { $refs.accountCreation.value = '0'; }" method="POST" action="{{ route('pass-through.packages.store') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form x-data="{ customerType: '{{ old('customer_type', 'new') }}' }" x-effect="if (customerType !== 'new' && $refs.accountCreation) { $refs.accountCreation.value = '0'; }" method="POST" action="{{ route('pass-through.packages.store') }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         @csrf
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700">Nama Paket</label>
@@ -330,7 +330,7 @@
                             <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
                             <input type="text" name="maintenance_fee" value="{{ old('maintenance_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 1.500.000" required>
                         </div>
-                        <div x-show="customerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'" x-cloak>
+                        <div x-show="customerType === 'new'" x-cloak>
                             <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
                             <input x-ref="accountCreation" type="text" name="account_creation_fee" value="{{ old('account_creation_fee') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Contoh: 500.000">
                             <p class="mt-1 text-xs text-gray-500">Biaya ini hanya ditagihkan untuk pelanggan baru.</p>
@@ -350,15 +350,15 @@
                                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                     <div>
                                         <h5 class="text-lg font-semibold text-gray-900">{{ $package->name }}</h5>
-                                        <p class="text-sm text-gray-500">{{ $package->customerLabel() }} &bull; Saldo Harian: Rp{{ number_format($package->dailyBalance, 0, ',', '.') }} &bull; Waktu Tayang: {{ $package->durationDays }} hari &bull; Dana Iklan: Rp{{ number_format($package->totalAdBudget(), 0, ',', '.') }}</p>
+                                        <p class="text-sm text-gray-500">{{ $package->customerLabel() }} &bull; Saldo Harian: Rp{{ number_format($package->daily_balance, 0, ',', '.') }} &bull; Waktu Tayang: {{ $package->duration_days }} hari &bull; Dana Iklan: Rp{{ number_format($package->totalAdBudget(), 0, ',', '.') }}</p>
                                     </div>
-                                    <form method="POST" action="{{ route('pass-through.packages.destroy', $package->id) }}" onsubmit="return confirm('Hapus paket {{ $package->name }}?');">
+                                    <form method="POST" action="{{ route('pass-through.packages.destroy', $package->uuid) }}" onsubmit="return confirm('Hapus paket {{ $package->name }}?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Hapus</button>
                                     </form>
                                 </div>
-                                <form x-data="{ customerType: '{{ $package->customerType }}' }" x-effect="if (customerType !== '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}' && $refs.accountCreation) { $refs.accountCreation.value = '0'; }" method="POST" action="{{ route('pass-through.packages.update', $package->id) }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <form x-data="{ customerType: '{{ $package->customer_type }}' }" x-effect="if (customerType !== 'new' && $refs.accountCreation) { $refs.accountCreation.value = '0'; }" method="POST" action="{{ route('pass-through.packages.update', $package->uuid) }}" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     @csrf
                                     @method('PUT')
                                     <div class="md:col-span-2">
@@ -368,25 +368,25 @@
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Pilihan Pelanggan</label>
                                         <select name="customer_type" x-model="customerType" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                            <option value="new" @selected($package->customerType === 'new')>Pelanggan Baru</option>
-                                            <option value="existing" @selected($package->customerType === 'existing')>Pelanggan Lama</option>
+                                            <option value="new" @selected($package->customer_type === 'new')>Pelanggan Baru</option>
+                                            <option value="existing" @selected($package->customer_type === 'existing')>Pelanggan Lama</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Saldo Harian</label>
-                                        <input type="text" name="daily_balance" value="{{ number_format($package->dailyBalance, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                        <input type="text" name="daily_balance" value="{{ number_format($package->daily_balance, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Waktu Tayang (hari)</label>
-                                        <input type="number" name="duration_days" value="{{ $package->durationDays }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" min="1" required>
+                                        <input type="number" name="duration_days" value="{{ $package->duration_days }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" min="1" required>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
-                                        <input type="text" name="maintenance_fee" value="{{ number_format($package->maintenanceFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                                        <input type="text" name="maintenance_fee" value="{{ number_format($package->maintenance_fee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                                     </div>
-                                    <div x-show="customerType === '{{ \App\Support\PassThroughPackage::CUSTOMER_TYPE_NEW }}'" x-cloak>
+                                    <div x-show="customerType === 'new'" x-cloak>
                                         <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
-                                        <input x-ref="accountCreation" type="text" name="account_creation_fee" value="{{ number_format($package->accountCreationFee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                        <input x-ref="accountCreation" type="text" name="account_creation_fee" value="{{ number_format($package->account_creation_fee, 0, ',', '.') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                                     </div>
                                     <div class="md:col-span-2 flex justify-end">
                                         <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Simpan Perubahan</button>

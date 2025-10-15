@@ -78,10 +78,10 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::match(['GET', 'POST'], 'pass-through/packages', [PassThroughPackageController::class, 'store'])
         ->middleware('role:staff')
         ->name('pass-through.packages.store');
-    Route::put('pass-through/packages/{package}', [PassThroughPackageController::class, 'update'])
+    Route::put('pass-through/packages/{package:uuid}', [PassThroughPackageController::class, 'update'])
         ->middleware('role:staff')
         ->name('pass-through.packages.update');
-    Route::delete('pass-through/packages/{package}', [PassThroughPackageController::class, 'destroy'])
+    Route::delete('pass-through/packages/{package:uuid}', [PassThroughPackageController::class, 'destroy'])
         ->middleware('role:staff')
         ->name('pass-through.packages.destroy');
     Route::post('pass-through/invoice-category', [PassThroughPackageController::class, 'updateInvoiceCategory'])
