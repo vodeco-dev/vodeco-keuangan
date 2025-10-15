@@ -164,8 +164,6 @@ class SettingController extends Controller
             'invoice_items',
             'invoices',
             'customer_services',
-            'invoice_portal_passphrase_logs',
-            'invoice_portal_passphrases',
             'access_codes',
             'categories',
             'activity_logs',

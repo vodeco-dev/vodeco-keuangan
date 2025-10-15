@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\InvoicePortalPassphraseAccessType;
 use App\Enums\Role;
 use App\Models\AccessCode;
 use App\Models\ActivityLog;
@@ -10,8 +9,6 @@ use App\Models\Category;
 use App\Models\CustomerService;
 use App\Models\Debt;
 use App\Models\Invoice;
-use App\Models\InvoicePortalPassphrase;
-use App\Models\InvoicePortalPassphraseLog;
 use App\Models\Transaction;
 use App\Models\TransactionDeletionRequest;
 use App\Models\User;
@@ -105,18 +102,6 @@ class SettingsDataManagementTest extends TestCase
             'code_hash' => Hash::make('secret'),
         ]);
 
-        $passphrase = InvoicePortalPassphrase::create([
-            'public_id' => (string) Str::uuid(),
-            'passphrase_hash' => Hash::make('super-secret'),
-            'access_type' => InvoicePortalPassphraseAccessType::CUSTOMER_SERVICE,
-            'created_by' => $admin->id,
-        ]);
-
-        InvoicePortalPassphraseLog::create([
-            'invoice_portal_passphrase_id' => $passphrase->id,
-            'action' => 'created',
-        ]);
-
         ActivityLog::create([
             'user_id' => $staff->id,
             'description' => 'Testing',
@@ -139,8 +124,6 @@ class SettingsDataManagementTest extends TestCase
         $this->assertDatabaseCount('invoices', 0);
         $this->assertDatabaseCount('invoice_items', 0);
         $this->assertDatabaseCount('customer_services', 0);
-        $this->assertDatabaseCount('invoice_portal_passphrases', 0);
-        $this->assertDatabaseCount('invoice_portal_passphrase_logs', 0);
         $this->assertDatabaseCount('access_codes', 0);
         $this->assertDatabaseCount('categories', 0);
         $this->assertDatabaseCount('activity_logs', 1);

@@ -16,7 +16,7 @@ class DebtFactory extends Factory
             'user_id' => User::factory(),
             'description' => $this->faker->sentence,
             'related_party' => $this->faker->name,
-            'type' => $this->faker->randomElement([Debt::TYPE_PASS_THROUGH, Debt::TYPE_DOWN_PAYMENT]),
+            'type' => Debt::TYPE_DOWN_PAYMENT,
             'amount' => $this->faker->numberBetween(1000, 100000),
             'due_date' => $this->faker->date(),
             'status' => $this->faker->randomElement([

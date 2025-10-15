@@ -20,18 +20,14 @@
                     <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{{ $debt->description }}</td>
                     <td class="px-4 py-3 text-sm text-gray-500">{{ $debt->related_party }}</td>
                     <td class="px-4 py-3 text-sm">
-                        @if ($debt->type == 'down_payment')
-                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Down Payment</span>
-                        @else
-                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Invoices Iklan</span>
-                        @endif
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Down Payment</span>
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-500">Rp{{ number_format($debt->amount, 0, ',', '.') }}</td>
                     <td class="px-4 py-3 text-sm text-gray-500">Rp{{ number_format($debt->paid_amount, 0, ',', '.') }}</td>
                     <td class="px-4 py-3 text-sm text-gray-500">Rp{{ number_format($debt->remaining_amount, 0, ',', '.') }}</td>
                     <td class="px-4 py-3 text-sm text-gray-500">
                         <div class="w-full bg-gray-200 rounded-full h-2.5">
-                            <div class="{{ $debt->type == 'down_payment' ? 'bg-blue-600' : 'bg-red-600' }} h-2.5 rounded-full" style="width: {{ $debt->progress }}%"></div>
+                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ $debt->progress }}%"></div>
                         </div>
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-500">{{ $debt->due_date ? \Carbon\Carbon::parse($debt->due_date)->isoFormat('D MMM YYYY') : '-' }}</td>
