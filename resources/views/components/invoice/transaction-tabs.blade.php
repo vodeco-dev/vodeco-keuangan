@@ -246,11 +246,9 @@ $forwardedAttributes = $attributes->except([
             </div>
         </div>
 
-        @isset($passThrough)
-            <div x-show="activeTab === 'pass_through'" data-tab-visible="pass_through" x-cloak>
-                {{ $passThrough }}
-            </div>
-        @endisset
+        <div :style="{ display: activeTab === 'pass_through' ? 'block' : 'none' }" data-tab-visible="pass_through" x-cloak>
+            {{ $passThrough }}
+        </div>
     </div>
 
     @if ($showTotal)

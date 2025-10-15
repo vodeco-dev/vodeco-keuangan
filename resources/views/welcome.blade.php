@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>{{ config('app.name', 'Finance App') }}</title>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
@@ -25,7 +25,7 @@
                 <a href="{{ route('login') }}" class="w-full sm:w-auto inline-block px-6 py-3 sm:px-8 sm:py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 text-center text-base sm:text-lg">
                     Log in
                 </a>
-                <a href="{{ route('invoices.public.create') }}" class="w-full sm:w-auto inline-block px-6 py-3 sm:px-8 sm:py-3 bg-white/90 text-blue-700 font-semibold rounded-lg shadow-md hover:bg-white focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-opacity-75 text-center text-base sm:text-lg">
+                <a href="{{ route('invoices.public.create') }}" class="w-full sm:w-auto inline-block px-6 py-3 sm:px-8 sm:py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 text-center text-base sm:text-lg">
                     Buat Invoice
                 </a>
                 </div>
