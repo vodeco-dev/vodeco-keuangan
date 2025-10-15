@@ -18,10 +18,20 @@ class PassThroughPackageController extends Controller
     private const INVOICE_CATEGORY_SETTING_KEY = 'pass_through_invoice_category_id';
 
     public function store(
-        StorePassThroughPackageRequest $request,
+        Request $request,
         PassThroughPackageManager $manager
     ): RedirectResponse {
-        $data = $request->validated();
+        if ($request->isMethod('get')) {
+            \Illuminate\Support\Facades\Log::warning('PassThroughPackageController@store was accessed with a GET request.');
+            return redirect()
+                ->route('debts.index')
+                ->withErrors(['get_request_error' => 'Terjadi kesalahan, permintaan tidak seharusnya dikirim dengan metode GET.'])
+                ->with('open_pass_through_modal', true);
+        }
+
+        $validated = app(StorePassThroughPackageRequest::class)->validated();
+
+        $data = $validated;
         $data['id'] = (string) Str::uuid();
 
         $manager->save(PassThroughPackage::fromArray($data));

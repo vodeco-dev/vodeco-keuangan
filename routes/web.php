@@ -75,7 +75,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::post('debts/category-preferences', [DebtController::class, 'updateCategoryPreferences'])->name('debts.category-preferences.update');
     Route::resource('debts', DebtController::class);
-    Route::post('pass-through/packages', [PassThroughPackageController::class, 'store'])
+    Route::match(['GET', 'POST'], 'pass-through/packages', [PassThroughPackageController::class, 'store'])
         ->middleware('role:staff')
         ->name('pass-through.packages.store');
     Route::put('pass-through/packages/{package}', [PassThroughPackageController::class, 'update'])
