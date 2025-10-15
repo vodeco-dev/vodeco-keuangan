@@ -77,6 +77,11 @@ class PassThroughPackage implements Arrayable
         return $this->customerType === self::CUSTOMER_TYPE_NEW;
     }
 
+    public function totalAdBudget(): float
+    {
+        return $this->dailyBalance * $this->durationDays;
+    }
+
     public function toArray(): array
     {
         return [
