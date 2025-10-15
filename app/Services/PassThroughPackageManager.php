@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PassThroughPackage;
+use App\Support\PassThroughPackage as PassThroughPackageData;
 use Illuminate\Support\Collection;
 
 class PassThroughPackageManager
@@ -12,15 +13,20 @@ class PassThroughPackageManager
      */
     public function all(): Collection
     {
-        return PassThroughPackage::where('is_active', true)->orderBy('name')->get();
+        return PassThroughPackage::where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(fn (PassThroughPackage $package) => PassThroughPackageData::fromModel($package));
     }
 
     /**
      * Find a package by its UUID.
      */
-    public function find(string $uuid): ?PassThroughPackage
+    public function find(string $uuid): ?PassThroughPackageData
     {
-        return PassThroughPackage::where('uuid', $uuid)->first();
+        $package = PassThroughPackage::where('uuid', $uuid)->first();
+
+        return $package ? PassThroughPackageData::fromModel($package) : null;
     }
 
     /**
@@ -44,7 +50,7 @@ class PassThroughPackageManager
      */
     public function delete(string $uuid): bool
     {
-        $package = $this->find($uuid);
+        $package = PassThroughPackage::where('uuid', $uuid)->first();
 
         if ($package) {
             return $package->delete();
