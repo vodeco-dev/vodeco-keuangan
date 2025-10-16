@@ -244,7 +244,56 @@ $forwardedAttributes = $attributes->except([
                 <div class="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm" x-show="hasPassThroughPackageSelected()" x-cloak>
                     <h4 class="text-base font-semibold text-gray-900">Ringkasan Paket</h4>
                     <dl class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 md:grid-cols-2">
-                        </dl>
+                        <div>
+                            <dt class="font-medium text-gray-600">Nama Paket</dt>
+                            <dd class="mt-1" x-text="selectedPackage()?.name || '-'">-</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-600">Jenis Pelanggan</dt>
+                            <dd class="mt-1" x-text="selectedPackage()?.customer_label || '-'">-</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-600">Saldo Harian</dt>
+                            <dd class="mt-1" x-text="formatCurrency(passThroughDailyBalanceUnit())"></dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-600">Durasi Tayang</dt>
+                            <dd class="mt-1" x-text="passThroughDurationDays() + ' hari'"></dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-600">Dana Iklan / Paket</dt>
+                            <dd class="mt-1" x-text="formatCurrency(passThroughAdBudgetUnit())"></dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-600">Jasa Maintenance / Paket</dt>
+                            <dd class="mt-1" x-text="formatCurrency(passThroughMaintenanceUnit())"></dd>
+                        </div>
+                        <div x-show="showsAccountCreationFee()">
+                            <dt class="font-medium text-gray-600">Biaya Pembuatan Akun / Paket</dt>
+                            <dd class="mt-1" x-text="formatCurrency(passThroughAccountCreationUnit())"></dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-600">Kuantitas</dt>
+                            <dd class="mt-1" x-text="passThroughQuantity() + ' paket'"></dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-600">Total Dana Iklan</dt>
+                            <dd class="mt-1 text-base font-semibold text-purple-600" x-text="formatCurrency(passThroughAdBudgetTotal())"></dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-gray-600">Total Maintenance</dt>
+                            <dd class="mt-1" x-text="formatCurrency(passThroughMaintenanceTotal())"></dd>
+                        </div>
+                        <div x-show="showsAccountCreationFee()">
+                            <dt class="font-medium text-gray-600">Total Pembuatan Akun</dt>
+                            <dd class="mt-1" x-text="formatCurrency(passThroughAccountCreationTotal())"></dd>
+                        </div>
+                        <div class="md:col-span-2">
+                            <dt class="font-medium text-gray-600">Total Invoice</dt>
+                            <dd class="mt-1 text-lg font-semibold text-green-600" x-text="formatCurrency(passThroughTotalPrice())"></dd>
+                        </div>
+                    </dl>
+                    <p class="mt-4 text-xs text-gray-500">Dana Invoices Iklan akan dicatat sebagai hutang sesuai saldo harian dan durasi paket. Biaya maintenance serta pembuatan akun akan dicatat sebagai pemasukan.</p>
                 </div>
             </div>
         </div>
