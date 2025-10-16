@@ -209,7 +209,7 @@
                                             <span class="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800 uppercase">{{ ucwords($invoice->status) }}</span>
                                             @if ($invoice->hasPaymentProof())
                                                 <button type="button"
-                                                    class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
+                                                    class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
                                                     @click="showProof('{{ route('invoices.payment-proof.show', $invoice) }}')">
                                                     Lihat Bukti
                                                 </button>

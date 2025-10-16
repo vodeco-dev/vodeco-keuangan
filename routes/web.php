@@ -132,6 +132,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
         ->name('settings.data.purge');
 
     // Riwayat Permintaan Penghapusan Pengguna
+    Route::post('/user-deletion-requests', [UserDeletionRequestController::class, 'store'])->name('user-deletion-requests.store');
     Route::get('/deletion-requests', [UserDeletionRequestController::class, 'index'])->name('user-deletion-requests.index');
 });
 

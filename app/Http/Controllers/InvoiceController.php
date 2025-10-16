@@ -453,6 +453,7 @@ class InvoiceController extends Controller
             'payment_proof_original_name' => $proofFile->getClientOriginalName(),
             'payment_proof_uploaded_at' => now(),
             'status' => 'belum lunas',
+            'needs_confirmation' => true,
         ]))->save();
 
         $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'payment_confirmation');
@@ -629,6 +630,7 @@ class InvoiceController extends Controller
 
             $invoice->down_payment = min($invoice->total, $downPaymentTotal);
             $invoice->payment_date = $paymentDate;
+            $invoice->needs_confirmation = false;
 
             if ($invoice->down_payment >= $invoice->total && $invoice->total > 0) {
                 $invoice->status = 'lunas';
