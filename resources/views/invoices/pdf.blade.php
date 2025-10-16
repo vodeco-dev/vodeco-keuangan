@@ -11,7 +11,10 @@
     $signaturePath = public_path($settings['signature_image'] ?? 'image3.png');
     $signatureData = base64_encode(file_get_contents($signaturePath));
     $headerBgPath = public_path('image4.png');
-    $headerBgData = base64_encode(file_get_contents($headerBgPath));
+    $headerBgData = null;
+    if (is_file($headerBgPath) && is_readable($headerBgPath)) {
+        $headerBgData = base64_encode(file_get_contents($headerBgPath));
+    }
     $watermarkPath = public_path('image2.png');
 
     $determineMime = function ($path) {
@@ -107,9 +110,11 @@
         <img src="data:image/{{ $watermarkMime }};base64,{{ $watermarkData }}" alt="Watermark">
     </div>
     @endif
-    <div style="position: absolute; top: 0; right: 0;">
+    @if ($headerBgData)
+    <div style="position: absolute; top: 0; right: 0; z-index: 5;">
         <img src="data:image/png;base64,{{ $headerBgData }}" style="width: 200px; height: auto;">
     </div>
+    @endif
     <div class="mx-auto max-w-[210mm] bg-white px-10 py-8 pdf-content">
         <!-- Header -->
         <table style="width: 100%;margin-top: 40px;">

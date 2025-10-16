@@ -31,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Force HTTPS scheme in local environment for ngrok/mkcert.
         if ($this->app->environment('local')) {
-            URL::forceScheme('https');
+            // URL::forceScheme('https');
         }
 
         Gate::policy(Transaction::class, TransactionPolicy::class);
