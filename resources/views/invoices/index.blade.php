@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    <div class="py-12" x-data="invoicePayments({ defaultDate: '{{ now()->toDateString() }}', activeTab: @js($defaultTab) })">
+    <div class="py-12" x-data="invoicePayments({ defaultDate: '{{ now()->toDateString() }}' })">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div x-show="lightboxOpen" x-cloak class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-6" @keydown.window.escape="closeLightbox()">
                 <div class="absolute inset-0" @click="closeLightbox()"></div>
@@ -73,9 +73,10 @@
                             <nav class="-mb-px flex flex-wrap gap-2" aria-label="Tabs">
                                 @foreach ($tabStates as $key => $tab)
                                     @if ($tab['unlocked'])
-                                        <button type="button" @click="switchTab('{{ $key }}')" :class="tabClass('{{ $key }}')">
+                                        <a href="{{ route('invoices.index', ['tab' => $key] + Arr::except($filters, ['range', 'type', 'filter_date'])) }}"
+                                           class="whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium focus:outline-none {{ $defaultTab === $key ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
                                             {{ $tab['label'] }}
-                                        </button>
+                                        </a>
                                     @endif
                                 @endforeach
                             </nav>
@@ -86,62 +87,30 @@
                         </div>
                     @endif
 
-                    @if ($tabStates['down-payment']['unlocked'])
-                    <div x-show="activeTab === 'down-payment'" x-cloak>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="border-b">
-                                    <tr>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Nomor</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Klien</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Total</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">DP Tercatat</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Rencana DP</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">
-                                    @forelse ($downPaymentInvoices as $invoice)
-                                        <tr>
-                                            <td class="px-6 py-4">
-                                                <p class="font-semibold text-gray-900">{{ $invoice->number }}</p>
-                                                <p class="text-xs text-gray-500">Status: {{ ucwords($invoice->status) }}</p>
-                                            </td>
-                                            <td class="px-6 py-4">{{ $invoice->client_name ?? '-' }}</td>
-                                            <td class="px-6 py-4 text-right">Rp {{ number_format((float) $invoice->total, 0, ',', '.') }}</td>
-                                            <td class="px-6 py-4 text-right">Rp {{ number_format((float) $invoice->down_payment, 0, ',', '.') }}</td>
-                                            <td class="px-6 py-4 text-right">Rp {{ number_format((float) $invoice->down_payment_due, 0, ',', '.') }}</td>
-                                            <td class="px-6 py-4 text-center">
-                                                <div class="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
-                                                    @if ($invoice->hasPaymentProof())
-                                                        <button type="button"
-                                                            class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
-                                                            @click="showProof('{{ route('invoices.payment-proof.show', $invoice) }}')">
-                                                            Bukti
-                                                        </button>
-                                                    @endif
-                                                    <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-sm font-medium text-gray-600 hover:text-gray-900">PDF</a>
-                                                    <button type="button"
-                                                        @click="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }}, {{ (float) ($invoice->down_payment_due ?? 0) }})"
-                                                        class="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700">
-                                                        Konfirmasi Down Payment
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">Belum ada invoice yang membutuhkan konfirmasi down payment.</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
+                    @if ($tabStates['needs-confirmation']['unlocked'] && $defaultTab === 'needs-confirmation')
+                    <div x-cloak>
+                        <div class="mb-6 flex flex-wrap items-center gap-4">
+                            <form action="{{ route('invoices.index') }}" method="GET" class="flex flex-wrap items-end gap-4">
+                                <input type="hidden" name="tab" value="needs-confirmation">
+                                <div>
+                                    <label for="filter_date_needs_confirmation" class="text-sm font-medium text-gray-600">Tanggal:</label>
+                                    <input type="date" name="filter_date" id="filter_date_needs_confirmation" value="{{ $filters['filter_date'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                </div>
+                                <div>
+                                    <span class="text-sm font-medium text-gray-600">Tipe:</span>
+                                    <div class="mt-1 flex items-center gap-2">
+                                        <a href="{{ route('invoices.index', ['tab' => 'needs-confirmation', 'type' => 'dp'] + Arr::except($filters, 'type')) }}" class="px-3 py-1 text-sm rounded-md {{ ($filters['type'] ?? '') === 'dp' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700' }}">Down Payment</a>
+                                        <a href="{{ route('invoices.index', ['tab' => 'needs-confirmation', 'type' => 'lunas'] + Arr::except($filters, 'type')) }}" class="px-3 py-1 text-sm rounded-md {{ ($filters['type'] ?? '') === 'lunas' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700' }}">Bayar Lunas</a>
+                                    </div>
+                                </div>
+                                <button type="submit" class="rounded-md bg-blue-600 p-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2h14v2L9 9v7l-2-2V9L1 4V2zm0-2h14v1H1V0z"/></svg>
+                                </button>
+                                <a href="{{ route('invoices.index', ['tab' => 'needs-confirmation']) }}" class="rounded-md bg-red-500 p-2 text-sm text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><g><path d="M8 11a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"/><path fill-rule="evenodd" d="M23 12c0 6.075-4.925 11-11 11S1 18.075 1 12S5.925 1 12 1s11 4.925 11 11Zm-2 0a9 9 0 1 1-18 0a9 9 0 0 1 18 0Z" clip-rule="evenodd"/></g></svg>
+                                </a>
+                            </form>
                         </div>
-                    </div>
-                    @endif
-
-                    @if ($tabStates['pay-in-full']['unlocked'])
-                    <div x-show="activeTab === 'pay-in-full'" x-cloak>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead class="border-b">
@@ -155,7 +124,7 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y">
-                                    @forelse ($payInFullInvoices as $invoice)
+                                    @forelse ($needsConfirmationInvoices as $invoice)
                                         <tr>
                                             <td class="px-6 py-4">
                                                 <p class="font-semibold text-gray-900">{{ $invoice->number }}</p>
@@ -178,14 +147,14 @@
                                                     <button type="button"
                                                         @click="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
                                                         class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
-                                                        Catat Pelunasan
+                                                        Konfirmasi Pembayaran
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">Tidak ada invoice yang siap dilunasi saat ini.</td>
+                                            <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">Tidak ada invoice yang perlu dikonfirmasi saat ini.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -194,8 +163,8 @@
                     </div>
                     @endif
 
-                    @if ($tabStates['settlement']['unlocked'])
-                    <div x-show="activeTab === 'settlement'" x-cloak>
+                    @if ($tabStates['settlement']['unlocked'] && $defaultTab === 'settlement')
+                    <div x-cloak>
                         <div class="space-y-4">
                             @forelse ($settlementInvoices as $invoice)
                                 <div class="rounded-lg border border-gray-200 p-4 shadow-sm">
@@ -220,6 +189,95 @@
                             @empty
                                 <p class="text-center text-sm text-gray-500">Belum ada invoice yang menunggu proses pelunasan khusus.</p>
                             @endforelse
+                        </div>
+                    </div>
+                    @endif
+
+                    @if ($tabStates['history']['unlocked'] && $defaultTab === 'history')
+                    <div x-cloak>
+                        <div class="mb-6 flex flex-wrap items-center gap-4">
+                            <form action="{{ route('invoices.index') }}" method="GET" class="flex flex-wrap items-end gap-4">
+                                <input type="hidden" name="tab" value="history">
+                                <div>
+                                    <label for="filter_date_history" class="text-sm font-medium text-gray-600">Tanggal:</label>
+                                    <input type="date" name="filter_date" id="filter_date_history" value="{{ $filters['filter_date'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                </div>
+                                <div>
+                                    <span class="text-sm font-medium text-gray-600">Tipe:</span>
+                                    <div class="mt-1 flex items-center gap-2">
+                                        <a href="{{ route('invoices.index', ['tab' => 'history', 'type' => 'dp'] + Arr::except($filters, 'type')) }}" class="px-3 py-1 text-sm rounded-md {{ ($filters['type'] ?? '') === 'dp' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700' }}">Down Payment</a>
+                                        <a href="{{ route('invoices.index', ['tab' => 'history', 'type' => 'lunas'] + Arr::except($filters, 'type')) }}" class="px-3 py-1 text-sm rounded-md {{ ($filters['type'] ?? '') === 'lunas' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700' }}">Bayar Lunas</a>
+                                    </div>
+                                </div>
+                                <button type="submit" class="rounded-md bg-blue-600 p-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2h14v2L9 9v7l-2-2V9L1 4V2zm0-2h14v1H1V0z"/></svg>
+                                </button>
+                                <a href="{{ route('invoices.index', ['tab' => 'history']) }}" class="rounded-md bg-red-500 p-2 text-sm text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><g><path d="M8 11a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"/><path fill-rule="evenodd" d="M23 12c0 6.075-4.925 11-11 11S1 18.075 1 12S5.925 1 12 1s11 4.925 11 11Zm-2 0a9 9 0 1 1-18 0a9 9 0 0 1 18 0Z" clip-rule="evenodd"/></g></svg>
+                                </a>
+                            </form>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="border-b">
+                                    <tr>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Nomor</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Klien</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Total</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Status</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    @forelse ($historyInvoices as $invoice)
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <p class="font-semibold text-gray-900">{{ $invoice->number }}</p>
+                                                <p class="text-xs text-gray-500">{{ $invoice->customer_service_name ?? $invoice->customerService?->name ?? '-' }}</p>
+                                            </td>
+                                            <td class="px-6 py-4">{{ $invoice->client_name ?? '-' }}</td>
+                                            <td class="px-6 py-4">{{ $invoice->issue_date->format('d M Y') }}</td>
+                                            <td class="px-6 py-4 text-right">Rp {{ number_format((float) $invoice->total, 0, ',', '.') }}</td>
+                                            <td class="px-6 py-4 text-center">
+                                                @if ($invoice->needs_confirmation)
+                                                    <span class="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800 uppercase">Perlu Konfirmasi</span>
+                                                @else
+                                                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium uppercase {{ match($invoice->status) {
+                                                        'lunas' => 'bg-green-100 text-green-800',
+                                                        'belum lunas' => 'bg-blue-100 text-blue-800',
+                                                        'belum bayar' => 'bg-red-100 text-red-800',
+                                                        default => 'bg-gray-100 text-gray-800'
+                                                    } }}">{{ ucwords($invoice->status) }}</span>
+                                                @endif
+                                            </td>
+                                            <td class="px-6 py-4 text-center">
+                                                <div class="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+                                                    @if ($invoice->hasPaymentProof())
+                                                        <button type="button"
+                                                            class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
+                                                            @click="showProof('{{ route('invoices.payment-proof.show', $invoice) }}')">
+                                                            Bukti
+                                                        </button>
+                                                    @endif
+                                                    <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-sm font-medium text-gray-600 hover:text-gray-900">PDF</a>
+                                                    @if ($invoice->needs_confirmation || $invoice->status !== 'lunas')
+                                                    <button type="button"
+                                                        @click="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
+                                                        class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
+                                                        Pembayaran
+                                                    </button>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">Tidak ada invoice yang cocok dengan filter yang dipilih.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                     @endif
@@ -253,7 +311,7 @@
                                     class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
                             </div>
                         </div>
-                        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse">
                             <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
                                 Simpan
                             </button>
@@ -272,7 +330,6 @@
                 openModal: false,
                 selectedInvoice: null,
                 defaultDate: config.defaultDate,
-                activeTab: config.activeTab ?? 'down-payment',
                 total: 0,
                 paid: 0,
                 plannedDownPayment: 0,
@@ -284,16 +341,6 @@
                     this.$watch('lightboxOpen', (value) => {
                         document.body.classList.toggle('overflow-hidden', value);
                     });
-                },
-                tabClass(tab) {
-                    const isActive = this.activeTab === tab;
-                    const baseClasses = 'whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium focus:outline-none';
-                    return isActive
-                        ? `${baseClasses} border-blue-500 text-blue-600`
-                        : `${baseClasses} border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300`;
-                },
-                switchTab(tab) {
-                    this.activeTab = tab;
                 },
                 get remaining() {
                     const remaining = this.total - this.paid;

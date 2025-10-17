@@ -41,26 +41,26 @@ class InvoiceController extends Controller
     {
         $this->authorizeResource(Invoice::class, 'invoice');
     }
-    public function index(): View
+    public function index(Request $request): View
     {
         $user = auth()->user();
         $verifiedRoles = collect(session('verified_access_roles', []));
 
         $tabPermissions = [
-            'down-payment' => [
-                'label' => 'Down Payment',
+            'needs-confirmation' => [
+                'label' => 'Perlu Konfirmasi',
                 'role' => null,
-                'allowed' => Gate::allows('viewDownPaymentTab', Invoice::class),
-            ],
-            'pay-in-full' => [
-                'label' => 'Bayar Lunas',
-                'role' => null,
-                'allowed' => Gate::allows('viewPayInFullTab', Invoice::class),
+                'allowed' => Gate::allows('viewNeedsConfirmationTab', Invoice::class),
             ],
             'settlement' => [
                 'label' => 'Pelunasan',
                 'role' => null,
                 'allowed' => Gate::allows('viewSettlementTab', Invoice::class),
+            ],
+            'history' => [
+                'label' => 'Histori Invoices',
+                'role' => null,
+                'allowed' => Gate::allows('viewHistoryTab', Invoice::class),
             ],
         ];
 
@@ -91,10 +91,7 @@ class InvoiceController extends Controller
             ];
         }
 
-        $defaultTab = collect($tabStates)
-            ->filter(fn ($tab) => $tab['unlocked'])
-            ->keys()
-            ->first() ?? 'none';
+        $defaultTab = $request->input('tab', collect($tabStates)->filter(fn ($tab) => $tab['unlocked'])->keys()->first() ?? 'none');
 
         $accessCodeRole = collect($tabStates)
             ->first(fn ($tab) => $tab['requires_code'])['role'] ?? null;
@@ -105,31 +102,44 @@ class InvoiceController extends Controller
         if ($shouldLoadInvoices) {
             $baseQuery = Invoice::query()
                 ->with('customerService')
-                ->latest();
+                ->latest('issue_date');
 
             if ($user->role !== Role::ADMIN && $user->role !== Role::ACCOUNTANT) {
                 $baseQuery->where('user_id', $user->id);
             }
         }
 
-        $downPaymentInvoices = $tabStates['down-payment']['unlocked'] && $baseQuery
-            ? (clone $baseQuery)
-                ->whereIn('status', ['belum bayar', 'belum lunas'])
-                ->whereNotNull('down_payment_due')
-                ->whereRaw('COALESCE(down_payment, 0) < down_payment_due')
-                ->get()
-            : collect();
+        $needsConfirmationInvoicesQuery = $tabStates['needs-confirmation']['unlocked'] && $baseQuery
+            ? (clone $baseQuery)->where('needs_confirmation', true)
+            : null;
 
-        $payInFullInvoices = $tabStates['pay-in-full']['unlocked'] && $baseQuery
-            ? (clone $baseQuery)
-                ->whereIn('status', ['belum bayar', 'belum lunas'])
-                ->whereRaw('COALESCE(total, 0) > COALESCE(down_payment, 0)')
-                ->where(function ($query) {
-                    $query->whereNull('down_payment_due')
-                        ->orWhereRaw('COALESCE(down_payment, 0) >= down_payment_due');
-                })
-                ->get()
-            : collect();
+        if ($needsConfirmationInvoicesQuery) {
+            $filterDate = $request->input('filter_date');
+            $filterRange = $request->input('range');
+            $filterType = $request->input('type');
+
+            if ($filterDate) {
+                $needsConfirmationInvoicesQuery->whereDate('issue_date', $filterDate);
+            } elseif ($filterRange) {
+                if ($filterRange === 'daily') {
+                    $needsConfirmationInvoicesQuery->whereDate('issue_date', today());
+                } elseif ($filterRange === 'weekly') {
+                    $needsConfirmationInvoicesQuery->whereBetween('issue_date', [now()->startOfWeek(), now()->endOfWeek()]);
+                } elseif ($filterRange === 'monthly') {
+                    $needsConfirmationInvoicesQuery->whereMonth('issue_date', now()->month)->whereYear('issue_date', now()->year);
+                }
+            }
+
+            if ($filterType === 'dp') {
+                $needsConfirmationInvoicesQuery->whereNotNull('down_payment_due');
+            } elseif ($filterType === 'lunas') {
+                $needsConfirmationInvoicesQuery->whereNull('down_payment_due');
+            }
+            
+            $needsConfirmationInvoices = $needsConfirmationInvoicesQuery->get();
+        } else {
+            $needsConfirmationInvoices = collect();
+        }
 
         $settlementInvoices = $tabStates['settlement']['unlocked'] && $baseQuery
             ? (clone $baseQuery)
@@ -143,18 +153,53 @@ class InvoiceController extends Controller
                 ->get()
             : collect();
 
+        $historyInvoicesQuery = $tabStates['history']['unlocked'] && $baseQuery
+            ? (clone $baseQuery)
+            : null;
+
+        if ($historyInvoicesQuery) {
+            $filterDate = $request->input('filter_date');
+            $filterRange = $request->input('range');
+            $filterType = $request->input('type');
+
+            if ($filterDate) {
+                $historyInvoicesQuery->whereDate('issue_date', $filterDate);
+            } elseif ($filterRange) {
+                if ($filterRange === 'daily') {
+                    $historyInvoicesQuery->whereDate('issue_date', today());
+                } elseif ($filterRange === 'weekly') {
+                    $historyInvoicesQuery->whereBetween('issue_date', [now()->startOfWeek(), now()->endOfWeek()]);
+                } elseif ($filterRange === 'monthly') {
+                    $historyInvoicesQuery->whereMonth('issue_date', now()->month)->whereYear('issue_date', now()->year);
+                }
+            }
+
+            if ($filterType === 'dp') {
+                $historyInvoicesQuery->whereNotNull('down_payment_due');
+            } elseif ($filterType === 'lunas') {
+                $historyInvoicesQuery->whereNull('down_payment_due');
+            }
+            
+            $historyInvoices = $historyInvoicesQuery->get();
+        } else {
+            $historyInvoices = collect();
+        }
+
         $incomeCategories = Category::where('type', 'pemasukan')
             ->orderBy('name')
             ->get();
+            
+        $filters = $request->only(['range', 'type', 'filter_date']);
 
         return view('invoices.index', compact(
-            'downPaymentInvoices',
-            'payInFullInvoices',
+            'needsConfirmationInvoices',
             'settlementInvoices',
+            'historyInvoices',
             'incomeCategories',
             'tabStates',
             'defaultTab',
-            'accessCodeRole'
+            'accessCodeRole',
+            'filters'
         ));
     }
 

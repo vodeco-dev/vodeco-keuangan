@@ -48,18 +48,18 @@ class InvoicePolicy
             || in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT], true);
     }
 
-    public function viewDownPaymentTab(User $user): bool
-    {
-        return in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT, Role::STAFF], true);
-    }
-
-    public function viewPayInFullTab(User $user): bool
-    {
-        return in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT, Role::STAFF], true);
-    }
-
     public function viewSettlementTab(User $user): bool
     {
         return in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT], true);
+    }
+
+    public function viewNeedsConfirmationTab(User $user): bool
+    {
+        return in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT], true);
+    }
+
+    public function viewHistoryTab(User $user): bool
+    {
+        return in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT, Role::STAFF], true);
     }
 }
