@@ -51,6 +51,27 @@
                                 maintenanceTotal: @json(old('pass_through_maintenance_total')),
                                 accountCreationTotal: @json(old('pass_through_account_creation_total')),
                                 totalPrice: @json(old('pass_through_total_price')),
+                                custom: {
+                                    customerType: @json(old('pass_through_custom_customer_type', 'new')),
+                                    dailyBalance: @json(old('pass_through_custom_daily_balance')),
+                                    durationDays: @json(old('pass_through_custom_duration_days')),
+                                    maintenanceFee: @json(old('pass_through_custom_maintenance_fee')),
+                                    accountCreationFee: @json(old('pass_through_custom_account_creation_fee')),
+                                },
+                                units: {
+                                    dailyBalance: @json(old('pass_through_daily_balance_unit')),
+                                    adBudget: @json(old('pass_through_ad_budget_unit')),
+                                    maintenance: @json(old('pass_through_maintenance_unit')),
+                                    accountCreation: @json(old('pass_through_account_creation_unit')),
+                                },
+                                totals: {
+                                    adBudget: @json(old('pass_through_ad_budget_total')),
+                                    maintenance: @json(old('pass_through_maintenance_total')),
+                                    accountCreation: @json(old('pass_through_account_creation_total')),
+                                    overall: @json(old('pass_through_total_price')),
+                                    dailyBalance: @json(old('pass_through_daily_balance_total')),
+                                },
+                                durationDays: @json(old('pass_through_duration_days')),
                             },
                         },
                     })">

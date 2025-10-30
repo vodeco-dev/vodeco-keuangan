@@ -211,5 +211,127 @@ class PassThroughInvoiceCreatorTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_store_invoice_requires_custom_fields(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Role::ADMIN]));
+
+        $response = $this->post(route('invoices.store'), [
+            'transaction_type' => 'pass_through',
+            'client_name' => 'PT Tanpa Data',
+            'client_whatsapp' => '081234567890',
+            'client_address' => 'Jl. Mawar No. 9',
+            'pass_through_package_id' => 'custom',
+            'pass_through_quantity' => '1',
+            'pass_through_custom_customer_type' => 'new',
+        ]);
+
+        $response->assertSessionHasErrors([
+            'pass_through_custom_daily_balance',
+            'pass_through_custom_duration_days',
+            'pass_through_custom_maintenance_fee',
+            'pass_through_custom_account_creation_fee',
+        ]);
+    }
+
+    public function test_store_invoice_with_custom_package_creates_records(): void
+    {
+        Carbon::setTestNow('2024-06-01 09:00:00');
+
+        $owner = User::factory()->create(['role' => Role::ADMIN]);
+
+        $category = Category::create([
+            'name' => 'Penjualan Iklan',
+            'type' => 'pemasukan',
+        ]);
+
+        Setting::updateOrCreate(
+            ['key' => 'pass_through_invoice_category_id'],
+            ['value' => $category->id]
+        );
+
+        $this->actingAs($owner);
+
+        $response = $this->post(route('invoices.store'), [
+            'transaction_type' => 'pass_through',
+            'client_name' => 'PT Custom Mandiri',
+            'client_whatsapp' => '08120000000',
+            'client_address' => 'Jl. Kenanga No. 5',
+            'pass_through_package_id' => 'custom',
+            'pass_through_quantity' => '2',
+            'pass_through_custom_customer_type' => 'new',
+            'pass_through_custom_daily_balance' => '100.000',
+            'pass_through_custom_duration_days' => '10',
+            'pass_through_custom_maintenance_fee' => '200.000',
+            'pass_through_custom_account_creation_fee' => '300.000',
+            'pass_through_daily_balance_unit' => '100.000',
+            'pass_through_ad_budget_unit' => '1.000.000',
+            'pass_through_maintenance_unit' => '200.000',
+            'pass_through_account_creation_unit' => '300.000',
+            'pass_through_ad_budget_total' => '2.000.000',
+            'pass_through_maintenance_total' => '400.000',
+            'pass_through_account_creation_total' => '600.000',
+            'pass_through_total_price' => '3.000.000',
+            'pass_through_daily_balance_total' => '200.000',
+            'pass_through_duration_days' => '10',
+        ]);
+
+        $response->assertRedirect(route('invoices.index'));
+
+        $invoice = Invoice::with('items', 'debt')->latest('id')->first();
+        $this->assertNotNull($invoice);
+        $this->assertSame(Invoice::TYPE_PASS_THROUGH_NEW, $invoice->type);
+        $this->assertSame(3000000.0, (float) $invoice->total);
+        $this->assertCount(3, $invoice->items);
+
+        $this->assertDatabaseHas('invoice_items', [
+            'invoice_id' => $invoice->id,
+            'description' => 'Biaya Pembuatan Akun Iklan',
+            'price' => 300000,
+            'quantity' => 2,
+            'category_id' => $category->id,
+        ]);
+
+        $this->assertDatabaseHas('invoice_items', [
+            'invoice_id' => $invoice->id,
+            'description' => 'Jasa Maintenance',
+            'price' => 200000,
+            'quantity' => 2,
+            'category_id' => $category->id,
+        ]);
+
+        $this->assertDatabaseHas('invoice_items', [
+            'invoice_id' => $invoice->id,
+            'description' => 'Paket Custom – Dana Invoices Iklan (100.000 x 10 hari)',
+            'price' => 1000000,
+            'quantity' => 2,
+            'category_id' => $category->id,
+        ]);
+
+        $this->assertDatabaseHas('debts', [
+            'invoice_id' => $invoice->id,
+            'user_id' => $owner->id,
+            'type' => Debt::TYPE_PASS_THROUGH,
+            'amount' => 2000000,
+            'daily_deduction' => 200000,
+            'description' => 'Invoices Iklan Paket Custom (x2)',
+        ]);
+
+        $this->assertDatabaseHas('transactions', [
+            'category_id' => $category->id,
+            'amount' => 400000,
+            'user_id' => $owner->id,
+            'description' => 'Jasa Maintenance (x2) - PT Custom Mandiri',
+        ]);
+
+        $this->assertDatabaseHas('transactions', [
+            'category_id' => $category->id,
+            'amount' => 600000,
+            'user_id' => $owner->id,
+            'description' => 'Biaya Pembuatan Akun (x2) - PT Custom Mandiri',
+        ]);
+
+        Carbon::setTestNow();
+    }
 }
 

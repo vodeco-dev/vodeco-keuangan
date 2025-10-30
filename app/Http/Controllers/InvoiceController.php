@@ -260,35 +260,43 @@ class InvoiceController extends Controller
         $ownerId = auth()->id();
 
         if ($transactionType === 'pass_through') {
-            $packageId = $data['pass_through_package_id'] ?? null;
-            $package = $packageId ? $this->passThroughPackageManager->find($packageId) : null;
-
-            if (! $package) {
+            try {
+                $context = $this->resolvePassThroughPackageContext($data);
+            } catch (\RuntimeException $exception) {
                 return back()
-                    ->withErrors(['pass_through_package_id' => 'Paket Invoices Iklan tidak ditemukan.'])
+                    ->withErrors(['pass_through_package_id' => $exception->getMessage()])
                     ->withInput();
             }
 
+            /** @var PassThroughPackage $package */
+            $package = $context['package'];
             $quantity = max((int) ($data['pass_through_quantity'] ?? 1), 1);
-            $description = trim((string) ($data['pass_through_description'] ?? $package->name ?? ''));
+
+            $description = trim((string) ($data['pass_through_description'] ?? ''));
             if ($description === '') {
-                $description = $package->name;
+                $description = $context['description'];
             }
-            $durationDays = (int) ($data['pass_through_duration_days'] ?? $package->durationDays ?? 0);
+
+            $durationDays = (int) ($context['duration_days'] ?? 0);
             if ($durationDays <= 0) {
                 $durationDays = $package->durationDays;
             }
 
-            $adBudgetUnit = round($package->dailyBalance * $durationDays, 2);
-            $maintenanceUnit = round($package->maintenanceFee, 2);
+            $dailyBalanceUnit = max((float) ($context['daily_balance_unit'] ?? $package->dailyBalance ?? 0), 0.0);
+            $maintenanceUnit = max((float) ($context['maintenance_unit'] ?? $package->maintenanceFee ?? 0), 0.0);
             $accountCreationUnit = $package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW
-                ? round($package->accountCreationFee, 2)
+                ? max((float) ($context['account_creation_unit'] ?? $package->accountCreationFee ?? 0), 0.0)
                 : 0.0;
+
+            $dailyBalanceUnit = round($dailyBalanceUnit, 2);
+            $adBudgetUnit = round($dailyBalanceUnit * $durationDays, 2);
+            $maintenanceUnit = round($maintenanceUnit, 2);
+            $accountCreationUnit = round($accountCreationUnit, 2);
 
             $adBudgetTotal = round($adBudgetUnit * $quantity, 2);
             $maintenanceTotal = round($maintenanceUnit * $quantity, 2);
             $accountCreationTotal = round($accountCreationUnit * $quantity, 2);
-            $dailyBalanceTotal = round($package->dailyBalance * $quantity, 2);
+            $dailyBalanceTotal = round($dailyBalanceUnit * $quantity, 2);
 
             try {
                 $this->passThroughInvoiceCreator->create(
@@ -302,7 +310,7 @@ class InvoiceController extends Controller
                         'maintenance_total' => $maintenanceTotal,
                         'account_creation_unit' => $accountCreationUnit,
                         'account_creation_total' => $accountCreationTotal,
-                        'daily_balance_unit' => $package->dailyBalance,
+                        'daily_balance_unit' => $dailyBalanceUnit,
                         'daily_balance_total' => $dailyBalanceTotal,
                         'duration_days' => $durationDays,
                         'owner_id' => $ownerId,
@@ -369,35 +377,43 @@ class InvoiceController extends Controller
         $transactionType = $data['transaction_type'] ?? 'down_payment';
 
         if ($transactionType === 'pass_through') {
-            $packageId = $data['pass_through_package_id'] ?? null;
-            $package = $packageId ? $this->passThroughPackageManager->find($packageId) : null;
-
-            if (! $package) {
+            try {
+                $context = $this->resolvePassThroughPackageContext($data);
+            } catch (\RuntimeException $exception) {
                 return back()
-                    ->withErrors(['pass_through_package_id' => 'Paket Invoices Iklan tidak ditemukan.'])
+                    ->withErrors(['pass_through_package_id' => $exception->getMessage()])
                     ->withInput();
             }
 
+            /** @var PassThroughPackage $package */
+            $package = $context['package'];
             $quantity = max((int) ($data['pass_through_quantity'] ?? 1), 1);
-            $description = trim((string) ($data['pass_through_description'] ?? $package->name ?? ''));
+
+            $description = trim((string) ($data['pass_through_description'] ?? ''));
             if ($description === '') {
-                $description = $package->name;
+                $description = $context['description'];
             }
-            $durationDays = (int) ($data['pass_through_duration_days'] ?? $package->durationDays ?? 0);
+
+            $durationDays = (int) ($context['duration_days'] ?? 0);
             if ($durationDays <= 0) {
                 $durationDays = $package->durationDays;
             }
 
-            $adBudgetUnit = round($package->dailyBalance * $durationDays, 2);
-            $maintenanceUnit = round($package->maintenanceFee, 2);
+            $dailyBalanceUnit = max((float) ($context['daily_balance_unit'] ?? $package->dailyBalance ?? 0), 0.0);
+            $maintenanceUnit = max((float) ($context['maintenance_unit'] ?? $package->maintenanceFee ?? 0), 0.0);
             $accountCreationUnit = $package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW
-                ? round($package->accountCreationFee, 2)
+                ? max((float) ($context['account_creation_unit'] ?? $package->accountCreationFee ?? 0), 0.0)
                 : 0.0;
+
+            $dailyBalanceUnit = round($dailyBalanceUnit, 2);
+            $adBudgetUnit = round($dailyBalanceUnit * $durationDays, 2);
+            $maintenanceUnit = round($maintenanceUnit, 2);
+            $accountCreationUnit = round($accountCreationUnit, 2);
 
             $adBudgetTotal = round($adBudgetUnit * $quantity, 2);
             $maintenanceTotal = round($maintenanceUnit * $quantity, 2);
             $accountCreationTotal = round($accountCreationUnit * $quantity, 2);
-            $dailyBalanceTotal = round($package->dailyBalance * $quantity, 2);
+            $dailyBalanceTotal = round($dailyBalanceUnit * $quantity, 2);
 
             try {
                 $invoice = $this->passThroughInvoiceCreator->create(
@@ -411,7 +427,7 @@ class InvoiceController extends Controller
                         'maintenance_total' => $maintenanceTotal,
                         'account_creation_unit' => $accountCreationUnit,
                         'account_creation_total' => $accountCreationTotal,
-                        'daily_balance_unit' => $package->dailyBalance,
+                        'daily_balance_unit' => $dailyBalanceUnit,
                         'daily_balance_total' => $dailyBalanceTotal,
                         'duration_days' => $durationDays,
                         'owner_id' => $ownerId,
@@ -858,6 +874,82 @@ class InvoiceController extends Controller
         $invoice->delete();
 
         return redirect()->route('invoices.index');
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{package: PassThroughPackage, description: string, duration_days: int, daily_balance_unit: float, maintenance_unit: float, account_creation_unit: float}
+     */
+    private function resolvePassThroughPackageContext(array $data): array
+    {
+        $packageId = $data['pass_through_package_id'] ?? null;
+
+        if ($packageId === 'custom') {
+            $customerTypeInput = strtolower((string) ($data['pass_through_custom_customer_type'] ?? ''));
+            $customerType = in_array($customerTypeInput, [PassThroughPackage::CUSTOMER_TYPE_EXISTING, PassThroughPackage::CUSTOMER_TYPE_NEW], true)
+                ? $customerTypeInput
+                : PassThroughPackage::CUSTOMER_TYPE_NEW;
+
+            $dailyBalance = max((float) ($data['pass_through_custom_daily_balance'] ?? 0), 0.0);
+            $durationDays = max((int) ($data['pass_through_custom_duration_days'] ?? 0), 0);
+            $maintenanceFee = max((float) ($data['pass_through_custom_maintenance_fee'] ?? 0), 0.0);
+            $accountCreationFee = $customerType === PassThroughPackage::CUSTOMER_TYPE_NEW
+                ? max((float) ($data['pass_through_custom_account_creation_fee'] ?? 0), 0.0)
+                : 0.0;
+
+            $package = new PassThroughPackage([
+                'name' => 'Paket Custom',
+                'customer_type' => $customerType,
+                'daily_balance' => $dailyBalance,
+                'duration_days' => $durationDays,
+                'maintenance_fee' => $maintenanceFee,
+                'account_creation_fee' => $accountCreationFee,
+            ]);
+
+            $description = trim((string) ($data['pass_through_description'] ?? ''));
+            if ($description === '') {
+                $description = 'Paket Custom';
+            }
+
+            return [
+                'package' => $package,
+                'description' => $description,
+                'duration_days' => $durationDays,
+                'daily_balance_unit' => $dailyBalance,
+                'maintenance_unit' => $maintenanceFee,
+                'account_creation_unit' => $accountCreationFee,
+            ];
+        }
+
+        $package = $packageId ? $this->passThroughPackageManager->find($packageId) : null;
+
+        if (! $package) {
+            throw new \RuntimeException('Paket Invoices Iklan tidak ditemukan.');
+        }
+
+        $description = trim((string) ($data['pass_through_description'] ?? ''));
+        if ($description === '') {
+            $description = $package->name;
+        }
+
+        $durationDays = (int) ($data['pass_through_duration_days'] ?? $package->durationDays ?? 0);
+        if ($durationDays <= 0) {
+            $durationDays = $package->durationDays;
+        }
+
+        $maintenanceUnit = (float) $package->maintenanceFee;
+        $accountCreationUnit = $package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW
+            ? (float) $package->accountCreationFee
+            : 0.0;
+
+        return [
+            'package' => $package,
+            'description' => $description,
+            'duration_days' => $durationDays,
+            'daily_balance_unit' => (float) $package->dailyBalance,
+            'maintenance_unit' => $maintenanceUnit,
+            'account_creation_unit' => $accountCreationUnit,
+        ];
     }
 
     private function persistInvoice(array $data, ?int $ownerId = null): Invoice

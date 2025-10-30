@@ -177,9 +177,9 @@ $forwardedAttributes = $attributes->except([
 
                     @if ($passThroughPackages->isEmpty())
                         <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-                            Belum ada paket Invoices Iklan yang dapat dipilih. Hubungi tim internal untuk menambahkan paket terlebih dahulu.
+                            Belum ada paket Invoices Iklan yang dapat dipilih. Hubungi tim internal untuk menambahkan paket terlebih dahulu atau gunakan opsi Paket Custom di bawah.
                         </div>
-                    @else
+                    @endif
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <div>
                             <label class="block text-sm font-medium text-gray-700" for="pass_through_package_id_public">Pilihan Paket</label>
@@ -188,9 +188,9 @@ $forwardedAttributes = $attributes->except([
                                 id="pass_through_package_id_public"
                                 x-model="passThroughPackageId"
                                 class="mt-1 block w-full rounded-lg border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
-                                @if ($passThroughPackages->isEmpty()) disabled @endif
                             >
                                 <option value="" disabled>Pilih paket</option>
+                                <option value="custom">Paket Custom</option>
                                 <template x-for="pkg in passThroughPackages" :key="pkg.id">
                                     <option :value="pkg.id" x-text="formatPackageOption(pkg)"></option>
                                 </template>
@@ -211,7 +211,6 @@ $forwardedAttributes = $attributes->except([
                                 @blur="normalizePassThroughQuantity()"
                                 class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
                                 placeholder="1"
-                                @if ($passThroughPackages->isEmpty()) disabled @endif
                             >
                             @error('pass_through_quantity')
                                 <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
@@ -232,15 +231,110 @@ $forwardedAttributes = $attributes->except([
                             @enderror
                         </div>
                     </div>
-                    @endif
 
-                    <input type="hidden" name="pass_through_quantity" :value="passThroughQuantity()">
-                    <input type="hidden" name="pass_through_ad_budget_total" :value="passThroughAdBudgetTotal()">
-                    <input type="hidden" name="pass_through_maintenance_total" :value="passThroughMaintenanceTotal()">
-                    <input type="hidden" name="pass_through_account_creation_total" :value="passThroughAccountCreationTotal()">
-                    <input type="hidden" name="pass_through_total_price" :value="passThroughTotalPrice()">
-                    <input type="hidden" name="pass_through_daily_balance_total" :value="passThroughDailyBalanceTotal()">
-                    <input type="hidden" name="pass_through_duration_days" :value="passThroughDurationDays()">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2" x-show="isCustomSelected()" x-cloak>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Tipe Pelanggan</label>
+                            <select
+                                name="pass_through_custom_customer_type"
+                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                x-model="customFields.customerType"
+                                @change="handleCustomCustomerTypeChange($event.target.value)"
+                            >
+                                <option value="new">Pelanggan Baru</option>
+                                <option value="existing">Pelanggan Lama</option>
+                            </select>
+                            @error('pass_through_custom_customer_type')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Saldo Harian</label>
+                            <input
+                                type="text"
+                                name="pass_through_custom_daily_balance"
+                                x-ref="customDailyBalanceInput"
+                                value="{{ old('pass_through_custom_daily_balance') }}"
+                                inputmode="numeric"
+                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                placeholder="Contoh: 500.000"
+                                x-on:input="handleCustomCurrencyInput('dailyBalance', $event.target.value)"
+                                x-on:blur="handleCustomCurrencyInput('dailyBalance', $event.target.value)"
+                            >
+                            <p class="mt-1 text-xs text-gray-500">Nilai ini akan digunakan sebagai dasar perhitungan dana iklan.</p>
+                            @error('pass_through_custom_daily_balance')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Durasi Tayang (hari)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                name="pass_through_custom_duration_days"
+                                x-ref="customDurationInput"
+                                value="{{ old('pass_through_custom_duration_days') }}"
+                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                placeholder="Contoh: 30"
+                                x-on:input="handleCustomDurationInput($event.target.value)"
+                            >
+                            @error('pass_through_custom_duration_days')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Biaya Maintenance</label>
+                            <input
+                                type="text"
+                                name="pass_through_custom_maintenance_fee"
+                                x-ref="customMaintenanceInput"
+                                value="{{ old('pass_through_custom_maintenance_fee') }}"
+                                inputmode="numeric"
+                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                placeholder="Contoh: 1.500.000"
+                                x-on:input="handleCustomCurrencyInput('maintenanceFee', $event.target.value)"
+                                x-on:blur="handleCustomCurrencyInput('maintenanceFee', $event.target.value)"
+                            >
+                            @error('pass_through_custom_maintenance_fee')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div x-show="customFields.customerType === 'new'" x-cloak>
+                            <label class="block text-sm font-medium text-gray-700">Biaya Pembuatan Akun Iklan</label>
+                            <input
+                                type="text"
+                                name="pass_through_custom_account_creation_fee"
+                                x-ref="customAccountCreationInput"
+                                value="{{ old('pass_through_custom_account_creation_fee') }}"
+                                inputmode="numeric"
+                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                placeholder="Contoh: 500.000"
+                                x-on:input="handleCustomCurrencyInput('accountCreationFee', $event.target.value)"
+                                x-on:blur="handleCustomCurrencyInput('accountCreationFee', $event.target.value)"
+                            >
+                            <p class="mt-1 text-xs text-gray-500">Biaya ini hanya dikenakan untuk pelanggan baru.</p>
+                            @error('pass_through_custom_account_creation_fee')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="pass_through_quantity" value="{{ old('pass_through_quantity') }}" :value="formatNumberForSubmission(passThroughQuantity())">
+                    <input type="hidden" name="pass_through_daily_balance_unit" value="{{ old('pass_through_daily_balance_unit') }}" :value="formatNumberForSubmission(passThroughDailyBalanceUnit())">
+                    <input type="hidden" name="pass_through_ad_budget_unit" value="{{ old('pass_through_ad_budget_unit') }}" :value="formatNumberForSubmission(passThroughAdBudgetUnit())">
+                    <input type="hidden" name="pass_through_maintenance_unit" value="{{ old('pass_through_maintenance_unit') }}" :value="formatNumberForSubmission(passThroughMaintenanceUnit())">
+                    <input type="hidden" name="pass_through_account_creation_unit" value="{{ old('pass_through_account_creation_unit') }}" :value="formatNumberForSubmission(passThroughAccountCreationUnit())">
+                    <input type="hidden" name="pass_through_ad_budget_total" value="{{ old('pass_through_ad_budget_total') }}" :value="formatNumberForSubmission(passThroughAdBudgetTotal())">
+                    <input type="hidden" name="pass_through_maintenance_total" value="{{ old('pass_through_maintenance_total') }}" :value="formatNumberForSubmission(passThroughMaintenanceTotal())">
+                    <input type="hidden" name="pass_through_account_creation_total" value="{{ old('pass_through_account_creation_total') }}" :value="formatNumberForSubmission(passThroughAccountCreationTotal())">
+                    <input type="hidden" name="pass_through_total_price" value="{{ old('pass_through_total_price') }}" :value="formatNumberForSubmission(passThroughTotalPrice())">
+                    <input type="hidden" name="pass_through_daily_balance_total" value="{{ old('pass_through_daily_balance_total') }}" :value="formatNumberForSubmission(passThroughDailyBalanceTotal())">
+                    <input type="hidden" name="pass_through_duration_days" value="{{ old('pass_through_duration_days') }}" :value="formatNumberForSubmission(passThroughDurationDays())">
                 </div>
 
                 <div class="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm" x-show="hasPassThroughPackageSelected()" x-cloak>
@@ -248,11 +342,11 @@ $forwardedAttributes = $attributes->except([
                     <dl class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-700 md:grid-cols-2">
                         <div>
                             <dt class="font-medium text-gray-600">Nama Paket</dt>
-                            <dd class="mt-1" x-text="selectedPackage()?.name || '-'">-</dd>
+                            <dd class="mt-1" x-text="summaryPackageName()">-</dd>
                         </div>
                         <div>
                             <dt class="font-medium text-gray-600">Jenis Pelanggan</dt>
-                            <dd class="mt-1" x-text="selectedPackage()?.customer_label || '-'">-</dd>
+                            <dd class="mt-1" x-text="summaryCustomerLabel()">-</dd>
                         </div>
                         <div>
                             <dt class="font-medium text-gray-600">Saldo Harian</dt>
