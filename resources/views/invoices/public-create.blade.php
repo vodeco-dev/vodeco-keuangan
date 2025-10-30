@@ -105,6 +105,27 @@
                                     'maintenanceTotal' => old('pass_through_maintenance_total'),
                                     'accountCreationTotal' => old('pass_through_account_creation_total'),
                                     'totalPrice' => old('pass_through_total_price'),
+                                    'custom' => [
+                                        'customerType' => old('pass_through_custom_customer_type', 'new'),
+                                        'dailyBalance' => old('pass_through_custom_daily_balance'),
+                                        'durationDays' => old('pass_through_custom_duration_days'),
+                                        'maintenanceFee' => old('pass_through_custom_maintenance_fee'),
+                                        'accountCreationFee' => old('pass_through_custom_account_creation_fee'),
+                                    ],
+                                    'units' => [
+                                        'dailyBalance' => old('pass_through_daily_balance_unit'),
+                                        'adBudget' => old('pass_through_ad_budget_unit'),
+                                        'maintenance' => old('pass_through_maintenance_unit'),
+                                        'accountCreation' => old('pass_through_account_creation_unit'),
+                                    ],
+                                    'totals' => [
+                                        'adBudget' => old('pass_through_ad_budget_total'),
+                                        'maintenance' => old('pass_through_maintenance_total'),
+                                        'accountCreation' => old('pass_through_account_creation_total'),
+                                        'overall' => old('pass_through_total_price'),
+                                        'dailyBalance' => old('pass_through_daily_balance_total'),
+                                    ],
+                                    'durationDays' => old('pass_through_duration_days'),
                                 ],
                             ];
                         @endphp

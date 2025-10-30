@@ -25,24 +25,136 @@ window.addEventListener('DOMContentLoaded', () => {
 window.Alpine = Alpine;
 
 window.passThroughForm = function passThroughForm(config = {}) {
-    console.log('passThroughForm initialized with config:', config);
     const packages = Array.isArray(config.packages) ? config.packages : [];
     const defaults = config.defaults || {};
+
+    const firstDefined = (...values) => values.find((value) => value !== undefined && value !== null);
+    const sanitizeCurrency = (value) => {
+        if (value === undefined || value === null || value === '') {
+            return 0;
+        }
+
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return Math.max(Math.round(value), 0);
+        }
+
+        const digits = String(value).replace(/\D/g, '');
+        return digits ? Math.max(Number(digits), 0) : 0;
+    };
+    const sanitizeInteger = (value) => {
+        if (value === undefined || value === null || value === '') {
+            return 0;
+        }
+
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return Math.max(Math.floor(value), 0);
+        }
+
+        const digits = String(value).replace(/[^0-9]/g, '');
+        return digits ? Math.max(Number(digits), 0) : 0;
+    };
+    const sanitizeCustomerType = (value) => {
+        const normalized = String(value ?? '').toLowerCase();
+        return normalized === 'existing' ? 'existing' : 'new';
+    };
+
+    let normalizedPackageId = '';
+    if (defaults.packageId !== undefined && defaults.packageId !== null && defaults.packageId !== '') {
+        normalizedPackageId = String(defaults.packageId);
+    } else if (packages.length > 0 && packages[0]?.id !== undefined && packages[0]?.id !== null) {
+        normalizedPackageId = String(packages[0].id);
+    } else {
+        normalizedPackageId = 'custom';
+    }
 
     const defaultQuantity = Number.parseInt(defaults.quantity, 10);
     const initialQuantity = Number.isFinite(defaultQuantity) && defaultQuantity > 0
         ? String(Math.floor(defaultQuantity))
         : '1';
 
+    const defaultCustom = defaults.custom || {};
+    const defaultUnits = defaults.units || {};
+    const defaultTotals = defaults.totals || {};
+    const defaultDuration = defaults.durationDays;
+
+    const initialCustomerType = sanitizeCustomerType(defaultCustom.customerType);
+    const initialDailyBalance = sanitizeCurrency(firstDefined(defaultCustom.dailyBalance, defaultUnits.dailyBalance));
+    const initialDurationDays = sanitizeInteger(firstDefined(defaultCustom.durationDays, defaultDuration));
+    const initialMaintenanceFee = sanitizeCurrency(firstDefined(defaultCustom.maintenanceFee, defaultUnits.maintenance));
+    const initialAccountCreationFeeRaw = sanitizeCurrency(firstDefined(defaultCustom.accountCreationFee, defaultUnits.accountCreation));
+
     return {
         passThroughPackages: packages,
-        passThroughPackageId: defaults.packageId || (packages[0]?.id ?? null),
+        passThroughPackageId: normalizedPackageId,
         passThroughQuantityInput: initialQuantity,
+        customFields: {
+            customerType: initialCustomerType,
+            dailyBalance: initialDailyBalance,
+            durationDays: initialDurationDays,
+            maintenanceFee: initialMaintenanceFee,
+            accountCreationFee: initialCustomerType === 'new' ? initialAccountCreationFeeRaw : 0,
+        },
         init() {
-            if (!this.passThroughPackageId && this.passThroughPackages.length > 0) {
-                this.passThroughPackageId = this.passThroughPackages[0].id;
+            if (!this.passThroughPackageId) {
+                if (this.passThroughPackages.length > 0 && this.passThroughPackages[0]?.id !== undefined) {
+                    this.passThroughPackageId = String(this.passThroughPackages[0].id);
+                } else {
+                    this.passThroughPackageId = 'custom';
+                }
             }
+
             this.normalizePassThroughQuantity();
+
+            this.$nextTick(() => {
+                this.initializeCustomInputs();
+
+                if (this.customFields.customerType !== 'new') {
+                    this.handleCustomCustomerTypeChange(this.customFields.customerType);
+                } else {
+                    const input = this.customCurrencyInput('accountCreationFee');
+                    if (input && this.customFields.accountCreationFee > 0) {
+                        this.setInputFormattedValue(input, this.customFields.accountCreationFee);
+                    }
+                }
+
+                const adBudgetUnitDefault = sanitizeCurrency(firstDefined(defaultTotals.adBudget, defaults.adBudgetTotal));
+                const maintenanceTotalDefault = sanitizeCurrency(firstDefined(defaultTotals.maintenance, defaults.maintenanceTotal));
+                const accountCreationTotalDefault = sanitizeCurrency(firstDefined(defaultTotals.accountCreation, defaults.accountCreationTotal));
+                const totalPriceDefault = sanitizeCurrency(firstDefined(defaultTotals.overall, defaults.totalPrice));
+                const dailyBalanceTotalDefault = sanitizeCurrency(firstDefined(defaultTotals.dailyBalance, defaults.dailyBalanceTotal));
+
+                if (adBudgetUnitDefault > 0 && this.passThroughDailyBalanceUnit() <= 0) {
+                    const durationInput = this.customDurationInput();
+                    if (durationInput && this.customFields.durationDays <= 0 && this.customFields.dailyBalance > 0) {
+                        const inferredDuration = Math.round(adBudgetUnitDefault / Math.max(this.customFields.dailyBalance, 1));
+                        this.customFields.durationDays = inferredDuration > 0 ? inferredDuration : this.customFields.durationDays;
+                        durationInput.value = this.customFields.durationDays > 0 ? String(this.customFields.durationDays) : '';
+                    }
+                }
+
+                if (maintenanceTotalDefault > 0 && this.customFields.maintenanceFee <= 0 && this.passThroughQuantity() > 0) {
+                    this.customFields.maintenanceFee = Math.round(maintenanceTotalDefault / this.passThroughQuantity());
+                    this.setInputFormattedValue(this.customCurrencyInput('maintenanceFee'), this.customFields.maintenanceFee);
+                }
+
+                if (
+                    this.customFields.customerType === 'new'
+                    && accountCreationTotalDefault > 0
+                    && this.customFields.accountCreationFee <= 0
+                    && this.passThroughQuantity() > 0
+                ) {
+                    this.customFields.accountCreationFee = Math.round(accountCreationTotalDefault / this.passThroughQuantity());
+                    this.setInputFormattedValue(this.customCurrencyInput('accountCreationFee'), this.customFields.accountCreationFee);
+                }
+
+                if (totalPriceDefault <= 0 && dailyBalanceTotalDefault > 0 && this.passThroughAdBudgetTotal() <= 0) {
+                    const inferredDailyBalance = Math.round(dailyBalanceTotalDefault / Math.max(this.passThroughQuantity(), 1));
+                    if (inferredDailyBalance > 0 && this.customFields.dailyBalance <= 0) {
+                        this.customFields.dailyBalance = inferredDailyBalance;
+                        this.setInputFormattedValue(this.customCurrencyInput('dailyBalance'), this.customFields.dailyBalance);
+                    }
+                }
+            });
         },
         formatPackageOption(pkg) {
             if (!pkg || typeof pkg !== 'object') {
@@ -66,20 +178,121 @@ window.passThroughForm = function passThroughForm(config = {}) {
             }
             return Math.max(Math.floor(numeric), 1);
         },
+        isCustomSelected() {
+            return String(this.passThroughPackageId || '') === 'custom';
+        },
         selectedPackage() {
-            if (!this.passThroughPackageId) {
+            if (!this.passThroughPackageId || this.isCustomSelected()) {
                 return null;
             }
+
             return this.passThroughPackages.find((pkg) => String(pkg.id) === String(this.passThroughPackageId)) || null;
         },
         hasPassThroughPackageSelected() {
-            return !!this.selectedPackage();
+            return this.isCustomSelected() || !!this.selectedPackage();
+        },
+        handleCustomCustomerTypeChange(value) {
+            const normalized = sanitizeCustomerType(value);
+            this.customFields.customerType = normalized;
+
+            if (normalized !== 'new') {
+                this.customFields.accountCreationFee = 0;
+                const input = this.customCurrencyInput('accountCreationFee');
+                if (input) {
+                    this.setInputFormattedValue(input, 0);
+                }
+            }
+        },
+        handleCustomCurrencyInput(field, value) {
+            const numeric = sanitizeCurrency(value);
+            if (field === 'accountCreationFee' && this.customFields.customerType !== 'new') {
+                this.customFields.accountCreationFee = 0;
+                const input = this.customCurrencyInput(field);
+                if (input) {
+                    this.setInputFormattedValue(input, 0);
+                }
+                return;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(this.customFields, field)) {
+                this.customFields[field] = numeric;
+            }
+
+            const input = this.customCurrencyInput(field);
+            if (input) {
+                this.setInputFormattedValue(input, numeric);
+            }
+        },
+        handleCustomDurationInput(value) {
+            const numeric = sanitizeInteger(value);
+            this.customFields.durationDays = numeric;
+            const input = this.customDurationInput();
+            if (input) {
+                input.value = numeric > 0 ? String(numeric) : '';
+            }
+        },
+        customCurrencyInput(field) {
+            const refs = {
+                dailyBalance: this.$refs.customDailyBalanceInput,
+                maintenanceFee: this.$refs.customMaintenanceInput,
+                accountCreationFee: this.$refs.customAccountCreationInput,
+            };
+
+            return refs[field] || null;
+        },
+        customDurationInput() {
+            return this.$refs.customDurationInput || null;
+        },
+        initializeCustomInputs() {
+            this.setInputFormattedValue(this.customCurrencyInput('dailyBalance'), this.customFields.dailyBalance);
+            this.setInputFormattedValue(this.customCurrencyInput('maintenanceFee'), this.customFields.maintenanceFee);
+            if (this.customFields.customerType === 'new') {
+                this.setInputFormattedValue(this.customCurrencyInput('accountCreationFee'), this.customFields.accountCreationFee);
+            }
+
+            const durationInput = this.customDurationInput();
+            if (durationInput) {
+                durationInput.value = this.customFields.durationDays > 0 ? String(this.customFields.durationDays) : '';
+            }
+        },
+        setInputFormattedValue(input, value) {
+            if (!input) {
+                return;
+            }
+
+            const numeric = Number(value);
+            const sanitized = Number.isFinite(numeric) ? Math.max(Math.round(numeric), 0) : 0;
+            input.value = this.formatNumber(sanitized);
+        },
+        summaryPackageName() {
+            if (this.isCustomSelected()) {
+                return 'Paket Custom';
+            }
+
+            const pkg = this.selectedPackage();
+            return pkg?.name || '-';
+        },
+        summaryCustomerLabel() {
+            if (this.isCustomSelected()) {
+                return this.customFields.customerType === 'existing' ? 'Pelanggan Lama' : 'Pelanggan Baru';
+            }
+
+            const pkg = this.selectedPackage();
+            return pkg?.customer_label || '-';
         },
         showsAccountCreationFee() {
+            if (this.isCustomSelected()) {
+                return this.customFields.customerType === 'new' && this.passThroughAccountCreationUnit() > 0;
+            }
+
             const pkg = this.selectedPackage();
             return pkg ? pkg.customer_type === 'new' : false;
         },
         passThroughDailyBalanceUnit() {
+            if (this.isCustomSelected()) {
+                return this.customFields.dailyBalance || 0;
+            }
+
             const pkg = this.selectedPackage();
             return pkg ? Number(pkg.daily_balance) || 0 : 0;
         },
@@ -87,6 +300,10 @@ window.passThroughForm = function passThroughForm(config = {}) {
             return this.passThroughDailyBalanceUnit() * this.passThroughQuantity();
         },
         passThroughDurationDays() {
+            if (this.isCustomSelected()) {
+                return this.customFields.durationDays || 0;
+            }
+
             const pkg = this.selectedPackage();
             return pkg ? Number(pkg.duration_days) || 0 : 0;
         },
@@ -97,6 +314,10 @@ window.passThroughForm = function passThroughForm(config = {}) {
             return this.passThroughAdBudgetUnit() * this.passThroughQuantity();
         },
         passThroughMaintenanceUnit() {
+            if (this.isCustomSelected()) {
+                return this.customFields.maintenanceFee || 0;
+            }
+
             const pkg = this.selectedPackage();
             return pkg ? Number(pkg.maintenance_fee) || 0 : 0;
         },
@@ -104,10 +325,19 @@ window.passThroughForm = function passThroughForm(config = {}) {
             return this.passThroughMaintenanceUnit() * this.passThroughQuantity();
         },
         passThroughAccountCreationUnit() {
+            if (this.isCustomSelected()) {
+                if (this.customFields.customerType !== 'new') {
+                    return 0;
+                }
+
+                return this.customFields.accountCreationFee || 0;
+            }
+
             const pkg = this.selectedPackage();
             if (!pkg || pkg.customer_type !== 'new') {
                 return 0;
             }
+
             return Number(pkg.account_creation_fee) || 0;
         },
         passThroughAccountCreationTotal() {
@@ -117,6 +347,16 @@ window.passThroughForm = function passThroughForm(config = {}) {
             return this.passThroughAdBudgetTotal()
                 + this.passThroughMaintenanceTotal()
                 + this.passThroughAccountCreationTotal();
+        },
+        formatNumber(value) {
+            const numeric = Number(value);
+            const sanitized = Number.isFinite(numeric) ? Math.max(Math.round(numeric), 0) : 0;
+            return sanitized.toLocaleString('id-ID');
+        },
+        formatNumberForSubmission(value) {
+            const numeric = Number(value);
+            const sanitized = Number.isFinite(numeric) ? Math.max(Math.round(numeric), 0) : 0;
+            return sanitized.toLocaleString('id-ID');
         },
         formatCurrency(value) {
             const numeric = Number(value) || 0;
