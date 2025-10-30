@@ -97,10 +97,8 @@
                 </svg>
                 <span>Tambah Catatan Baru</span>
             </button>
-            <button @click="passThroughModal = true" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center gap-2">
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4H6a2 2 0 00-2 2v5m11-7h5a2 2 0 012 2v5M9 20h6m-3-3v3m-7-8h16" />
-                </svg>
+            <button @click="passThroughModal = true" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="#ffffff"><g fill="none" stroke="#ffffff" stroke-linejoin="round"><path d="M1.5 18a3 3 0 1 0 6 0a3 3 0 1 0-6 0"/><path stroke-linecap="round" d="M10.501 2.401A3 3 0 0 0 9.402 6.5l7.5 13a3 3 0 0 0 5.197-2.998l-7.5-13a3 3 0 0 0-4.098-1.1Z" clip-rule="evenodd"/><path stroke-linecap="round" d="m12 11.003l-4.9 8.496a3 3 0 0 1-5.2-2.998L9.394 3.514"/></g></svg>
                 <span>Pengaturan Invoices Iklan</span>
             </button>
             <button @click="categoryModal = true" type="button" class="p-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100" title="Pengaturan pilihan kategori">
@@ -198,7 +196,7 @@
                 </button>
                 <button type="button"
                     @click="activeTab = '{{ \App\Models\Debt::TYPE_PASS_THROUGH }}'"
-                    :class="activeTab === '{{ \App\Models\Debt::TYPE_PASS_THROUGH }}' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                    :class="activeTab === '{{ \App\Models\Debt::TYPE_PASS_THROUGH }}' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
                     class="px-3 py-2 text-sm font-medium border-b-2 transition">
                     Invoices Iklan
                 </button>
@@ -336,7 +334,7 @@
                             <p class="mt-1 text-xs text-gray-500">Biaya ini hanya ditagihkan untuk pelanggan baru.</p>
                         </div>
                         <div class="md:col-span-2 flex justify-end">
-                            <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Simpan Paket</button>
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Simpan Paket</button>
                         </div>
                     </form>
                 </div>

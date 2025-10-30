@@ -2,68 +2,70 @@
 use Illuminate\Support\Str;
 
 $tabLabels = [
-    'down_payment' => 'Down Payment',
-    'full_payment' => 'Bayar Lunas',
-    'pass_through' => 'Invoices Iklan',
-    'settlement' => 'Pelunasan',
+  "down_payment" => "Down Payment",
+  "full_payment" => "Bayar Lunas",
+  "pass_through" => "Invoices Iklan",
+  "settlement" => "Pelunasan",
 ];
 
 $allowedTransactions = $allowedTransactions ?? array_keys($tabLabels);
-$allowedTransactions = array_values(array_intersect(array_keys($tabLabels), $allowedTransactions));
+$allowedTransactions = array_values(
+  array_intersect(array_keys($tabLabels), $allowedTransactions),
+);
 if (empty($allowedTransactions)) {
-    $allowedTransactions = array_keys($tabLabels);
+  $allowedTransactions = array_keys($tabLabels);
 }
 
-$defaultTransaction = $defaultTransaction ?? 'down_payment';
-if (! in_array($defaultTransaction, $allowedTransactions, true)) {
-    $defaultTransaction = $allowedTransactions[0];
+$defaultTransaction = $defaultTransaction ?? "down_payment";
+if (!in_array($defaultTransaction, $allowedTransactions, true)) {
+  $defaultTransaction = $allowedTransactions[0];
 }
 
-$componentId = $attributes->get('id') ?? 'invoice-tabs-' . Str::random(8);
-$formId = $formId ?? 'invoice-form';
-$variant = $variant ?? 'internal';
+$componentId = $attributes->get("id") ?? "invoice-tabs-" . Str::random(8);
+$formId = $formId ?? "invoice-form";
+$variant = $variant ?? "internal";
 $categoryOptions = $categoryOptions ?? [];
 $items = $items ?? [];
-$downPaymentFieldLabel = $downPaymentFieldLabel ?? 'Nominal Down Payment';
-$downPaymentPlaceholder = $downPaymentPlaceholder ?? 'Contoh: 5.000.000';
+$downPaymentFieldLabel = $downPaymentFieldLabel ?? "Nominal Down Payment";
+$downPaymentPlaceholder = $downPaymentPlaceholder ?? "Contoh: 5.000.000";
 $downPaymentHelp = $downPaymentHelp ?? null;
-$downPaymentValue = $downPaymentValue ?? '';
+$downPaymentValue = $downPaymentValue ?? "";
 $downPaymentRequired = $downPaymentRequired ?? false;
-$addItemButtonLabel = $addItemButtonLabel ?? 'Tambah Item';
-$totalLabel = $totalLabel ?? 'Total Invoice';
+$addItemButtonLabel = $addItemButtonLabel ?? "Tambah Item";
+$totalLabel = $totalLabel ?? "Total Invoice";
 $showTotal = $showTotal ?? true;
-$settlementInvoiceNumber = $settlementInvoiceNumber ?? '';
-$settlementRemainingBalance = $settlementRemainingBalance ?? '';
-$settlementPaidAmount = $settlementPaidAmount ?? '';
+$settlementInvoiceNumber = $settlementInvoiceNumber ?? "";
+$settlementRemainingBalance = $settlementRemainingBalance ?? "";
+$settlementPaidAmount = $settlementPaidAmount ?? "";
 $settlementPaymentStatus = $settlementPaymentStatus ?? null;
-$currencyPlaceholder = $currencyPlaceholder ?? 'Contoh: 1.500.000';
+$currencyPlaceholder = $currencyPlaceholder ?? "Contoh: 1.500.000";
 
 // New props for pass-through content
 $passThroughPackages = $passThroughPackages ?? collect();
 $passThroughConfig = $passThroughConfig ?? [];
 
 $forwardedAttributes = $attributes->except([
-    'id',
-    'form-id',
-    'items',
-    'category-options',
-    'allowed-transactions',
-    'default-transaction',
-    'variant',
-    'down-payment-field-label',
-    'down-payment-placeholder',
-    'down-payment-help',
-    'down-payment-required',
-    'add-item-button-label',
-    'total-label',
-    'down-payment-value',
-    'settlement-invoice-number',
-    'settlement-remaining-balance',
-    'settlement-paid-amount',
-    'settlement-payment-status',
-    'currency-placeholder',
-    'pass-through-packages',
-    'pass-through-config',
+  "id",
+  "form-id",
+  "items",
+  "category-options",
+  "allowed-transactions",
+  "default-transaction",
+  "variant",
+  "down-payment-field-label",
+  "down-payment-placeholder",
+  "down-payment-help",
+  "down-payment-required",
+  "add-item-button-label",
+  "total-label",
+  "down-payment-value",
+  "settlement-invoice-number",
+  "settlement-remaining-balance",
+  "settlement-paid-amount",
+  "settlement-payment-status",
+  "currency-placeholder",
+  "pass-through-packages",
+  "pass-through-config",
 ]);
 ?>
 
@@ -278,7 +280,7 @@ $forwardedAttributes = $attributes->except([
                         </div>
                         <div>
                             <dt class="font-medium text-gray-600">Total Dana Iklan</dt>
-                            <dd class="mt-1 text-base font-semibold text-purple-600" x-text="formatCurrency(passThroughAdBudgetTotal())"></dd>
+                            <dd class="mt-1 text-base font-semibold text-blue-600" x-text="formatCurrency(passThroughAdBudgetTotal())"></dd>
                         </div>
                         <div>
                             <dt class="font-medium text-gray-600">Total Maintenance</dt>
