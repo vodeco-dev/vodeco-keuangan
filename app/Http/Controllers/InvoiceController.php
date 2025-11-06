@@ -47,6 +47,16 @@ class InvoiceController extends Controller
         $verifiedRoles = collect(session('verified_access_roles', []));
 
         $tabPermissions = [
+            'down-payment' => [
+                'label' => 'Down Payment',
+                'role' => null,
+                'allowed' => in_array($user->role, [Role::ADMIN, Role::STAFF, Role::ACCOUNTANT], true),
+            ],
+            'pay-in-full' => [
+                'label' => 'Bayar Lunas',
+                'role' => null,
+                'allowed' => in_array($user->role, [Role::ADMIN, Role::STAFF, Role::ACCOUNTANT], true),
+            ],
             'needs-confirmation' => [
                 'label' => 'Perlu Konfirmasi',
                 'role' => null,
