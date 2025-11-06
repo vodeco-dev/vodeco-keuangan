@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\App;
 use App\Enums\Role;
 
 class UserSeeder extends Seeder
@@ -14,6 +15,11 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+
+        if (App::environment('production')) {
+            // Jangan jalankan seeder ini di lingkungan produksi
+            return;
+        }
         // hapus user yang mungkin sudah ada dengan email yang sama
         User::whereIn('email', [
             'admin@vodeco.co.id',
