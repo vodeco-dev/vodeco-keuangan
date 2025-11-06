@@ -249,6 +249,15 @@ class StoreInvoiceRequest extends FormRequest
                 }
             }
 
+            $isCustomPackage = $passThroughPackageId === 'custom';
+            $customFieldKeys = [
+                'pass_through_custom_customer_type',
+                'pass_through_custom_daily_balance',
+                'pass_through_custom_duration_days',
+                'pass_through_custom_maintenance_fee',
+                'pass_through_custom_account_creation_fee',
+            ];
+
             $passThroughFields = [
                 'pass_through_package_id' => $passThroughPackageId,
                 'pass_through_quantity' => $this->sanitizeInteger($this->input('pass_through_quantity')),
@@ -264,29 +273,40 @@ class StoreInvoiceRequest extends FormRequest
                 'pass_through_account_creation_unit' => $this->sanitizeCurrency($this->input('pass_through_account_creation_unit')),
             ];
 
-            $customCustomerType = $this->input('pass_through_custom_customer_type');
-            if (is_string($customCustomerType)) {
-                $customCustomerType = trim($customCustomerType);
-                if ($customCustomerType !== '') {
-                    $normalizedType = strtolower($customCustomerType);
-                    if (in_array($normalizedType, [PassThroughPackage::CUSTOMER_TYPE_NEW, PassThroughPackage::CUSTOMER_TYPE_EXISTING], true)) {
-                        $customCustomerType = $normalizedType;
+            $customPassThroughFields = [];
+
+            if ($isCustomPackage) {
+                $customCustomerType = $this->input('pass_through_custom_customer_type');
+                if (is_string($customCustomerType)) {
+                    $customCustomerType = trim($customCustomerType);
+                    if ($customCustomerType !== '') {
+                        $normalizedType = strtolower($customCustomerType);
+                        if (in_array($normalizedType, [PassThroughPackage::CUSTOMER_TYPE_NEW, PassThroughPackage::CUSTOMER_TYPE_EXISTING], true)) {
+                            $customCustomerType = $normalizedType;
+                        }
+                    } else {
+                        $customCustomerType = null;
                     }
-                } else {
-                    $customCustomerType = null;
+                }
+
+                $customPassThroughFields = [
+                    'pass_through_custom_customer_type' => $customCustomerType,
+                    'pass_through_custom_daily_balance' => $this->sanitizeCurrency($this->input('pass_through_custom_daily_balance')),
+                    'pass_through_custom_duration_days' => $this->sanitizeInteger($this->input('pass_through_custom_duration_days')),
+                    'pass_through_custom_maintenance_fee' => $this->sanitizeCurrency($this->input('pass_through_custom_maintenance_fee')),
+                    'pass_through_custom_account_creation_fee' => $this->sanitizeCurrency($this->input('pass_through_custom_account_creation_fee')),
+                ];
+            } else {
+                foreach ($customFieldKeys as $field) {
+                    $this->request->remove($field);
                 }
             }
 
-            $customPassThroughFields = [
-                'pass_through_custom_customer_type' => $customCustomerType,
-                'pass_through_custom_daily_balance' => $this->sanitizeCurrency($this->input('pass_through_custom_daily_balance')),
-                'pass_through_custom_duration_days' => $this->sanitizeInteger($this->input('pass_through_custom_duration_days')),
-                'pass_through_custom_maintenance_fee' => $this->sanitizeCurrency($this->input('pass_through_custom_maintenance_fee')),
-                'pass_through_custom_account_creation_fee' => $this->sanitizeCurrency($this->input('pass_through_custom_account_creation_fee')),
-            ];
-
             $merged = array_merge($merged, array_filter($passThroughFields, fn ($value) => $value !== null));
-            $merged = array_merge($merged, array_filter($customPassThroughFields, fn ($value) => $value !== null));
+
+            if ($isCustomPackage) {
+                $merged = array_merge($merged, array_filter($customPassThroughFields, fn ($value) => $value !== null));
+            }
         }
 
         if (in_array($transactionType, ['settlement', 'pass_through'])) {

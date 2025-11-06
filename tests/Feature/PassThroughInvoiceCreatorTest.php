@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\Category;
 use App\Models\Debt;
 use App\Models\Invoice;
+use App\Models\PassThroughPackage as PassThroughPackageModel;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\User;
@@ -210,6 +211,52 @@ class PassThroughInvoiceCreatorTest extends TestCase
         ]);
 
         Carbon::setTestNow();
+    }
+
+    public function test_store_invoice_with_regular_package_does_not_require_custom_fields(): void
+    {
+        $owner = User::factory()->create(['role' => Role::ADMIN]);
+
+        $category = Category::create([
+            'name' => 'Penjualan Iklan',
+            'type' => 'pemasukan',
+        ]);
+
+        Setting::updateOrCreate(
+            ['key' => 'pass_through_invoice_category_id'],
+            ['value' => $category->id]
+        );
+
+        $packageModel = PassThroughPackageModel::create([
+            'name' => 'Paket Reguler',
+            'customer_type' => PassThroughPackage::CUSTOMER_TYPE_EXISTING,
+            'daily_balance' => 150000,
+            'duration_days' => 7,
+            'maintenance_fee' => 50000,
+            'account_creation_fee' => 0,
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->from(route('invoices.create'))
+            ->post(route('invoices.store'), [
+                'transaction_type' => 'pass_through',
+                'client_name' => 'PT Paket Reguler',
+                'client_whatsapp' => '081234567890',
+                'client_address' => 'Jl. Anggrek No. 3',
+                'pass_through_package_id' => $packageModel->uuid,
+                'pass_through_quantity' => 1,
+            ]);
+
+        $response->assertRedirect(route('invoices.index'));
+        $response->assertSessionDoesntHaveErrors([
+            'pass_through_custom_daily_balance' => 'Saldo harian paket custom minimal 1.',
+        ]);
+        $response->assertSessionHasNoErrors();
+
+        $invoice = Invoice::where('client_name', 'PT Paket Reguler')->latest('id')->first();
+        $this->assertNotNull($invoice);
+        $this->assertSame(Invoice::TYPE_PASS_THROUGH_EXISTING, $invoice->type);
     }
 
     public function test_store_invoice_requires_custom_fields(): void
