@@ -56,6 +56,35 @@ class InvoiceTest extends TestCase
         ]);
     }
 
+    public function test_down_payment_invoice_does_not_trigger_pass_through_validation_errors(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['type' => 'pemasukan']);
+
+        $response = $this->actingAs($user)
+            ->from('/invoices/create')
+            ->post('/invoices', [
+                'transaction_type' => 'down_payment',
+                'client_name' => 'Client Tanpa Pass Through',
+                'client_whatsapp' => '08123456789',
+                'client_address' => 'Alamat',
+                'items' => [
+                    [
+                        'description' => 'Service',
+                        'quantity' => 1,
+                        'price' => 1000,
+                        'category_id' => $category->id,
+                    ],
+                ],
+            ]);
+
+        $response->assertRedirect('/invoices');
+        $response->assertSessionDoesntHaveErrors([
+            'pass_through_custom_daily_balance' => 'Saldo harian paket custom minimal 1.',
+        ]);
+        $response->assertSessionHasNoErrors();
+    }
+
     public function test_authenticated_user_can_create_full_payment_invoice(): void
     {
         $user = User::factory()->create();

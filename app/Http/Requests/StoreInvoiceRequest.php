@@ -177,6 +177,14 @@ class StoreInvoiceRequest extends FormRequest
     {
         $transactionType = $this->input('transaction_type', 'down_payment');
 
+        if ($transactionType !== 'pass_through') {
+            foreach (array_keys($this->all()) as $key) {
+                if (str_starts_with($key, 'pass_through_')) {
+                    $this->request->remove($key);
+                }
+            }
+        }
+
         $rawItems = $this->input('items', []);
 
         $items = collect($rawItems)->map(function ($item) {
@@ -224,50 +232,6 @@ class StoreInvoiceRequest extends FormRequest
             $settlementPaidAmount = $normalized === '' ? null : $normalized;
         }
 
-        $passThroughPackageId = $this->input('pass_through_package_id');
-        if (is_string($passThroughPackageId)) {
-            $passThroughPackageId = trim($passThroughPackageId);
-            if ($passThroughPackageId === '') {
-                $passThroughPackageId = null;
-            }
-        }
-
-        $passThroughFields = [
-            'pass_through_package_id' => $passThroughPackageId,
-            'pass_through_quantity' => $this->sanitizeInteger($this->input('pass_through_quantity')),
-            'pass_through_ad_budget_total' => $this->sanitizeCurrency($this->input('pass_through_ad_budget_total')),
-            'pass_through_maintenance_total' => $this->sanitizeCurrency($this->input('pass_through_maintenance_total')),
-            'pass_through_account_creation_total' => $this->sanitizeCurrency($this->input('pass_through_account_creation_total')),
-            'pass_through_total_price' => $this->sanitizeCurrency($this->input('pass_through_total_price')),
-            'pass_through_daily_balance_total' => $this->sanitizeCurrency($this->input('pass_through_daily_balance_total')),
-            'pass_through_duration_days' => $this->sanitizeInteger($this->input('pass_through_duration_days')),
-            'pass_through_daily_balance_unit' => $this->sanitizeCurrency($this->input('pass_through_daily_balance_unit')),
-            'pass_through_ad_budget_unit' => $this->sanitizeCurrency($this->input('pass_through_ad_budget_unit')),
-            'pass_through_maintenance_unit' => $this->sanitizeCurrency($this->input('pass_through_maintenance_unit')),
-            'pass_through_account_creation_unit' => $this->sanitizeCurrency($this->input('pass_through_account_creation_unit')),
-        ];
-
-        $customCustomerType = $this->input('pass_through_custom_customer_type');
-        if (is_string($customCustomerType)) {
-            $customCustomerType = trim($customCustomerType);
-            if ($customCustomerType !== '') {
-                $normalizedType = strtolower($customCustomerType);
-                if (in_array($normalizedType, [PassThroughPackage::CUSTOMER_TYPE_NEW, PassThroughPackage::CUSTOMER_TYPE_EXISTING], true)) {
-                    $customCustomerType = $normalizedType;
-                }
-            } else {
-                $customCustomerType = null;
-            }
-        }
-
-        $customPassThroughFields = [
-            'pass_through_custom_customer_type' => $customCustomerType,
-            'pass_through_custom_daily_balance' => $this->sanitizeCurrency($this->input('pass_through_custom_daily_balance')),
-            'pass_through_custom_duration_days' => $this->sanitizeInteger($this->input('pass_through_custom_duration_days')),
-            'pass_through_custom_maintenance_fee' => $this->sanitizeCurrency($this->input('pass_through_custom_maintenance_fee')),
-            'pass_through_custom_account_creation_fee' => $this->sanitizeCurrency($this->input('pass_through_custom_account_creation_fee')),
-        ];
-
         $merged = [
             'transaction_type' => $transactionType,
             'client_whatsapp' => $whatsapp,
@@ -276,8 +240,54 @@ class StoreInvoiceRequest extends FormRequest
             'settlement_paid_amount' => $settlementPaidAmount,
         ];
 
-        $merged = array_merge($merged, array_filter($passThroughFields, fn ($value) => $value !== null));
-        $merged = array_merge($merged, array_filter($customPassThroughFields, fn ($value) => $value !== null));
+        if ($transactionType === 'pass_through') {
+            $passThroughPackageId = $this->input('pass_through_package_id');
+            if (is_string($passThroughPackageId)) {
+                $passThroughPackageId = trim($passThroughPackageId);
+                if ($passThroughPackageId === '') {
+                    $passThroughPackageId = null;
+                }
+            }
+
+            $passThroughFields = [
+                'pass_through_package_id' => $passThroughPackageId,
+                'pass_through_quantity' => $this->sanitizeInteger($this->input('pass_through_quantity')),
+                'pass_through_ad_budget_total' => $this->sanitizeCurrency($this->input('pass_through_ad_budget_total')),
+                'pass_through_maintenance_total' => $this->sanitizeCurrency($this->input('pass_through_maintenance_total')),
+                'pass_through_account_creation_total' => $this->sanitizeCurrency($this->input('pass_through_account_creation_total')),
+                'pass_through_total_price' => $this->sanitizeCurrency($this->input('pass_through_total_price')),
+                'pass_through_daily_balance_total' => $this->sanitizeCurrency($this->input('pass_through_daily_balance_total')),
+                'pass_through_duration_days' => $this->sanitizeInteger($this->input('pass_through_duration_days')),
+                'pass_through_daily_balance_unit' => $this->sanitizeCurrency($this->input('pass_through_daily_balance_unit')),
+                'pass_through_ad_budget_unit' => $this->sanitizeCurrency($this->input('pass_through_ad_budget_unit')),
+                'pass_through_maintenance_unit' => $this->sanitizeCurrency($this->input('pass_through_maintenance_unit')),
+                'pass_through_account_creation_unit' => $this->sanitizeCurrency($this->input('pass_through_account_creation_unit')),
+            ];
+
+            $customCustomerType = $this->input('pass_through_custom_customer_type');
+            if (is_string($customCustomerType)) {
+                $customCustomerType = trim($customCustomerType);
+                if ($customCustomerType !== '') {
+                    $normalizedType = strtolower($customCustomerType);
+                    if (in_array($normalizedType, [PassThroughPackage::CUSTOMER_TYPE_NEW, PassThroughPackage::CUSTOMER_TYPE_EXISTING], true)) {
+                        $customCustomerType = $normalizedType;
+                    }
+                } else {
+                    $customCustomerType = null;
+                }
+            }
+
+            $customPassThroughFields = [
+                'pass_through_custom_customer_type' => $customCustomerType,
+                'pass_through_custom_daily_balance' => $this->sanitizeCurrency($this->input('pass_through_custom_daily_balance')),
+                'pass_through_custom_duration_days' => $this->sanitizeInteger($this->input('pass_through_custom_duration_days')),
+                'pass_through_custom_maintenance_fee' => $this->sanitizeCurrency($this->input('pass_through_custom_maintenance_fee')),
+                'pass_through_custom_account_creation_fee' => $this->sanitizeCurrency($this->input('pass_through_custom_account_creation_fee')),
+            ];
+
+            $merged = array_merge($merged, array_filter($passThroughFields, fn ($value) => $value !== null));
+            $merged = array_merge($merged, array_filter($customPassThroughFields, fn ($value) => $value !== null));
+        }
 
         if (in_array($transactionType, ['settlement', 'pass_through'])) {
             $this->request->remove('items');
