@@ -76,16 +76,16 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('debts/category-preferences', [DebtController::class, 'updateCategoryPreferences'])->name('debts.category-preferences.update');
     Route::resource('debts', DebtController::class);
     Route::match(['GET', 'POST'], 'pass-through/packages', [PassThroughPackageController::class, 'store'])
-        ->middleware('role:staff')
+        ->middleware('role:admin,accountant,staff')
         ->name('pass-through.packages.store');
     Route::put('pass-through/packages/{package:uuid}', [PassThroughPackageController::class, 'update'])
-        ->middleware('role:staff')
+        ->middleware('role:admin,accountant,staff')
         ->name('pass-through.packages.update');
     Route::delete('pass-through/packages/{package:uuid}', [PassThroughPackageController::class, 'destroy'])
-        ->middleware('role:staff')
+        ->middleware('role:admin,accountant,staff')
         ->name('pass-through.packages.destroy');
     Route::post('pass-through/invoice-category', [PassThroughPackageController::class, 'updateInvoiceCategory'])
-        ->middleware('role:staff')
+        ->middleware('role:admin,accountant,staff')
         ->name('pass-through.invoice-category.update');
     Route::get('invoices/{invoice}/payment-proof', [InvoiceController::class, 'showPaymentProof'])
         ->name('invoices.payment-proof.show');
@@ -160,4 +160,4 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
