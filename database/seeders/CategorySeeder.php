@@ -4,14 +4,13 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB; // <-- Tambahkan ini
 
 class CategorySeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
+
         $categories = [
             ['name' => 'Penjualan Website', 'type' => 'pemasukan'],
             ['name' => 'Penjualan Compro', 'type' => 'pemasukan'],
@@ -42,7 +41,7 @@ class CategorySeeder extends Seeder
             ['name' => 'Biaya konsumsi', 'type' => 'pengeluaran'],
             ['name' => 'Biaya langganan', 'type' => 'pengeluaran'],
             ['name' => 'Biaya perlengkapan kantor', 'type' => 'pengeluaran'],
-            ['name' => 'Biaya lainnya', 'type' => 'pengeluaran'],
+            ['name' => 'Biaya lainnya', 'type' => 'pengeluaran'], // <-- Duplikat sudah aman
             ['name' => 'Biaya pemeliharaan dan perbaikan', 'type' => 'pengeluaran'],
             ['name' => 'Piutang tidak tertagih', 'type' => 'pengeluaran'],
 
@@ -53,9 +52,13 @@ class CategorySeeder extends Seeder
             ['name' => 'PPh pasal 23 (PPh jasa dan barang)', 'type' => 'pengeluaran'],
             ['name' => 'Biaya adm bank', 'type' => 'pengeluaran'],
             ['name' => 'Pajak bank', 'type' => 'pengeluaran'],
-            ['name' => 'Biaya lainnya', 'type' => 'pengeluaran'],
         ];
 
-        Category::insert($categories);
+        foreach ($categories as $category) {
+            Category::firstOrCreate(
+                ['name' => $category['name']], // Cek berdasarkan nama
+                ['type' => $category['type']]  // Data yang diisi jika baru
+            );
+        }
     }
 }
