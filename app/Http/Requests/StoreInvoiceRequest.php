@@ -58,7 +58,8 @@ class StoreInvoiceRequest extends FormRequest
             'pass_through_maintenance_unit' => ['nullable', 'numeric', 'min:0'],
             'pass_through_account_creation_unit' => ['nullable', 'numeric', 'min:0'],
             'pass_through_custom_customer_type' => [
-                'required_if:pass_through_package_id,custom',
+                Rule::requiredIf(fn () => $this->input('transaction_type') === 'pass_through'
+                    && $this->input('pass_through_package_id') === 'custom'),
                 'nullable',
                 'string',
                 Rule::in([
@@ -66,11 +67,30 @@ class StoreInvoiceRequest extends FormRequest
                     PassThroughPackage::CUSTOMER_TYPE_EXISTING,
                 ]),
             ],
-            'pass_through_custom_daily_balance' => ['required_if:pass_through_package_id,custom', 'nullable', 'numeric', 'min:1'],
-            'pass_through_custom_duration_days' => ['required_if:pass_through_package_id,custom', 'nullable', 'integer', 'min:1'],
-            'pass_through_custom_maintenance_fee' => ['required_if:pass_through_package_id,custom', 'nullable', 'numeric', 'min:0'],
+            'pass_through_custom_daily_balance' => [
+                Rule::requiredIf(fn () => $this->input('transaction_type') === 'pass_through'
+                    && $this->input('pass_through_package_id') === 'custom'),
+                'nullable',
+                'numeric',
+                'min:1',
+            ],
+            'pass_through_custom_duration_days' => [
+                Rule::requiredIf(fn () => $this->input('transaction_type') === 'pass_through'
+                    && $this->input('pass_through_package_id') === 'custom'),
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+            'pass_through_custom_maintenance_fee' => [
+                Rule::requiredIf(fn () => $this->input('transaction_type') === 'pass_through'
+                    && $this->input('pass_through_package_id') === 'custom'),
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
             'pass_through_custom_account_creation_fee' => [
-                'required_if:pass_through_custom_customer_type,new',
+                Rule::requiredIf(fn () => $this->input('transaction_type') === 'pass_through'
+                    && $this->input('pass_through_custom_customer_type') === PassThroughPackage::CUSTOMER_TYPE_NEW),
                 'nullable',
                 'numeric',
                 'min:0',
