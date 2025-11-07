@@ -29,6 +29,12 @@ class Debt extends Model
         'daily_deduction',
     ];
 
+    protected $appends = [
+        'paid_amount',
+        'remaining_amount',
+        'progress',
+    ];
+
     protected $casts = [
         'daily_deduction' => 'decimal:2',
     ];
