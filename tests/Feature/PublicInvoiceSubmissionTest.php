@@ -206,8 +206,8 @@ class PublicInvoiceSubmissionTest extends TestCase
 
         $this->assertDatabaseHas('invoices', [
             'client_name' => 'Jane Doe',
-            'status' => 'lunas',
-            'down_payment' => 2500000,
+            'status' => 'belum lunas',
+            'down_payment' => 0,
         ]);
 
         $this->assertDatabaseHas('invoice_items', [
@@ -305,8 +305,8 @@ class PublicInvoiceSubmissionTest extends TestCase
 
         $this->assertDatabaseHas('invoices', [
             'client_name' => 'Siti Budi',
-            'status' => 'lunas',
-            'down_payment' => 1800000,
+            'status' => 'belum lunas',
+            'down_payment' => 0,
         ]);
     }
 

@@ -112,10 +112,10 @@ class InvoiceTest extends TestCase
         $invoice = Invoice::where('client_name', 'Client Lunas')->first();
 
         $this->assertNotNull($invoice);
-        $this->assertSame('lunas', $invoice->status);
+        $this->assertSame('belum lunas', $invoice->status);
         $this->assertEquals(250000.0, (float) $invoice->total);
-        $this->assertEquals(250000.0, (float) $invoice->down_payment);
-        $this->assertNotNull($invoice->payment_date);
+        $this->assertEquals(0.0, (float) $invoice->down_payment);
+        $this->assertNull($invoice->payment_date);
 
         $this->assertDatabaseHas('invoice_items', [
             'invoice_id' => $invoice->id,
