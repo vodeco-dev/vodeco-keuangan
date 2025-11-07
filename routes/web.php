@@ -52,6 +52,7 @@ Route::post('/invoices/settlement/{token}', [InvoiceSettlementController::class,
 
 // Route untuk melihat invoice secara publik tanpa perlu login
 Route::get('/invoices/view/{token}', [InvoiceController::class, 'showPublicHosted'])->name('invoices.public.show');
+Route::get('/invoices/pdf-hosted/{token}', [InvoiceController::class, 'showPublicHosted'])->name('invoices.public.pdf-hosted');
 
 // Menggunakan middleware 'auth' untuk memastikan hanya user yang sudah login
 // yang bisa mengakses halaman-halaman ini.
