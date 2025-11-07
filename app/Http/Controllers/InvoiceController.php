@@ -495,22 +495,8 @@ class InvoiceController extends Controller
 
         $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'submission');
 
-        try {
-            $pdfUrl = $this->invoicePdfService->ensureHostedUrl($invoice);
-        } catch (Throwable $exception) {
-            \Log::error('Failed to get PDF URL for public invoice', [
-                'invoice_id' => $invoice->id,
-                'invoice_number' => $invoice->number,
-                'error' => $exception->getMessage(),
-            ]);
-            $pdfUrl = null;
-        }
-
-        return redirect()
-            ->route('invoices.public.create')
-            ->with('status', 'Invoice berhasil dibuat.')
-            ->with('invoice_pdf_url', $pdfUrl)
-            ->with('invoice_number', $invoice->number);
+        // Generate and return PDF directly
+        return $this->generateInvoicePdfResponse($invoice);
     }
 
     public function confirmPublicPayment(PublicConfirmPaymentRequest $request): RedirectResponse
@@ -1081,14 +1067,14 @@ class InvoiceController extends Controller
                 $downPaymentDue = isset($data['down_payment_due']) ? (float) $data['down_payment_due'] : null;
             }
 
-            $status = match ($transactionType) {
-                'down_payment' => 'belum lunas',
-                'full_payment' => 'belum lunas',
-                default => 'belum bayar',
-            };
+        $status = match ($transactionType) {
+            'down_payment' => 'belum lunas',
+            'full_payment' => 'lunas',
+            default => 'belum bayar',
+        };
 
-            $downPayment = 0;
-            $paymentDate = null;
+        $downPayment = $transactionType === 'full_payment' ? $total : 0;
+        $paymentDate = $transactionType === 'full_payment' ? now() : null;
 
             $invoice = Invoice::create([
                 'user_id' => $ownerId ?? auth()->id(),
@@ -1511,5 +1497,27 @@ class InvoiceController extends Controller
             'passphraseSession' => $passphrase ? $sessionData : null,
             'passphraseToken' => $passphraseToken,
         ]);
+    }
+
+    /**
+     * Generate and return PDF response for invoice
+     */
+    private function generateInvoicePdfResponse(Invoice $invoice)
+    {
+        $invoice->loadMissing('items', 'customerService');
+        
+        $settings = [
+            'company_name' => config('app.name', 'Company Name'),
+            'company_address' => config('app.company_address', ''),
+            'company_phone' => config('app.company_phone', ''),
+            'company_email' => config('app.company_email', ''),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.pdf', [
+            'invoice' => $invoice,
+            'settings' => $settings,
+        ]);
+
+        return $pdf->setPaper('a4')->download($invoice->number . '.pdf');
     }
 }
