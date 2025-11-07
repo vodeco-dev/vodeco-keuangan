@@ -1050,12 +1050,12 @@ class InvoiceController extends Controller
 
             $status = match ($transactionType) {
                 'down_payment' => 'belum lunas',
-                'full_payment' => 'lunas',
+                'full_payment' => 'belum lunas',
                 default => 'belum bayar',
             };
 
-            $downPayment = $transactionType === 'full_payment' ? $total : 0;
-            $paymentDate = $transactionType === 'full_payment' ? now() : null;
+            $downPayment = 0;
+            $paymentDate = null;
 
             $invoice = Invoice::create([
                 'user_id' => $ownerId ?? auth()->id(),
