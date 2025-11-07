@@ -50,6 +50,7 @@
                             x-data="{
                                 open: false,
                                 menuStyle: '',
+                                dropUp: false,
                                 toggle() {
                                     this.open = !this.open;
                                 },
@@ -74,9 +75,12 @@
 
                                     const rect = trigger.getBoundingClientRect();
                                     const menuWidth = menu.offsetWidth;
+                                    const menuHeight = menu.offsetHeight;
                                     const spacing = 8;
                                     const viewportLeft = window.scrollX + 16;
                                     const viewportRight = window.scrollX + window.innerWidth - 16;
+                                    const viewportTop = window.scrollY + 16;
+                                    const viewportBottom = window.scrollY + window.innerHeight - 16;
 
                                     let left = rect.right + window.scrollX - menuWidth;
                                     if (left < viewportLeft) {
@@ -87,7 +91,29 @@
                                         left = Math.max(viewportLeft, viewportRight - menuWidth);
                                     }
 
-                                    const top = rect.bottom + window.scrollY + spacing;
+                                    const spaceBelow = viewportBottom - rect.bottom - spacing;
+                                    const spaceAbove = rect.top - viewportTop - spacing;
+
+                                    this.dropUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+                                    let top;
+                                    if (this.dropUp) {
+                                        top = rect.top + window.scrollY - spacing - menuHeight;
+
+                                        if (top < viewportTop) {
+                                            this.dropUp = false;
+                                            top = rect.bottom + window.scrollY + spacing;
+                                        }
+                                    }
+
+                                    if (!this.dropUp) {
+                                        top = rect.bottom + window.scrollY + spacing;
+
+                                        if (top + menuHeight > viewportBottom) {
+                                            top = Math.max(viewportTop, viewportBottom - menuHeight);
+                                        }
+                                    }
+
                                     this.menuStyle = `top: ${top}px; left: ${left}px;`;
                                 }
                             }"
@@ -122,7 +148,8 @@
                                     x-transition.origin.top.right
                                     x-ref="menu"
                                     :style="menuStyle"
-                                    class="fixed z-[9999] w-52 origin-top-right rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                                    :class="dropUp ? 'origin-bottom-right' : 'origin-top-right'"
+                                    class="fixed z-[9999] w-52 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                                 >
                                     <div class="py-1 text-left text-sm text-gray-700">
                                         @if ($debt->status == \App\Models\Debt::STATUS_BELUM_LUNAS)
