@@ -284,10 +284,41 @@
                                 </a>
                             </form>
                         </div>
+
+                        <!-- Bulk Actions Bar for History -->
+                        <div x-show="bulkActionsHistory.hasSelection()" x-cloak class="mb-4 flex flex-wrap items-center gap-3 rounded-md bg-blue-50 border border-blue-200 p-3">
+                            <span class="text-sm font-medium text-blue-900">
+                                <span x-text="bulkActionsHistory.getSelectedCount()"></span> invoice dipilih
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" 
+                                    @click="bulkActionsHistory.executeBulkAction('send')"
+                                    class="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700">
+                                    Kirim
+                                </button>
+                                <button type="button" 
+                                    @click="bulkActionsHistory.executeBulkAction('delete')"
+                                    class="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-700">
+                                    Hapus
+                                </button>
+                                <button type="button" 
+                                    @click="bulkActionsHistory.clearSelection()"
+                                    class="inline-flex items-center rounded-md bg-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-300">
+                                    Batal
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead class="border-b">
                                     <tr>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase w-12">
+                                            <input type="checkbox" 
+                                                @change="bulkActionsHistory.toggleSelectAll()"
+                                                :checked="bulkActionsHistory.selectAll"
+                                                class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        </th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Nomor</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Klien</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
@@ -299,6 +330,14 @@
                                 <tbody class="divide-y">
                                     @forelse ($historyInvoices as $invoice)
                                         <tr>
+                                            <td class="px-6 py-4">
+                                                <input type="checkbox" 
+                                                    name="selected_history[]" 
+                                                    value="{{ $invoice->id }}"
+                                                    @change="bulkActionsHistory.updateSelectedItems()"
+                                                    @click.stop
+                                                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                            </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <p class="font-semibold text-gray-900">{{ $invoice->number }}</p>
                                                 <p class="text-xs text-gray-500">{{ $invoice->customer_service_name ?? $invoice->customerService?->name ?? '-' }}</p>
@@ -463,12 +502,19 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">Tidak ada invoice yang cocok dengan filter yang dipilih.</td>
+                                            <td colspan="7" class="px-6 py-6 text-center text-sm text-gray-500">Tidak ada invoice yang cocok dengan filter yang dipilih.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Bulk Action Form for History -->
+                        <form id="bulk-action-form-history" action="{{ route('invoices.bulk-action') }}" method="POST" style="display: none;">
+                            @csrf
+                            <input type="hidden" name="action" value="">
+                            <input type="hidden" name="tab" value="history">
+                        </form>
                     </div>
                     @endif
                 </div>
@@ -568,6 +614,66 @@
                         if (confirmMsg && !confirm(confirmMsg)) return;
                         
                         const form = document.getElementById('bulk-action-form');
+                        if (form) {
+                            form.querySelector('input[name=\'action\']').value = actionValue;
+                            
+                            // Clear existing selected inputs
+                            form.querySelectorAll('input[name=\'selected[]\']').forEach(input => input.remove());
+                            
+                            // Add selected items
+                            this.selectedItems.forEach(item => {
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = 'selected[]';
+                                input.value = item;
+                                form.appendChild(input);
+                            });
+                            
+                            form.submit();
+                        }
+                    }
+                },
+                bulkActionsHistory: {
+                    selectedItems: [],
+                    selectAll: false,
+                    updateSelectedItems() {
+                        const checkboxes = Array.from(document.querySelectorAll('input[type=\'checkbox\'][name=\'selected_history[]\']:checked'));
+                        this.selectedItems = checkboxes.map(cb => cb.value);
+                        const total = document.querySelectorAll('input[type=\'checkbox\'][name=\'selected_history[]\']').length;
+                        this.selectAll = total > 0 && this.selectedItems.length === total;
+                    },
+                    toggleSelectAll() {
+                        const checkboxes = document.querySelectorAll('input[type=\'checkbox\'][name=\'selected_history[]\']');
+                        this.selectAll = !this.selectAll;
+                        checkboxes.forEach(checkbox => {
+                            checkbox.checked = this.selectAll;
+                        });
+                        this.updateSelectedItems();
+                    },
+                    hasSelection() {
+                        return this.selectedItems.length > 0;
+                    },
+                    getSelectedCount() {
+                        return this.selectedItems.length;
+                    },
+                    clearSelection() {
+                        this.selectedItems = [];
+                        this.selectAll = false;
+                        document.querySelectorAll('input[type=\'checkbox\'][name=\'selected_history[]\']').forEach(cb => cb.checked = false);
+                    },
+                    executeBulkAction(actionValue) {
+                        if (!this.hasSelection()) return;
+                        
+                        let confirmMsg = '';
+                        if (actionValue === 'delete') {
+                            confirmMsg = 'Apakah Anda yakin ingin menghapus ' + this.getSelectedCount() + ' invoice yang dipilih?';
+                        } else if (actionValue === 'send') {
+                            confirmMsg = 'Kirim ' + this.getSelectedCount() + ' invoice yang dipilih?';
+                        }
+                        
+                        if (confirmMsg && !confirm(confirmMsg)) return;
+                        
+                        const form = document.getElementById('bulk-action-form-history');
                         if (form) {
                             form.querySelector('input[name=\'action\']').value = actionValue;
                             

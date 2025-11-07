@@ -1302,13 +1302,15 @@ class InvoiceController extends Controller
     public function bulkAction(Request $request): RedirectResponse
     {
         $request->validate([
-            'action' => ['required', 'string', 'in:approve,delete'],
+            'action' => ['required', 'string', 'in:approve,delete,send'],
             'selected' => ['required', 'array', 'min:1'],
             'selected.*' => ['required', 'integer', 'exists:invoices,id'],
+            'tab' => ['nullable', 'string', 'in:needs-confirmation,history'],
         ]);
 
         $selectedIds = $request->input('selected');
         $action = $request->input('action');
+        $tab = $request->input('tab', 'needs-confirmation');
         $user = $request->user();
 
         $invoices = Invoice::whereIn('id', $selectedIds)->get();
@@ -1319,7 +1321,7 @@ class InvoiceController extends Controller
         });
 
         if ($accessibleInvoices->isEmpty()) {
-            return redirect()->route('invoices.index', ['tab' => 'needs-confirmation'])
+            return redirect()->route('invoices.index', ['tab' => $tab])
                 ->with('error', 'Tidak ada invoice yang dapat diakses.');
         }
 
@@ -1333,8 +1335,28 @@ class InvoiceController extends Controller
 
             $message = count($accessibleInvoices) . ' invoice berhasil disetujui dan tidak lagi memerlukan konfirmasi.';
             
-            return redirect()->route('invoices.index', ['tab' => 'needs-confirmation'])
+            return redirect()->route('invoices.index', ['tab' => $tab])
                 ->with('success', $message);
+        }
+
+        if ($action === 'send') {
+            $sentCount = 0;
+            
+            $accessibleInvoices->each(function ($invoice) use (&$sentCount) {
+                if (Gate::allows('send', $invoice)) {
+                    $invoice->update(['status' => 'belum bayar']);
+                    $sentCount++;
+                }
+            });
+
+            if ($sentCount > 0) {
+                $message = $sentCount . ' invoice berhasil dikirim.';
+                return redirect()->route('invoices.index', ['tab' => $tab])
+                    ->with('success', $message);
+            }
+
+            return redirect()->route('invoices.index', ['tab' => $tab])
+                ->with('error', 'Tidak ada invoice yang dapat dikirim.');
         }
 
         if ($action === 'delete') {
@@ -1349,15 +1371,15 @@ class InvoiceController extends Controller
 
             if ($deletedCount > 0) {
                 $message = $deletedCount . ' invoice berhasil dihapus.';
-                return redirect()->route('invoices.index', ['tab' => 'needs-confirmation'])
+                return redirect()->route('invoices.index', ['tab' => $tab])
                     ->with('success', $message);
             }
 
-            return redirect()->route('invoices.index', ['tab' => 'needs-confirmation'])
+            return redirect()->route('invoices.index', ['tab' => $tab])
                 ->with('error', 'Tidak ada invoice yang dapat dihapus.');
         }
 
-        return redirect()->route('invoices.index', ['tab' => 'needs-confirmation'])
+        return redirect()->route('invoices.index', ['tab' => $tab])
             ->with('error', 'Aksi tidak valid.');
     }
 

@@ -9,7 +9,10 @@
         @endphp
         <meta name="default-theme" content="{{ $defaultTheme }}">
 
-        <link rel="icon" href="{{ asset('favicon.png') }}">
+        <!-- Favicon -->
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('favicon.png') }}">
         <title>{{ config('app.name', 'Finance Vodeco') }}</title>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
