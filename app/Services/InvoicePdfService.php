@@ -75,7 +75,11 @@ class InvoicePdfService
             throw new RuntimeException('Unable to store invoice PDF.');
         }
 
-        $invoice->forceFill(['pdf_path' => $newPath])->saveQuietly();
+        $invoice->pdf_path = $newPath;
+        $invoice->saveQuietly();
+        
+        // Refresh to ensure we have the latest data from database
+        $invoice->refresh();
 
         return $newPath;
     }
