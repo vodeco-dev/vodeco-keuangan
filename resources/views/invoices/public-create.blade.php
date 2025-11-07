@@ -18,12 +18,27 @@
             <div class="mb-10 text-center">
                 <img src="{{ asset('logo-vodeco-dark-mode.png') }}" alt="Logo Vodeco" class="mx-auto h-16">
                 <h1 class="mt-4 text-3xl font-semibold text-gray-900">Formulir Pembuatan Invoice</h1>
-                <p class="mt-2 text-gray-600">Isi detail berikut untuk membuat invoice. Setelah formulir dikirim, file PDF akan terunduh secara otomatis.</p>
+                <p class="mt-2 text-gray-600">Isi detail berikut untuk membuat invoice. Setelah formulir dikirim, tautan publik untuk mengakses PDF akan dibuat.</p>
             </div>
 
             <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
                 <div class="px-6 py-8 md:px-10 space-y-8">
-                    @if (session('status'))
+                    @if (session('invoice_pdf_url'))
+                        <div class="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+                            <p class="font-semibold">{{ session('status') ?: 'Invoice berhasil dibuat.' }}</p>
+                            <p class="mt-2">Nomor Invoice Anda adalah: <span class="font-mono font-bold">{{ session('invoice_number') }}</span></p>
+                            <div class="mt-4">
+                                <a href="{{ session('invoice_pdf_url') }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-green-700">
+                                    Buka PDF Invoice
+                                </a>
+                                <button type="button" x-data="{ copied: false }" @click="navigator.clipboard.writeText('{{ session('invoice_pdf_url') }}'); copied = true; setTimeout(() => copied = false, 2000);" class="ml-2 inline-flex items-center rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 shadow hover:bg-gray-300">
+                                    <span x-show="!copied">Salin Tautan PDF</span>
+                                    <span x-show="copied" x-cloak>Tautan disalin!</span>
+                                </button>
+                            </div>
+                            <p class="mt-3 text-xs text-green-700">Anda dapat menyimpan tautan ini untuk mengakses invoice di kemudian hari.</p>
+                        </div>
+                    @elseif (session('status'))
                         <div class="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
                             {{ session('status') }}
                         </div>
@@ -239,7 +254,7 @@
 
                                             <div class="flex justify-end">
                                                 <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                                                    Buat & Unduh Invoice
+                                                    Buat Invoice
                                                 </button>
                                             </div>
                                         </form>

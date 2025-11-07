@@ -149,7 +149,7 @@ class ReportController extends Controller
                 ],
             ])
                 ->setPaper('a4', 'landscape')
-                ->download($fileName);
+                ->stream($fileName);
         }
 
         return Excel::download(
