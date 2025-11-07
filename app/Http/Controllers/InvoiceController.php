@@ -1417,4 +1417,99 @@ class InvoiceController extends Controller
 
         return $status;
     }
+
+    /**
+     * Menampilkan form untuk cek konfirmasi invoice (public)
+     */
+    public function publicCheckConfirmation(Request $request): View
+    {
+        /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
+        $passphrase = $request->attributes->get('invoicePortalPassphrase');
+        $sessionData = (array) session('invoice_portal_passphrase');
+
+        if ($passphrase) {
+            if ((int) ($sessionData['id'] ?? 0) !== $passphrase->id) {
+                $sessionData = [
+                    'id' => $passphrase->id,
+                    'token' => Crypt::encryptString((string) $passphrase->id),
+                    'access_type' => $passphrase->access_type->value,
+                    'access_label' => $passphrase->access_type->label(),
+                    'label' => $passphrase->label,
+                    'display_label' => $passphrase->displayLabel(),
+                    'verified_at' => $sessionData['verified_at'] ?? now()->toIso8601String(),
+                ];
+
+                session(['invoice_portal_passphrase' => $sessionData]);
+            }
+        } else {
+            $sessionData = [];
+        }
+
+        $passphraseToken = $sessionData['token'] ?? null;
+
+        return view('invoices.public-check-confirmation', [
+            'passphraseSession' => $passphrase ? $sessionData : null,
+            'passphraseToken' => $passphraseToken,
+        ]);
+    }
+
+    /**
+     * Mencari invoice berdasarkan nomor dan menampilkan status konfirmasi (public)
+     */
+    public function publicSearchConfirmation(Request $request): View|RedirectResponse
+    {
+        $request->validate([
+            'invoice_number' => 'required|string|max:255',
+        ], [
+            'invoice_number.required' => 'Nomor invoice wajib diisi.',
+        ]);
+
+        /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
+        $passphrase = $request->attributes->get('invoicePortalPassphrase');
+        $sessionData = (array) session('invoice_portal_passphrase');
+
+        if ($passphrase) {
+            if ((int) ($sessionData['id'] ?? 0) !== $passphrase->id) {
+                $sessionData = [
+                    'id' => $passphrase->id,
+                    'token' => Crypt::encryptString((string) $passphrase->id),
+                    'access_type' => $passphrase->access_type->value,
+                    'access_label' => $passphrase->access_type->label(),
+                    'label' => $passphrase->label,
+                    'display_label' => $passphrase->displayLabel(),
+                    'verified_at' => $sessionData['verified_at'] ?? now()->toIso8601String(),
+                ];
+
+                session(['invoice_portal_passphrase' => $sessionData]);
+            }
+        } else {
+            $sessionData = [];
+        }
+
+        $passphraseToken = $sessionData['token'] ?? null;
+
+        $invoiceNumber = $request->input('invoice_number');
+        
+        // Cari invoice berdasarkan nomor
+        $invoice = Invoice::where('number', $invoiceNumber)
+            ->with(['customerService', 'items', 'owner', 'creator'])
+            ->first();
+
+        if (!$invoice) {
+            return back()
+                ->withInput()
+                ->with('error', 'Invoice dengan nomor "' . $invoiceNumber . '" tidak ditemukan.');
+        }
+
+        // Tentukan status dan informasi konfirmasi
+        $confirmationStatus = $this->getConfirmationStatus($invoice);
+
+        return view('invoices.public-check-confirmation', [
+            'invoice' => $invoice,
+            'confirmationStatus' => $confirmationStatus,
+            'searchedNumber' => $invoiceNumber,
+            'passphraseSession' => $passphrase ? $sessionData : null,
+            'passphraseToken' => $passphraseToken,
+        ]);
+    }
 }

@@ -44,6 +44,12 @@ Route::post('/invoices/public/passphrase/logout', [InvoicePortalPassphraseVerifi
 Route::get('/invoices/public/reference/{number}', [InvoiceController::class, 'publicReference'])
     ->middleware('invoice.passphrase:required')
     ->name('invoices.public.reference');
+Route::get('/invoices/public/check-confirmation', [InvoiceController::class, 'publicCheckConfirmation'])
+    ->middleware('invoice.passphrase')
+    ->name('invoices.public.check-confirmation');
+Route::post('/invoices/public/check-confirmation', [InvoiceController::class, 'publicSearchConfirmation'])
+    ->middleware('invoice.passphrase')
+    ->name('invoices.public.search-confirmation');
 Route::get('/invoices/settlement/{token}', [InvoiceSettlementController::class, 'show'])
     ->name('invoices.settlement.show');
 Route::post('/invoices/settlement/{token}', [InvoiceSettlementController::class, 'store'])
