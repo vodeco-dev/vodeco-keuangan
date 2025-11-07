@@ -1560,6 +1560,49 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Search invoice for settlement by Admin Pelunasan (JSON response for AJAX)
+     */
+    public function publicSearchSettlement(Request $request)
+    {
+        $request->validate([
+            'invoice_number' => 'required|string|max:255',
+        ], [
+            'invoice_number.required' => 'Nomor invoice wajib diisi.',
+        ]);
+
+        $invoiceNumber = $request->input('invoice_number');
+        
+        // Cari invoice berdasarkan nomor
+        $invoice = Invoice::where('number', $invoiceNumber)
+            ->with(['customerService', 'items'])
+            ->first();
+
+        if (!$invoice) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invoice dengan nomor "' . $invoiceNumber . '" tidak ditemukan.',
+            ], 404);
+        }
+
+        // Generate PDF URL menggunakan public token
+        $pdfUrl = route('invoices.public.show', ['token' => $invoice->public_token]);
+
+        return response()->json([
+            'success' => true,
+            'invoice' => [
+                'number' => $invoice->number,
+                'client_name' => $invoice->client_name,
+                'client_whatsapp' => $invoice->client_whatsapp,
+                'total' => $invoice->total,
+                'down_payment' => $invoice->down_payment,
+                'remaining_balance' => $invoice->remaining_balance,
+                'status' => $invoice->status,
+                'pdf_url' => $pdfUrl,
+            ],
+        ]);
+    }
+
+    /**
      * Generate and return PDF response for invoice
      */
     private function generateInvoicePdfResponse(Invoice $invoice)
