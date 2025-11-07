@@ -50,6 +50,9 @@ Route::get('/invoices/public/check-confirmation', [InvoiceController::class, 'pu
 Route::post('/invoices/public/check-confirmation', [InvoiceController::class, 'publicSearchConfirmation'])
     ->middleware('invoice.passphrase')
     ->name('invoices.public.search-confirmation');
+Route::post('/invoices/public/search-settlement', [InvoiceController::class, 'publicSearchSettlement'])
+    ->middleware('invoice.passphrase:required')
+    ->name('invoices.public.search-settlement');
 Route::get('/invoices/settlement/{token}', [InvoiceSettlementController::class, 'show'])
     ->name('invoices.settlement.show');
 Route::post('/invoices/settlement/{token}', [InvoiceSettlementController::class, 'store'])

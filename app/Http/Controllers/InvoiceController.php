@@ -1560,6 +1560,53 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Search invoice for settlement by Admin Pelunasan
+     */
+    public function publicSearchSettlement(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'invoice_number' => 'required|string|max:255',
+        ], [
+            'invoice_number.required' => 'Nomor invoice wajib diisi.',
+        ]);
+
+        $invoiceNumber = $request->input('invoice_number');
+        
+        // Cari invoice berdasarkan nomor
+        $invoice = Invoice::where('number', $invoiceNumber)
+            ->with(['customerService', 'items'])
+            ->first();
+
+        if (!$invoice) {
+            return back()
+                ->withInput()
+                ->with('settlement_error', 'Invoice dengan nomor "' . $invoiceNumber . '" tidak ditemukan.');
+        }
+
+        // Generate settlement token jika belum ada atau sudah expired
+        if (!$invoice->settlement_token || $invoice->isSettlementTokenExpired()) {
+            $invoice->generateSettlementToken();
+        }
+
+        // Generate settlement URL
+        $settlementUrl = route('invoices.settlement.show', ['token' => $invoice->settlement_token]);
+
+        return back()->with([
+            'settlement_invoice' => [
+                'number' => $invoice->number,
+                'client_name' => $invoice->client_name,
+                'client_whatsapp' => $invoice->client_whatsapp,
+                'total' => $invoice->total,
+                'down_payment' => $invoice->down_payment,
+                'remaining_balance' => $invoice->remaining_balance,
+                'status' => $invoice->status,
+                'settlement_url' => $settlementUrl,
+                'settlement_token_expires_at' => $invoice->settlement_token_expires_at?->format('d M Y H:i'),
+            ],
+        ]);
+    }
+
+    /**
      * Generate and return PDF response for invoice
      */
     private function generateInvoicePdfResponse(Invoice $invoice)

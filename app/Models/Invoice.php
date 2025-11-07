@@ -221,4 +221,26 @@ class Invoice extends Model
     {
         return app(InvoicePdfService::class)->ensureHostedUrl($this);
     }
+
+    /**
+     * Generate a new settlement token for this invoice
+     */
+    public function generateSettlementToken(int $daysValid = 7): void
+    {
+        $this->settlement_token = Str::random(64);
+        $this->settlement_token_expires_at = now()->addDays($daysValid);
+        $this->save();
+    }
+
+    /**
+     * Check if the settlement token is expired
+     */
+    public function isSettlementTokenExpired(): bool
+    {
+        if (!$this->settlement_token_expires_at) {
+            return true;
+        }
+
+        return $this->settlement_token_expires_at->isPast();
+    }
 }

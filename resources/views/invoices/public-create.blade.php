@@ -89,6 +89,12 @@
                             ])->values();
 
                             $allowedPortalTabs = ['create_invoice', 'confirm_payment'];
+                            
+                            // Tambahkan tab pelunasan untuk Admin Pelunasan
+                            if ($passphraseSession && ($passphraseSession['access_type'] ?? '') === 'admin_pelunasan') {
+                                $allowedPortalTabs[] = 'settlement_lookup';
+                            }
+                            
                             $activePortalTab = old('portal_mode') ?: session('active_portal_tab', 'create_invoice');
 
                             if (! in_array($activePortalTab, $allowedPortalTabs, true)) {
@@ -172,7 +178,7 @@
 
                         <div x-data="{ activePortalTab: '{{ $activePortalTab }}' }">
                             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                <div class="flex items-center gap-2 rounded-xl bg-gray-100 p-1">
+                                <div class="flex items-center gap-2 rounded-xl bg-gray-100 p-1 flex-wrap">
                                     <button type="button"
                                         class="flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition"
                                         :class="activePortalTab === 'create_invoice' ? 'bg-white text-indigo-600 shadow' : 'text-gray-600 hover:text-indigo-600'"
@@ -185,6 +191,14 @@
                                         @click="activePortalTab = 'confirm_payment'">
                                         Konfirmasi Pembayaran
                                     </button>
+                                    @if(in_array('settlement_lookup', $allowedPortalTabs))
+                                    <button type="button"
+                                        class="flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition"
+                                        :class="activePortalTab === 'settlement_lookup' ? 'bg-white text-green-600 shadow' : 'text-gray-600 hover:text-green-600'"
+                                        @click="activePortalTab = 'settlement_lookup'">
+                                        Pelunasan
+                                    </button>
+                                    @endif
                                     <a href="{{ route('invoices.public.check-confirmation') }}"
                                         class="flex-1 rounded-lg px-4 py-2 text-sm font-semibold text-center transition bg-blue-600 text-white shadow hover:bg-blue-700">
                                         Cek Konfirmasi
@@ -192,6 +206,9 @@
                                 </div>
                                 <p class="text-xs text-gray-500 md:text-sm" x-show="activePortalTab === 'confirm_payment'" x-cloak>
                                     Unggah bukti pembayaran dengan menyertakan nomor invoice yang telah diterbitkan.
+                                </p>
+                                <p class="text-xs text-gray-500 md:text-sm" x-show="activePortalTab === 'settlement_lookup'" x-cloak>
+                                    Cari invoice untuk mendapatkan link pelunasan yang dapat dibagikan kepada klien.
                                 </p>
                             </div>
 
@@ -366,6 +383,158 @@
                                         </div>
                                     @endif
                                 </div>
+
+                                @if(in_array('settlement_lookup', $allowedPortalTabs))
+                                <div x-show="activePortalTab === 'settlement_lookup'" x-cloak>
+                                    <div class="space-y-6">
+                                        <h2 class="text-lg font-semibold text-gray-900">Cari Invoice untuk Pelunasan</h2>
+                                        <p class="text-sm text-gray-600">Masukkan nomor invoice untuk mendapatkan link pelunasan yang dapat dibagikan kepada klien.</p>
+
+                                        @if (session('settlement_error'))
+                                            <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+                                                <div class="flex items-center">
+                                                    <span class="text-xl mr-3">❌</span>
+                                                    <span>{{ session('settlement_error') }}</span>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        <form method="POST" action="{{ route('invoices.public.search-settlement') }}" class="space-y-4">
+                                            @csrf
+                                            <input type="hidden" name="passphrase_token" value="{{ $passphraseToken }}">
+                                            
+                                            <div>
+                                                <label for="settlement_invoice_number" class="block text-sm font-medium text-gray-700">Nomor Invoice</label>
+                                                <input 
+                                                    type="text" 
+                                                    name="invoice_number" 
+                                                    id="settlement_invoice_number" 
+                                                    class="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-lg"
+                                                    placeholder="Contoh: INV-2024-001"
+                                                    value="{{ old('invoice_number') }}"
+                                                    required
+                                                >
+                                                @error('invoice_number')
+                                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+
+                                            <button 
+                                                type="submit" 
+                                                class="inline-flex items-center justify-center rounded-xl bg-green-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                            >
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                                </svg>
+                                                Cari Invoice
+                                            </button>
+                                        </form>
+
+                                        @if (session('settlement_invoice'))
+                                            @php
+                                                $settlementInvoice = session('settlement_invoice');
+                                                $formatCurrency = static fn ($value) => 'Rp ' . number_format((float) $value, 0, ',', '.');
+                                            @endphp
+
+                                            <div class="mt-8 border-t border-gray-200 pt-8">
+                                                <h3 class="text-lg font-semibold text-gray-900 mb-6">Informasi Invoice</h3>
+
+                                                <!-- Detail Invoice -->
+                                                <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <p class="text-sm text-gray-600">Nomor Invoice</p>
+                                                            <p class="font-semibold text-gray-900">{{ $settlementInvoice['number'] }}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p class="text-sm text-gray-600">Nama Klien</p>
+                                                            <p class="font-semibold text-gray-900">{{ $settlementInvoice['client_name'] }}</p>
+                                                        </div>
+                                                        @if($settlementInvoice['client_whatsapp'])
+                                                        <div>
+                                                            <p class="text-sm text-gray-600">WhatsApp Klien</p>
+                                                            <p class="font-semibold text-gray-900">{{ $settlementInvoice['client_whatsapp'] }}</p>
+                                                        </div>
+                                                        @endif
+                                                        <div>
+                                                            <p class="text-sm text-gray-600">Total Invoice</p>
+                                                            <p class="font-semibold text-gray-900">{{ $formatCurrency($settlementInvoice['total'] ?? 0) }}</p>
+                                                        </div>
+                                                        @if($settlementInvoice['down_payment'])
+                                                        <div>
+                                                            <p class="text-sm text-gray-600">Pembayaran Masuk</p>
+                                                            <p class="font-semibold text-gray-900">{{ $formatCurrency($settlementInvoice['down_payment'] ?? 0) }}</p>
+                                                        </div>
+                                                        @endif
+                                                        <div>
+                                                            <p class="text-sm text-gray-600">Sisa Tagihan</p>
+                                                            <p class="font-semibold text-green-600 text-lg">{{ $formatCurrency($settlementInvoice['remaining_balance'] ?? 0) }}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p class="text-sm text-gray-600">Status</p>
+                                                            <p class="font-semibold text-gray-900">{{ ucfirst($settlementInvoice['status']) }}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Link Pelunasan -->
+                                                <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                                                    <h4 class="font-semibold text-green-900 mb-4 flex items-center">
+                                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                                        </svg>
+                                                        Link Pelunasan Invoice
+                                                    </h4>
+                                                    
+                                                    <div class="bg-white rounded-lg p-4 mb-4 break-all">
+                                                        <p class="text-sm text-gray-900 font-mono">{{ $settlementInvoice['settlement_url'] }}</p>
+                                                    </div>
+
+                                                    @if($settlementInvoice['settlement_token_expires_at'])
+                                                    <p class="text-sm text-green-700 mb-4">
+                                                        <strong>Berlaku sampai:</strong> {{ $settlementInvoice['settlement_token_expires_at'] }} WIB
+                                                    </p>
+                                                    @endif
+
+                                                    <div class="flex flex-col sm:flex-row gap-3">
+                                                        <button 
+                                                            type="button" 
+                                                            x-data="{ copied: false }" 
+                                                            @click="navigator.clipboard.writeText('{{ $settlementInvoice['settlement_url'] }}'); copied = true; setTimeout(() => copied = false, 2000);"
+                                                            class="flex-1 inline-flex items-center justify-center rounded-lg bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-green-700 transition"
+                                                        >
+                                                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="!copied">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                                            </svg>
+                                                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="copied" x-cloak>
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                                            </svg>
+                                                            <span x-show="!copied">Salin Link Pelunasan</span>
+                                                            <span x-show="copied" x-cloak>Link Disalin!</span>
+                                                        </button>
+                                                        
+                                                        <a 
+                                                            href="{{ $settlementInvoice['settlement_url'] }}" 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            class="flex-1 inline-flex items-center justify-center rounded-lg bg-white border-2 border-green-600 px-5 py-3 text-sm font-semibold text-green-600 shadow hover:bg-green-50 transition"
+                                                        >
+                                                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                                            </svg>
+                                                            Buka Link Pelunasan
+                                                        </a>
+                                                    </div>
+
+                                                    <p class="mt-4 text-xs text-green-700">
+                                                        Bagikan link ini kepada klien untuk melakukan pelunasan invoice. Link akan kadaluarsa setelah waktu yang ditentukan.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                                @endif
                             </div>
                         </div>
                     @endif
