@@ -45,36 +45,107 @@
                         @endif
                     </td>
                     <td class="px-4 py-3 text-sm text-center">
-                        <div class="relative inline-block text-left" x-data="{ open: false }" @keydown.escape.stop="open = false">
-                            <button type="button" @click="open = !open" class="inline-flex w-full justify-center rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        <div
+                            class="relative inline-block text-left"
+                            x-data="{
+                                open: false,
+                                menuStyle: '',
+                                toggle() {
+                                    this.open = !this.open;
+                                },
+                                close() {
+                                    this.open = false;
+                                },
+                                handleWindowClick(event) {
+                                    if (!this.open) return;
+                                    const trigger = this.$refs.trigger;
+                                    const menu = this.$refs.menu;
+                                    if ((trigger && trigger.contains(event.target)) || (menu && menu.contains(event.target))) {
+                                        return;
+                                    }
+                                    this.close();
+                                },
+                                updatePosition() {
+                                    const trigger = this.$refs.trigger;
+                                    const menu = this.$refs.menu;
+                                    if (!trigger || !menu) {
+                                        return;
+                                    }
+
+                                    const rect = trigger.getBoundingClientRect();
+                                    const menuWidth = menu.offsetWidth;
+                                    const spacing = 8;
+                                    const viewportLeft = window.scrollX + 16;
+                                    const viewportRight = window.scrollX + window.innerWidth - 16;
+
+                                    let left = rect.right + window.scrollX - menuWidth;
+                                    if (left < viewportLeft) {
+                                        left = viewportLeft;
+                                    }
+
+                                    if (left + menuWidth > viewportRight) {
+                                        left = Math.max(viewportLeft, viewportRight - menuWidth);
+                                    }
+
+                                    const top = rect.bottom + window.scrollY + spacing;
+                                    this.menuStyle = `top: ${top}px; left: ${left}px;`;
+                                }
+                            }"
+                            x-init="
+                                $watch('open', value => {
+                                    if (value) {
+                                        $nextTick(() => updatePosition());
+                                    }
+                                });
+                            "
+                            @keydown.escape.window.stop="close()"
+                            @resize.window="open && updatePosition()"
+                            @scroll.window="open && updatePosition()"
+                            @click.window="handleWindowClick($event)"
+                        >
+                            <button
+                                type="button"
+                                x-ref="trigger"
+                                @click="toggle()"
+                                class="inline-flex w-full justify-center rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            >
                                 <span class="sr-only">Buka menu aksi</span>
                                 <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.75a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" />
                                 </svg>
                             </button>
 
-                            <div x-cloak x-show="open" x-transition.origin.top.right @click.away="open = false" class="absolute right-0 z-20 mt-2 w-52 origin-top-right rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                <div class="py-1 text-left text-sm text-gray-700">
-                                    @if ($debt->status == \App\Models\Debt::STATUS_BELUM_LUNAS)
-                                        <button type="button" @click="open = false; openPaymentModal(@js($debt->toArray()))" class="block w-full px-4 py-2 text-left hover:bg-gray-100">Tambah Pembayaran</button>
+                            <template x-teleport="body">
+                                <div
+                                    x-cloak
+                                    x-show="open"
+                                    x-transition.origin.top.right
+                                    x-ref="menu"
+                                    :style="menuStyle"
+                                    class="fixed z-[9999] w-52 origin-top-right rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                                >
+                                    <div class="py-1 text-left text-sm text-gray-700">
+                                        @if ($debt->status == \App\Models\Debt::STATUS_BELUM_LUNAS)
+                                            <button type="button" @click="open = false; openPaymentModal(@js($debt->toArray()))" class="block w-full px-4 py-2 text-left hover:bg-gray-100">Tambah Pembayaran</button>
 
-                                        <a href="{{ route('debts.edit', $debt) }}" class="block px-4 py-2 hover:bg-gray-100" @click="open = false">Edit</a>
+                                            <a href="{{ route('debts.edit', $debt) }}" class="block px-4 py-2 hover:bg-gray-100" @click="open = false">Edit</a>
 
-                                        <form action="{{ route('debts.fail', $debt) }}" method="POST" onsubmit="return confirm('Tandai catatan ini sebagai gagal project?');">
+                                            <form action="{{ route('debts.fail', $debt) }}" method="POST" onsubmit="return confirm('Tandai catatan ini sebagai gagal project?');">
+                                                @csrf
+                                                <button type="submit" class="block w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100" @click="open = false">Tandai Gagal</button>
+                                            </form>
+                                        @endif
+
+                                        <button type="button" @click="open = false; detailModal = true; selectedDebt = @js($debt->toArray())" class="block w-full px-4 py-2 text-left hover:bg-gray-100">Lihat Riwayat</button>
+
+                                        <form action="{{ route('debts.destroy', $debt) }}" method="POST" onsubmit="return confirm('Anda yakin ingin menghapus catatan ini?');">
                                             @csrf
-                                            <button type="submit" class="block w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100" @click="open = false">Tandai Gagal</button>
+                                            @method('DELETE')
+                                            <button type="submit" class="block w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100" @click="open = false">Hapus</button>
                                         </form>
-                                    @endif
-
-                                    <button type="button" @click="open = false; detailModal = true; selectedDebt = @js($debt->toArray())" class="block w-full px-4 py-2 text-left hover:bg-gray-100">Lihat Riwayat</button>
-
-                                    <form action="{{ route('debts.destroy', $debt) }}" method="POST" onsubmit="return confirm('Anda yakin ingin menghapus catatan ini?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="block w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100" @click="open = false">Hapus</button>
-                                    </form>
+                                    </div>
                                 </div>
-                            </div>
+                            </template>
                         </div>
                     </td>
                 </tr>
