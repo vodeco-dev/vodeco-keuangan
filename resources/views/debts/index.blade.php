@@ -553,15 +553,15 @@
             <div class="grid grid-cols-3 gap-4 mb-6 text-center">
                 <div>
                     <p class="text-sm text-gray-500">Total Nilai</p>
-                    <p class="font-semibold" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(selectedDebt.amount)"></p>
+                    <p class="font-semibold" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(Number(selectedDebt.amount ?? 0))"></p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-500">Telah Dibayar</p>
-                    <p class="font-semibold text-green-600" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(selectedDebt.paid_amount)"></p>
+                    <p class="font-semibold text-green-600" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(Number(selectedDebt.paid_amount ?? 0))"></p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-500">Sisa Tagihan</p>
-                    <p class="font-semibold text-red-600" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(selectedDebt.remaining_amount)"></p>
+                    <p class="font-semibold text-red-600" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(Number(selectedDebt.remaining_amount ?? 0))"></p>
                 </div>
             </div>
 
@@ -580,7 +580,7 @@
                             <template x-for="payment in selectedDebt.payments" :key="payment.id">
                                 <tr>
                                     <td class="px-4 py-3 text-sm text-gray-500" x-text="new Date(payment.payment_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })"></td>
-                                    <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(payment.amount)"></td>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white" x-text="'Rp' + new Intl.NumberFormat('id-ID').format(Number(payment.amount ?? 0))"></td>
                                     <td class="px-4 py-3 text-sm text-gray-500" x-text="payment.notes || '-'"></td>
                                 </tr>
                             </template>
