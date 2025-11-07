@@ -13,8 +13,8 @@
     <p>Nomor WhatsApp Klien: {{ $invoice->client_whatsapp }}</p>
     <p>Client Address: {{ $invoice->client_address }}</p>
     <p>Customer Service: {{ $invoice->customer_service_name ?? $invoice->customerService?->name ?? '-' }}</p>
-    <p>Issue Date: {{ $invoice->issue_date->format('Y-m-d') }}</p>
-    <p>Due Date: {{ $invoice->due_date->format('Y-m-d') }}</p>
+    <p>Issue Date: {{ $invoice->issue_date?->format('Y-m-d') ?? '-' }}</p>
+    <p>Due Date: {{ $invoice->due_date?->format('Y-m-d') ?? '-' }}</p>
     <p>Total: {{ $invoice->total }}</p>
     <h2>Items</h2>
     <table>
