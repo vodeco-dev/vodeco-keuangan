@@ -109,6 +109,10 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     // Route resource untuk invoices (CRUD standar)
     Route::resource('invoices', InvoiceController::class);
     
+    // Route untuk cek konfirmasi invoice
+    Route::get('invoices-confirmation-check', [InvoiceController::class, 'checkConfirmation'])->name('invoices.check-confirmation');
+    Route::post('invoices-confirmation-check', [InvoiceController::class, 'searchConfirmation'])->name('invoices.search-confirmation');
+    
     Route::get('customer-services/create', [CustomerServiceController::class, 'create'])->name('customer-services.create');
     Route::post('customer-services', [CustomerServiceController::class, 'store'])->name('customer-services.store');
     // Debts
