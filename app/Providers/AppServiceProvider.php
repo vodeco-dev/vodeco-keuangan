@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\Debt;
+use App\Models\Invoice;
 use App\Models\Transaction;
+use App\Observers\InvoiceObserver;
 use App\Policies\DebtPolicy;
 use App\Policies\TransactionPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -47,6 +49,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('invoice-passphrase', function (Request $request) {
             return Limit::perMinute(5)->by($request->ip());
         });
+
+        Invoice::observe(InvoiceObserver::class);
     }
 }
 

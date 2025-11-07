@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\InvoicePdfService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -216,28 +217,6 @@ class Invoice extends Model
 
     public function getPdfUrlAttribute(): ?string
     {
-        if (! $this->hasPdf()) {
-            return null;
-        }
-
-        $disk = config('filesystems.default');
-
-        try {
-            $storage = Storage::disk($disk);
-
-            if (! $storage->exists($this->pdf_path)) {
-                return null;
-            }
-
-            $url = $storage->url($this->pdf_path);
-
-            if (is_string($url) && $url !== '') {
-                return $url;
-            }
-        } catch (\Throwable $exception) {
-            return null;
-        }
-
-        return null;
+        return app(InvoicePdfService::class)->ensureHostedUrl($this);
     }
 }
