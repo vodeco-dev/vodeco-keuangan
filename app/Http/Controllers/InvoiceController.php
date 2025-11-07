@@ -16,8 +16,6 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Models\Setting;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -25,6 +23,7 @@ use Illuminate\Support\Str;
 use Illuminate\View\View;
 use App\Models\User;
 use App\Services\CategoryService;
+use App\Services\InvoicePdfService;
 use App\Services\InvoiceSettlementService;
 use App\Services\PassThroughInvoiceCreator;
 use App\Services\PassThroughPackageManager;
@@ -36,7 +35,8 @@ class InvoiceController extends Controller
 {
     public function __construct(
         private PassThroughInvoiceCreator $passThroughInvoiceCreator,
-        private PassThroughPackageManager $passThroughPackageManager
+        private PassThroughPackageManager $passThroughPackageManager,
+        private InvoicePdfService $invoicePdfService
     )
     {
         $this->authorizeResource(Invoice::class, 'invoice');
@@ -269,6 +269,8 @@ class InvoiceController extends Controller
         $transactionType = $data['transaction_type'] ?? 'down_payment';
         $ownerId = auth()->id();
 
+        $invoice = null;
+
         if ($transactionType === 'pass_through') {
             try {
                 $context = $this->resolvePassThroughPackageContext($data);
@@ -309,7 +311,7 @@ class InvoiceController extends Controller
             $dailyBalanceTotal = round($dailyBalanceUnit * $quantity, 2);
 
             try {
-                $this->passThroughInvoiceCreator->create(
+                $invoice = $this->passThroughInvoiceCreator->create(
                     $package,
                     $quantity,
                     [
@@ -343,10 +345,14 @@ class InvoiceController extends Controller
             $referenceInvoice = $request->referenceInvoice()
                 ?? Invoice::where('number', $data['settlement_invoice_number'])->firstOrFail();
 
-            $this->persistSettlementInvoice($data, $referenceInvoice);
+            $invoice = $this->persistSettlementInvoice($data, $referenceInvoice);
         } else {
             $data['customer_service_name'] = auth()->user()?->name;
-            $this->persistInvoice($data, $ownerId);
+            $invoice = $this->persistInvoice($data, $ownerId);
+        }
+
+        if ($invoice) {
+            $this->regenerateInvoicePdf($invoice);
         }
 
         return redirect()->route('invoices.index');
@@ -465,15 +471,21 @@ class InvoiceController extends Controller
             $invoice = $this->persistInvoice($data, $ownerId);
         }
 
-        $settings = Setting::pluck('value', 'key')->all();
+        if ($invoice) {
+            $this->regenerateInvoicePdf($invoice);
+        }
 
         $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'submission');
 
-        return Pdf::loadView('invoices.pdf', [
-            'invoice' => $invoice,
-            'settings' => $settings,
-        ])
-            ->setPaper('a4')
+        if (app()->runningUnitTests()) {
+            return response()
+                ->view('invoices.pdf', $this->invoicePdfService->viewData($invoice))
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'inline; filename="' . $invoice->number . '.pdf"');
+        }
+
+        return $this->invoicePdfService
+            ->makePdf($invoice)
             ->download($invoice->number . '.pdf');
     }
 
@@ -764,26 +776,15 @@ class InvoiceController extends Controller
     {
         $this->authorize('view', $invoice);
 
-        $invoice->loadMissing('items', 'customerService');
-
-        // Ambil pengaturan bisnis dari database
-        $settings = Setting::pluck('value', 'key')->all();
-
         if (app()->runningUnitTests()) {
             return response()
-                ->view('invoices.pdf', [
-                    'invoice' => $invoice,
-                    'settings' => $settings,
-                ])
+                ->view('invoices.pdf', $this->invoicePdfService->viewData($invoice))
                 ->header('Content-Type', 'application/pdf')
                 ->header('Content-Disposition', 'inline; filename="'.$invoice->number.'.pdf"');
         }
 
-        return Pdf::loadView('invoices.pdf', [
-            'invoice' => $invoice,
-            'settings' => $settings,
-        ])
-            ->setPaper('a4')
+        return $this->invoicePdfService
+            ->makePdf($invoice)
             ->download($invoice->number . '.pdf');
     }
 
@@ -791,26 +792,15 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::where('public_token', $token)->firstOrFail();
 
-        $invoice->loadMissing('items', 'customerService');
-
-        // Ambil pengaturan bisnis dari database
-        $settings = Setting::pluck('value', 'key')->all();
-
         if (app()->runningUnitTests()) {
             return response()
-                ->view('invoices.pdf', [
-                    'invoice' => $invoice,
-                    'settings' => $settings,
-                ])
+                ->view('invoices.pdf', $this->invoicePdfService->viewData($invoice))
                 ->header('Content-Type', 'application/pdf')
                 ->header('Content-Disposition', 'inline; filename="'.$invoice->number.'.pdf"');
         }
 
-        return Pdf::loadView('invoices.pdf', [
-            'invoice' => $invoice,
-            'settings' => $settings,
-        ])
-            ->setPaper('a4')
+        return $this->invoicePdfService
+            ->makePdf($invoice)
             ->download($invoice->number . '.pdf');
     }
 
@@ -839,6 +829,7 @@ class InvoiceController extends Controller
         $data = $request->validated();
 
         $ownerId = $invoice->user_id;
+        $previousPdfPath = $invoice->pdf_path;
 
         DB::transaction(function () use ($invoice, $data, $ownerId) {
             $items = $this->mapInvoiceItems($data['items']);
@@ -873,6 +864,9 @@ class InvoiceController extends Controller
             $invoice->load('items');
             $this->syncDebtAfterInvoiceChange($invoice);
         });
+
+        $invoice->refresh()->load('items', 'customerService');
+        $this->regenerateInvoicePdf($invoice, $previousPdfPath);
 
         return redirect()->route('invoices.index');
     }
@@ -960,6 +954,21 @@ class InvoiceController extends Controller
             'maintenance_unit' => $maintenanceUnit,
             'account_creation_unit' => $accountCreationUnit,
         ];
+    }
+
+    private function regenerateInvoicePdf(Invoice $invoice, ?string $previousPath = null): void
+    {
+        $disk = Storage::disk('public');
+
+        $pathToDelete = $previousPath ?? $invoice->pdf_path;
+
+        if ($pathToDelete) {
+            $disk->delete($pathToDelete);
+        }
+
+        $newPath = $this->invoicePdfService->store($invoice);
+
+        $invoice->forceFill(['pdf_path' => $newPath])->save();
     }
 
     private function persistInvoice(array $data, ?int $ownerId = null): Invoice
