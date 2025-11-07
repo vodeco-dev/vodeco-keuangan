@@ -47,6 +47,11 @@ class NavigationServiceProvider extends ServiceProvider
                 'icon' => view('components.icons.invoices')->render(),
             ],
             [
+                'name' => 'Cek Konfirmasi Invoice',
+                'route' => 'invoices.check-confirmation',
+                'icon' => view('components.icons.check-confirmation')->render(),
+            ],
+            [
                 'name' => 'Passphrase Portal',
                 'route' => 'invoice-portal.passphrases.index',
                 'icon' => view('components.icons.passphrases')->render(),
