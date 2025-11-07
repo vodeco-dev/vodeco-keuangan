@@ -8,13 +8,10 @@ use App\Models\Category;
 use App\Models\Invoice;
 use App\Models\InvoicePortalPassphrase;
 use App\Models\User;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Barryvdh\DomPDF\PDF as DomPdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
-use Mockery;
 use Tests\TestCase;
 
 class PublicInvoiceSubmissionTest extends TestCase
@@ -68,23 +65,6 @@ class PublicInvoiceSubmissionTest extends TestCase
         $defaultTransaction = $transactionInput?->getAttribute('value');
         $this->assertNotEmpty($defaultTransaction);
 
-        $pdfMock = Mockery::mock(DomPdf::class);
-        $pdfMock->shouldReceive('setPaper')
-            ->once()
-            ->with('a4')
-            ->andReturnSelf();
-        $pdfMock->shouldReceive('download')
-            ->once()
-            ->with(Mockery::type('string'))
-            ->andReturn(response('PDF content', 200, ['Content-Type' => 'application/pdf']));
-
-        Pdf::shouldReceive('loadView')
-            ->once()
-            ->with('invoices.pdf', Mockery::on(function ($data) {
-                return isset($data['invoice'], $data['settings']);
-            }))
-            ->andReturn($pdfMock);
-
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
             'transaction_type' => $defaultTransaction,
@@ -102,25 +82,35 @@ class PublicInvoiceSubmissionTest extends TestCase
             ],
         ];
 
+        Storage::fake('public');
+
         $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
 
-        $response->assertOk();
-        $response->assertHeader('content-type', 'application/pdf');
+        $response->assertRedirect(route('invoices.public.create'));
+        $response->assertSessionHas('invoice_pdf_url');
+        $response->assertSessionHas('invoice_number');
 
-        $this->assertDatabaseHas('invoices', [
-            'client_name' => 'John Doe',
-            'status' => 'belum lunas',
-            'customer_service_name' => $passphrase->displayLabel(),
-        ]);
+        $invoice = Invoice::latest('id')->firstOrFail();
+
+        $expectedPreviewUrl = route('invoices.public.pdf-hosted', ['token' => $invoice->public_token]);
+        $response->assertSessionHas('invoice_pdf_url', $expectedPreviewUrl);
+
+        $this->assertSame('belum lunas', $invoice->status);
+        $this->assertFalse($invoice->needs_confirmation);
+        $this->assertNull($invoice->payment_proof_path);
+        $this->assertSame($passphrase->displayLabel(), $invoice->customer_service_name);
+
+        Storage::disk('public')->assertExists($invoice->pdf_path);
+
+        $previewResponse = $this->get($expectedPreviewUrl);
+        $previewResponse->assertOk();
+        $previewResponse->assertHeader('Content-Disposition', 'inline; filename="' . $invoice->number . '.pdf"');
 
         $this->assertDatabaseHas('invoice_items', [
             'description' => 'Layanan Konsultasi',
             'quantity' => 1,
             'price' => 1500000,
         ]);
-
-        $invoice = Invoice::latest('id')->first();
-        $this->assertNull($invoice?->payment_proof_path);
 
         $passphrase->refresh();
 
@@ -133,7 +123,7 @@ class PublicInvoiceSubmissionTest extends TestCase
         ]);
     }
 
-    public function test_public_invoice_submission_with_full_payment_transaction_generates_paid_invoice(): void
+    public function test_public_invoice_submission_with_full_payment_transaction_requires_confirmation(): void
     {
         $admin = User::factory()->create([
             'role' => Role::ADMIN,
@@ -165,23 +155,6 @@ class PublicInvoiceSubmissionTest extends TestCase
             ],
         ];
 
-        $pdfMock = Mockery::mock(DomPdf::class);
-        $pdfMock->shouldReceive('setPaper')
-            ->once()
-            ->with('a4')
-            ->andReturnSelf();
-        $pdfMock->shouldReceive('download')
-            ->once()
-            ->with(Mockery::type('string'))
-            ->andReturn(response('PDF content', 200, ['Content-Type' => 'application/pdf']));
-
-        Pdf::shouldReceive('loadView')
-            ->once()
-            ->with('invoices.pdf', Mockery::on(function ($data) {
-                return isset($data['invoice'], $data['settings']);
-            }))
-            ->andReturn($pdfMock);
-
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
             'transaction_type' => 'full_payment',
@@ -199,16 +172,28 @@ class PublicInvoiceSubmissionTest extends TestCase
             ],
         ];
 
+        Storage::fake('public');
+
         $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
 
-        $response->assertOk();
-        $response->assertHeader('content-type', 'application/pdf');
+        $response->assertRedirect(route('invoices.public.create'));
+        $response->assertSessionHas('invoice_pdf_url');
 
-        $this->assertDatabaseHas('invoices', [
-            'client_name' => 'Jane Doe',
-            'status' => 'lunas',
-            'down_payment' => 2500000,
-        ]);
+        $invoice = Invoice::where('client_name', 'Jane Doe')->latest('id')->firstOrFail();
+        $expectedPreviewUrl = route('invoices.public.pdf-hosted', ['token' => $invoice->public_token]);
+
+        $response->assertSessionHas('invoice_pdf_url', $expectedPreviewUrl);
+
+        $this->assertSame('belum lunas', $invoice->status);
+        $this->assertTrue($invoice->needs_confirmation);
+        $this->assertSame(0.0, (float) $invoice->down_payment);
+        $this->assertNull($invoice->payment_date);
+
+        Storage::disk('public')->assertExists($invoice->pdf_path);
+
+        $previewResponse = $this->get($expectedPreviewUrl);
+        $previewResponse->assertOk();
+        $previewResponse->assertHeader('Content-Disposition', 'inline; filename="' . $invoice->number . '.pdf"');
 
         $this->assertDatabaseHas('invoice_items', [
             'description' => 'Pembuatan Website',
@@ -263,23 +248,6 @@ class PublicInvoiceSubmissionTest extends TestCase
         $this->assertSame(1, $transactionButtons->length);
         $this->assertSame('Bayar Lunas', trim($transactionButtons->item(0)?->textContent ?? ''));
 
-        $pdfMock = Mockery::mock(DomPdf::class);
-        $pdfMock->shouldReceive('setPaper')
-            ->once()
-            ->with('a4')
-            ->andReturnSelf();
-        $pdfMock->shouldReceive('download')
-            ->once()
-            ->with(Mockery::type('string'))
-            ->andReturn(response('PDF content', 200, ['Content-Type' => 'application/pdf']));
-
-        Pdf::shouldReceive('loadView')
-            ->once()
-            ->with('invoices.pdf', Mockery::on(function ($data) {
-                return isset($data['invoice'], $data['settings']);
-            }))
-            ->andReturn($pdfMock);
-
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
             'transaction_type' => 'full_payment',
@@ -298,16 +266,21 @@ class PublicInvoiceSubmissionTest extends TestCase
             'payment_proof' => UploadedFile::fake()->image('bukti.png', 600, 600),
         ];
 
+        Storage::fake('public');
+
         $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
 
-        $response->assertOk();
-        $response->assertHeader('content-type', 'application/pdf');
+        $response->assertRedirect(route('invoices.public.create'));
+        $response->assertSessionHas('invoice_pdf_url');
 
-        $this->assertDatabaseHas('invoices', [
-            'client_name' => 'Siti Budi',
-            'status' => 'lunas',
-            'down_payment' => 1800000,
-        ]);
+        $invoice = Invoice::where('client_name', 'Siti Budi')->latest('id')->firstOrFail();
+
+        $this->assertSame('belum lunas', $invoice->status);
+        $this->assertTrue($invoice->needs_confirmation);
+        $this->assertSame(0.0, (float) $invoice->down_payment);
+        $this->assertNull($invoice->payment_date);
+
+        Storage::disk('public')->assertExists($invoice->pdf_path);
     }
 
     public function test_admin_perpanjangan_passphrase_rejects_non_full_payment_transactions(): void
