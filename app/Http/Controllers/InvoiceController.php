@@ -495,22 +495,8 @@ class InvoiceController extends Controller
 
         $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'submission');
 
-        try {
-            $pdfUrl = $this->invoicePdfService->ensureHostedUrl($invoice);
-        } catch (Throwable $exception) {
-            \Log::error('Failed to get PDF URL for public invoice', [
-                'invoice_id' => $invoice->id,
-                'invoice_number' => $invoice->number,
-                'error' => $exception->getMessage(),
-            ]);
-            $pdfUrl = null;
-        }
-
-        return redirect()
-            ->route('invoices.public.create')
-            ->with('status', 'Invoice berhasil dibuat.')
-            ->with('invoice_pdf_url', $pdfUrl)
-            ->with('invoice_number', $invoice->number);
+        // Generate and return PDF directly
+        return $this->generateInvoicePdfResponse($invoice);
     }
 
     public function confirmPublicPayment(PublicConfirmPaymentRequest $request): RedirectResponse
@@ -659,20 +645,30 @@ class InvoiceController extends Controller
     {
         $this->authorize('storePayment', $invoice);
 
+        $invoice->loadMissing('items');
+
+        $invoiceTotal = round((float) $invoice->total, 2);
+        $currentDownPayment = round((float) $invoice->down_payment, 2);
+        $remainingBalance = max($invoiceTotal - $currentDownPayment, 0);
+        
+        // If invoice is already fully paid (lunas) or has no remaining balance,
+        // just confirm it without requiring payment amount
+        if ($invoice->status === 'lunas' || $remainingBalance <= 0) {
+            $invoice->needs_confirmation = false;
+            $invoice->save();
+            
+            return redirect()->route('invoices.index')->with('success', 'Invoice berhasil dikonfirmasi.');
+        }
+
         $request->validate([
             'payment_amount' => 'required|numeric|min:0.01',
             'payment_date' => 'required|date',
             'category_id' => 'nullable|exists:categories,id',
         ]);
 
-        $invoice->loadMissing('items');
-
         $paymentAmount = round((float) $request->input('payment_amount'), 2);
         $paymentDate = $request->input('payment_date');
         $categoryId = $request->input('category_id');
-        $currentDownPayment = round((float) $invoice->down_payment, 2);
-        $invoiceTotal = round((float) $invoice->total, 2);
-        $remainingBalance = max($invoiceTotal - $currentDownPayment, 0);
         $willBePaidOff = $invoiceTotal > 0 && round($currentDownPayment + $paymentAmount, 2) >= $invoiceTotal;
 
         if ($willBePaidOff && empty($categoryId)) {
@@ -813,13 +809,18 @@ class InvoiceController extends Controller
             abort(404, 'PDF invoice tidak tersedia: ' . $exception->getMessage());
         }
 
-        $disk = Storage::disk('public');
+        $diskName = config('pdf.cache.enabled') && config('pdf.generation.strategy') === 'on_demand'
+            ? config('pdf.cache.disk', 'public')
+            : 'public';
+
+        $disk = Storage::disk($diskName);
 
         if (! $disk->exists($path)) {
             \Log::error('PDF file not found in storage', [
                 'invoice_id' => $invoice->id,
                 'invoice_number' => $invoice->number,
                 'path' => $path,
+                'disk' => $diskName,
             ]);
 
             abort(404, 'File PDF tidak ditemukan di storage.');
@@ -861,7 +862,11 @@ class InvoiceController extends Controller
             abort(404, 'PDF invoice tidak tersedia: ' . $exception->getMessage());
         }
 
-        $disk = Storage::disk('public');
+        $diskName = config('pdf.cache.enabled') && config('pdf.generation.strategy') === 'on_demand'
+            ? config('pdf.cache.disk', 'public')
+            : 'public';
+
+        $disk = Storage::disk($diskName);
 
         if (! $disk->exists($path)) {
             \Log::error('PDF file not found in storage (public)', [
@@ -869,6 +874,7 @@ class InvoiceController extends Controller
                 'invoice_number' => $invoice->number,
                 'token' => $token,
                 'path' => $path,
+                'disk' => $diskName,
             ]);
 
             abort(404, 'File PDF tidak ditemukan di storage.');
@@ -1055,6 +1061,15 @@ class InvoiceController extends Controller
 
     private function regenerateInvoicePdf(Invoice $invoice, ?string $previousPath = null): void
     {
+        $strategy = config('pdf.generation.strategy', 'on_demand');
+
+        // For on_demand strategy, just invalidate cache
+        if ($strategy === 'on_demand') {
+            $this->invoicePdfService->invalidateCache($invoice);
+            return;
+        }
+
+        // For persistent strategy, regenerate and store
         $disk = Storage::disk('public');
 
         $pathToDelete = $previousPath ?? $invoice->pdf_path;
@@ -1081,14 +1096,14 @@ class InvoiceController extends Controller
                 $downPaymentDue = isset($data['down_payment_due']) ? (float) $data['down_payment_due'] : null;
             }
 
-            $status = match ($transactionType) {
-                'down_payment' => 'belum lunas',
-                'full_payment' => 'belum lunas',
-                default => 'belum bayar',
-            };
+        $status = match ($transactionType) {
+            'down_payment' => 'belum lunas',
+            'full_payment' => 'lunas',
+            default => 'belum bayar',
+        };
 
-            $downPayment = 0;
-            $paymentDate = null;
+        $downPayment = $transactionType === 'full_payment' ? $total : 0;
+        $paymentDate = $transactionType === 'full_payment' ? now() : null;
 
             $invoice = Invoice::create([
                 'user_id' => $ownerId ?? auth()->id(),
@@ -1511,5 +1526,27 @@ class InvoiceController extends Controller
             'passphraseSession' => $passphrase ? $sessionData : null,
             'passphraseToken' => $passphraseToken,
         ]);
+    }
+
+    /**
+     * Generate and return PDF response for invoice
+     */
+    private function generateInvoicePdfResponse(Invoice $invoice)
+    {
+        $invoice->loadMissing('items', 'customerService');
+        
+        $settings = [
+            'company_name' => config('app.name', 'Company Name'),
+            'company_address' => config('app.company_address', ''),
+            'company_phone' => config('app.company_phone', ''),
+            'company_email' => config('app.company_email', ''),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.pdf', [
+            'invoice' => $invoice,
+            'settings' => $settings,
+        ]);
+
+        return $pdf->setPaper('a4')->download($invoice->number . '.pdf');
     }
 }

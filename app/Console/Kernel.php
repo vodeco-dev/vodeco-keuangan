@@ -14,6 +14,11 @@ class Kernel extends ConsoleKernel
     {
         // Menjalankan proses untuk mengirim pengingat invoice yang jatuh tempo
         $schedule->command('invoices:reminder')->daily();
+
+        // Cleanup expired PDF cache files (runs every hour)
+        $schedule->command('pdf:cleanup-cache')
+            ->hourly()
+            ->when(fn () => config('pdf.cache.enabled', true));
     }
 
     /**

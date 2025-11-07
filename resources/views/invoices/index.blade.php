@@ -190,11 +190,26 @@
                                                     @endif
                                                     <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-sm font-medium text-gray-600 hover:text-gray-900">PDF</a>
                                                     <a href="{{ route('invoices.public.show', $invoice->public_token) }}" target="_blank" class="text-sm font-medium text-blue-600 hover:text-blue-900">Link Publik</a>
-                                                    <button type="button"
-                                                        @click.stop="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
-                                                        class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
-                                                        Konfirmasi Pembayaran
-                                                    </button>
+                                                    @php
+                                                        $remaining = max((float) $invoice->total - (float) $invoice->down_payment, 0);
+                                                        $isFullyPaid = $invoice->status === 'lunas' || $remaining <= 0;
+                                                    @endphp
+                                                    @if($isFullyPaid)
+                                                        <form method="POST" action="{{ route('invoices.pay', $invoice) }}" class="inline">
+                                                            @csrf
+                                                            <button type="submit"
+                                                                onclick="return confirm('Konfirmasi pembayaran untuk invoice ini?')"
+                                                                class="inline-flex items-center rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700">
+                                                                Konfirmasi (Lunas)
+                                                            </button>
+                                                        </form>
+                                                    @else
+                                                        <button type="button"
+                                                            @click.stop="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
+                                                            class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
+                                                            Konfirmasi Pembayaran
+                                                        </button>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
