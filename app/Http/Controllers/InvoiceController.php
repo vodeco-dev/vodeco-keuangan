@@ -776,14 +776,44 @@ class InvoiceController extends Controller
         try {
             $path = $this->invoicePdfService->ensureStoredPdfPath($invoice);
         } catch (Throwable $exception) {
-            abort(404, 'PDF invoice tidak tersedia.');
+            \Log::error('Failed to generate PDF for invoice', [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
+            ]);
+
+            abort(404, 'PDF invoice tidak tersedia: ' . $exception->getMessage());
         }
 
-        return Storage::disk('public')->response(
-            $path,
-            $invoice->number . '.pdf',
-            ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
-        );
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($path)) {
+            \Log::error('PDF file not found in storage', [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'path' => $path,
+            ]);
+
+            abort(404, 'File PDF tidak ditemukan di storage.');
+        }
+
+        try {
+            return $disk->response(
+                $path,
+                $invoice->number . '.pdf',
+                ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
+            );
+        } catch (Throwable $exception) {
+            \Log::error('Failed to serve PDF file', [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'path' => $path,
+                'error' => $exception->getMessage(),
+            ]);
+
+            abort(500, 'Gagal mengakses file PDF.');
+        }
     }
 
     public function showPublicHosted(string $token): Response
@@ -793,14 +823,47 @@ class InvoiceController extends Controller
         try {
             $path = $this->invoicePdfService->ensureStoredPdfPath($invoice);
         } catch (Throwable $exception) {
-            abort(404, 'PDF invoice tidak tersedia.');
+            \Log::error('Failed to generate PDF for public invoice', [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'token' => $token,
+                'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
+            ]);
+
+            abort(404, 'PDF invoice tidak tersedia: ' . $exception->getMessage());
         }
 
-        return Storage::disk('public')->response(
-            $path,
-            $invoice->number . '.pdf',
-            ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
-        );
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($path)) {
+            \Log::error('PDF file not found in storage (public)', [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'token' => $token,
+                'path' => $path,
+            ]);
+
+            abort(404, 'File PDF tidak ditemukan di storage.');
+        }
+
+        try {
+            return $disk->response(
+                $path,
+                $invoice->number . '.pdf',
+                ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
+            );
+        } catch (Throwable $exception) {
+            \Log::error('Failed to serve PDF file (public)', [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'token' => $token,
+                'path' => $path,
+                'error' => $exception->getMessage(),
+            ]);
+
+            abort(500, 'Gagal mengakses file PDF.');
+        }
     }
 
     public function show(Invoice $invoice)
@@ -874,9 +937,11 @@ class InvoiceController extends Controller
     {
         $this->authorize('delete', $invoice);
 
+        $invoiceNumber = $invoice->number;
         $invoice->delete();
 
-        return redirect()->route('invoices.index');
+        return redirect()->route('invoices.index', ['tab' => 'history'])
+            ->with('success', "Invoice #{$invoiceNumber} berhasil dihapus.");
     }
 
     /**
@@ -1153,5 +1218,67 @@ class InvoiceController extends Controller
         $debt->due_date = $invoice->due_date;
         $debt->related_party = $relatedParty;
         $debt->save();
+    }
+
+    public function bulkAction(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'action' => ['required', 'string', 'in:approve,delete'],
+            'selected' => ['required', 'array', 'min:1'],
+            'selected.*' => ['required', 'integer', 'exists:invoices,id'],
+        ]);
+
+        $selectedIds = $request->input('selected');
+        $action = $request->input('action');
+        $user = $request->user();
+
+        $invoices = Invoice::whereIn('id', $selectedIds)->get();
+
+        // Filter invoices yang bisa diakses user
+        $accessibleInvoices = $invoices->filter(function ($invoice) use ($user) {
+            return Gate::allows('view', $invoice);
+        });
+
+        if ($accessibleInvoices->isEmpty()) {
+            return redirect()->route('invoices.index', ['tab' => 'needs-confirmation'])
+                ->with('error', 'Tidak ada invoice yang dapat diakses.');
+        }
+
+        if ($action === 'approve') {
+            // Set needs_confirmation = false untuk invoice yang dipilih
+            $accessibleInvoices->each(function ($invoice) {
+                $this->authorize('storePayment', $invoice);
+                $invoice->needs_confirmation = false;
+                $invoice->save();
+            });
+
+            $message = count($accessibleInvoices) . ' invoice berhasil disetujui dan tidak lagi memerlukan konfirmasi.';
+            
+            return redirect()->route('invoices.index', ['tab' => 'needs-confirmation'])
+                ->with('success', $message);
+        }
+
+        if ($action === 'delete') {
+            $deletedCount = 0;
+            
+            $accessibleInvoices->each(function ($invoice) use (&$deletedCount) {
+                if (Gate::allows('delete', $invoice)) {
+                    $invoice->delete();
+                    $deletedCount++;
+                }
+            });
+
+            if ($deletedCount > 0) {
+                $message = $deletedCount . ' invoice berhasil dihapus.';
+                return redirect()->route('invoices.index', ['tab' => 'needs-confirmation'])
+                    ->with('success', $message);
+            }
+
+            return redirect()->route('invoices.index', ['tab' => 'needs-confirmation'])
+                ->with('error', 'Tidak ada invoice yang dapat dihapus.');
+        }
+
+        return redirect()->route('invoices.index', ['tab' => 'needs-confirmation'])
+            ->with('error', 'Aksi tidak valid.');
     }
 }

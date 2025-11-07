@@ -9,55 +9,117 @@
         $isAdmin = auth()->user()?->role === \App\Enums\Role::ADMIN;
     @endphp
 
-    <div class="py-12" @unless($isAdmin) x-data="{
-        showReasonModal: false,
-        reason: '',
-        error: '',
-        form: null,
-        transactionDescription: '',
-        init() {
-            this.$watch('showReasonModal', value => {
-                document.body.classList.toggle('overflow-y-hidden', value);
-            });
-        },
-        open(event) {
-            this.error = '';
-            this.reason = '';
-            this.form = event.currentTarget.closest('form');
-            this.transactionDescription = event.currentTarget.dataset.description || 'Tanpa deskripsi';
-            this.showReasonModal = true;
-            this.$nextTick(() => this.$refs.reasonTextarea?.focus());
-        },
-        close() {
-            this.showReasonModal = false;
-            this.reason = '';
-            this.error = '';
-            this.transactionDescription = '';
-            this.form = null;
-        },
-        submitReason() {
-            if (!this.reason.trim()) {
-                this.error = 'Alasan penghapusan wajib diisi.';
-                this.$nextTick(() => this.$refs.reasonTextarea?.focus());
-                return;
-            }
-
-            const form = this.form;
-            if (form) {
-                const reasonInput = form.querySelector('input[name=\'reason\']');
-                if (reasonInput) {
-                    reasonInput.value = this.reason.trim();
+    <div class="py-12" 
+        x-data="{
+            selectedItems: [],
+            selectAll: false,
+            showReasonModal: false,
+            reason: '',
+            error: '',
+            form: null,
+            transactionDescription: '',
+            init() {
+                this.$watch('showReasonModal', value => {
+                    document.body.classList.toggle('overflow-y-hidden', value);
+                });
+                this.$watch('selectedItems', value => {
+                    const total = document.querySelectorAll('input[type=\'checkbox\'][name=\'selected[]\']').length;
+                    this.selectAll = total > 0 && value.length === total;
+                });
+            },
+            updateSelectedItems() {
+                const checkboxes = Array.from(document.querySelectorAll('input[type=\'checkbox\'][name=\'selected[]\']:checked'));
+                this.selectedItems = checkboxes.map(cb => cb.value);
+            },
+            toggleSelectAll() {
+                const checkboxes = document.querySelectorAll('input[type=\'checkbox\'][name=\'selected[]\']');
+                this.selectAll = !this.selectAll;
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = this.selectAll;
+                });
+                this.updateSelectedItems();
+            },
+            hasSelection() {
+                return this.selectedItems.length > 0;
+            },
+            getSelectedCount() {
+                return this.selectedItems.length;
+            },
+            clearSelection() {
+                this.selectedItems = [];
+                this.selectAll = false;
+                document.querySelectorAll('input[type=\'checkbox\'][name=\'selected[]\']').forEach(cb => cb.checked = false);
+            },
+            executeBulkAction(actionValue) {
+                if (!this.hasSelection()) return;
+                
+                let confirmMsg = '';
+                if (actionValue === 'delete') {
+                    confirmMsg = 'Apakah Anda yakin ingin menghapus ' + this.getSelectedCount() + ' transaksi yang dipilih?';
+                } else if (actionValue === 'export') {
+                    confirmMsg = 'Ekspor ' + this.getSelectedCount() + ' transaksi yang dipilih?';
                 }
-
+                
+                if (confirmMsg && !confirm(confirmMsg)) return;
+                
+                const form = document.getElementById('bulk-action-form');
+                if (form) {
+                    form.querySelector('input[name=\'action\']').value = actionValue;
+                    
+                    // Clear existing selected inputs
+                    form.querySelectorAll('input[name=\'selected[]\']').forEach(input => input.remove());
+                    
+                    // Add selected items
+                    this.selectedItems.forEach(item => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'selected[]';
+                        input.value = item;
+                        form.appendChild(input);
+                    });
+                    
+                    form.submit();
+                }
+            },
+            open(event) {
+                this.error = '';
+                this.reason = '';
+                this.form = event.currentTarget.closest('form');
+                this.transactionDescription = event.currentTarget.dataset.description || 'Tanpa deskripsi';
+                this.showReasonModal = true;
+                this.$nextTick(() => this.$refs.reasonTextarea?.focus());
+            },
+            close() {
                 this.showReasonModal = false;
                 this.reason = '';
-                this.form = null;
-                this.transactionDescription = '';
                 this.error = '';
-                form.submit();
+                this.transactionDescription = '';
+                this.form = null;
+            },
+            submitReason() {
+                if (!this.reason.trim()) {
+                    this.error = 'Alasan penghapusan wajib diisi.';
+                    this.$nextTick(() => this.$refs.reasonTextarea?.focus());
+                    return;
+                }
+
+                const form = this.form;
+                if (form) {
+                    const reasonInput = form.querySelector('input[name=\'reason\']');
+                    if (reasonInput) {
+                        reasonInput.value = this.reason.trim();
+                    }
+
+                    this.showReasonModal = false;
+                    this.reason = '';
+                    this.form = null;
+                    this.transactionDescription = '';
+                    this.error = '';
+                    form.submit();
+                }
             }
-        }
-    }" @endunless>
+        }"
+        @unless($isAdmin) @endunless>
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             {{-- Bagian Summary Cards --}}
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8">
@@ -193,11 +255,77 @@
                     </div>
                 @endif
 
+                {{-- Bulk Actions Bar --}}
+                <div 
+                    class="mb-4 flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg border border-gray-200"
+                    x-show="hasSelection()"
+                    x-cloak
+                >
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm font-medium text-gray-700">
+                            <span x-text="getSelectedCount()"></span> item dipilih
+                        </span>
+                        
+                        <div class="relative" x-data="{ open: false }">
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <span>Aksi Bulk</span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-cloak
+                                class="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10"
+                            >
+                                <div class="py-1">
+                                    <button
+                                        type="button"
+                                        @click="executeBulkAction('delete'); open = false"
+                                        class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                    >
+                                        Hapus
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="executeBulkAction('export'); open = false"
+                                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    >
+                                        Ekspor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button
+                        type="button"
+                        @click="clearSelection()"
+                        class="text-sm text-gray-600 hover:text-gray-900"
+                    >
+                        Batal
+                    </button>
+                </div>
+
                 {{-- Tabel Transaksi --}}
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead class="border-b">
                             <tr>
+                                <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase w-12">
+                                    <input 
+                                        type="checkbox" 
+                                        @change="toggleSelectAll()"
+                                        :checked="selectAll"
+                                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    >
+                                </th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Pengguna</th>
                                 <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Kategori</th>
@@ -210,6 +338,15 @@
                         <tbody class="divide-y">
                             @forelse ($transactions as $transaction)
                                 <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input 
+                                            type="checkbox" 
+                                            name="selected[]" 
+                                            value="{{ $transaction->id }}"
+                                            @change="updateSelectedItems()"
+                                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        >
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap">{{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMM YYYY') }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap">{{ $transaction->user->name }}</td>
                                     
@@ -275,13 +412,21 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                    <td colspan="8" class="px-6 py-4 text-center text-gray-500">
                                         Belum ada transaksi.
                                     </td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
+                    
+                    <form id="bulk-action-form" action="{{ route('transactions.bulk-action') }}" method="POST" style="display: none;">
+                        @csrf
+                        <input type="hidden" name="action" value="">
+                        <template x-for="item in selectedItems" :key="item">
+                            <input type="hidden" name="selected[]" :value="item">
+                        </template>
+                    </form>
                 </div>
 
                 {{-- Paginasi --}}

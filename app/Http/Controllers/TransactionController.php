@@ -243,4 +243,55 @@ class TransactionController extends Controller
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil dihapus.');
     }
+
+    /**
+     * Menangani aksi bulk untuk multiple transactions.
+     */
+    public function bulkAction(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'action' => ['required', 'string', 'in:delete,export'],
+            'selected' => ['required', 'array', 'min:1'],
+            'selected.*' => ['required', 'integer', 'exists:transactions,id'],
+        ]);
+
+        $selectedIds = $request->input('selected');
+        $action = $request->input('action');
+        $isAdmin = $request->user()->role === Role::ADMIN;
+
+        if ($action === 'delete') {
+            $transactions = Transaction::whereIn('id', $selectedIds)->get();
+            
+            foreach ($transactions as $transaction) {
+                if ($isAdmin) {
+                    $this->authorize('delete', $transaction);
+                    $transaction->delete();
+                    $this->transactionService->clearAllSummaryCache();
+                } else {
+                    TransactionDeletionRequest::create([
+                        'transaction_id' => $transaction->id,
+                        'requested_by' => $request->user()->id,
+                        'status' => 'pending',
+                        'deletion_reason' => 'Bulk deletion request',
+                    ]);
+                }
+            }
+
+            $message = $isAdmin 
+                ? count($selectedIds) . ' transaksi berhasil dihapus.'
+                : count($selectedIds) . ' permintaan penghapusan telah dibuat dan menunggu persetujuan admin.';
+
+            return redirect()->route('transactions.index')
+                ->with('success', $message);
+        }
+
+        if ($action === 'export') {
+            // Export functionality bisa ditambahkan di sini
+            return redirect()->route('transactions.index')
+                ->with('info', 'Fitur ekspor sedang dalam pengembangan.');
+        }
+
+        return redirect()->route('transactions.index')
+            ->with('error', 'Aksi tidak valid.');
+    }
 }

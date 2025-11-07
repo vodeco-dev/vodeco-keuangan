@@ -21,6 +21,12 @@
                     </div>
                 @endif
 
+                @if (session('success'))
+                    <div class="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
                 @if (session('access_code_generated'))
                     @php
                         $generated = session('access_code_generated');
@@ -88,7 +94,7 @@
                     @endif
 
                     @if ($tabStates['needs-confirmation']['unlocked'] && $defaultTab === 'needs-confirmation')
-                    <div x-cloak>
+                    <div>
                         <div class="mb-6 flex flex-wrap items-center gap-4">
                             <form action="{{ route('invoices.index') }}" method="GET" class="flex flex-wrap items-end gap-4">
                                 <input type="hidden" name="tab" value="needs-confirmation">
@@ -111,10 +117,41 @@
                                 </a>
                             </form>
                         </div>
+
+                        <!-- Bulk Actions Bar -->
+                        <div x-show="bulkActions.hasSelection()" x-cloak class="mb-4 flex flex-wrap items-center gap-3 rounded-md bg-blue-50 border border-blue-200 p-3">
+                            <span class="text-sm font-medium text-blue-900">
+                                <span x-text="bulkActions.getSelectedCount()"></span> invoice dipilih
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" 
+                                    @click="bulkActions.executeBulkAction('approve')"
+                                    class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
+                                    Setujui
+                                </button>
+                                <button type="button" 
+                                    @click="bulkActions.executeBulkAction('delete')"
+                                    class="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-700">
+                                    Hapus
+                                </button>
+                                <button type="button" 
+                                    @click="bulkActions.clearSelection()"
+                                    class="inline-flex items-center rounded-md bg-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-300">
+                                    Batal
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead class="border-b">
                                     <tr>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase w-12">
+                                            <input type="checkbox" 
+                                                @change="bulkActions.toggleSelectAll()"
+                                                :checked="bulkActions.selectAll"
+                                                class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        </th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Nomor</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Customer Service</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Total</th>
@@ -126,6 +163,14 @@
                                 <tbody class="divide-y">
                                     @forelse ($needsConfirmationInvoices as $invoice)
                                         <tr>
+                                            <td class="px-6 py-4">
+                                                <input type="checkbox" 
+                                                    name="selected[]" 
+                                                    value="{{ $invoice->id }}"
+                                                    @change="bulkActions.updateSelectedItems()"
+                                                    @click.stop
+                                                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                            </td>
                                             <td class="px-6 py-4">
                                                 <p class="font-semibold text-gray-900">{{ $invoice->number }}</p>
                                                 <p class="text-xs text-gray-500">Status: {{ ucwords($invoice->status) }}</p>
@@ -139,13 +184,14 @@
                                                     @if ($invoice->hasPaymentProof())
                                                         <button type="button"
                                                             class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
-                                                            @click="showProof('{{ route('invoices.payment-proof.show', $invoice) }}')">
+                                                            @click.stop="showProof('{{ route('invoices.payment-proof.show', $invoice) }}')">
                                                             Bukti
                                                         </button>
                                                     @endif
                                                     <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-sm font-medium text-gray-600 hover:text-gray-900">PDF</a>
+                                                    <a href="{{ route('invoices.public.show', $invoice->public_token) }}" target="_blank" class="text-sm font-medium text-blue-600 hover:text-blue-900">Link Publik</a>
                                                     <button type="button"
-                                                        @click="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
+                                                        @click.stop="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
                                                         class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
                                                         Konfirmasi Pembayaran
                                                     </button>
@@ -154,12 +200,18 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">Tidak ada invoice yang perlu dikonfirmasi saat ini.</td>
+                                            <td colspan="7" class="px-6 py-6 text-center text-sm text-gray-500">Tidak ada invoice yang perlu dikonfirmasi saat ini.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Bulk Action Form -->
+                        <form id="bulk-action-form" action="{{ route('invoices.bulk-action') }}" method="POST" style="display: none;">
+                            @csrf
+                            <input type="hidden" name="action" value="">
+                        </form>
                     </div>
                     @endif
 
@@ -252,22 +304,145 @@
                                                 @endif
                                             </td>
                                             <td class="px-6 py-4 text-center">
-                                                <div class="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
-                                                    @if ($invoice->hasPaymentProof())
-                                                        <button type="button"
-                                                            class="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-200"
-                                                            @click="showProof('{{ route('invoices.payment-proof.show', $invoice) }}')">
-                                                            Bukti
-                                                        </button>
-                                                    @endif
-                                                    <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-sm font-medium text-gray-600 hover:text-gray-900">PDF</a>
-                                                    @if ($invoice->needs_confirmation || $invoice->status !== 'lunas')
-                                                    <button type="button"
-                                                        @click="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
-                                                        class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
-                                                        Pembayaran
+                                                <div
+                                                    class="relative inline-block text-left"
+                                                    x-data="{
+                                                        menuOpen: false,
+                                                        menuStyle: '',
+                                                        dropUp: false,
+                                                        toggleMenu() {
+                                                            this.menuOpen = !this.menuOpen;
+                                                        },
+                                                        closeMenu() {
+                                                            this.menuOpen = false;
+                                                        },
+                                                        handleWindowClick(event) {
+                                                            if (!this.menuOpen) return;
+                                                            const trigger = this.$refs.menuTrigger;
+                                                            const menu = this.$refs.menuDropdown;
+                                                            if ((trigger && trigger.contains(event.target)) || (menu && menu.contains(event.target))) {
+                                                                return;
+                                                            }
+                                                            this.closeMenu();
+                                                        },
+                                                        updatePosition() {
+                                                            const trigger = this.$refs.menuTrigger;
+                                                            const menu = this.$refs.menuDropdown;
+                                                            if (!trigger || !menu) {
+                                                                return;
+                                                            }
+
+                                                            const rect = trigger.getBoundingClientRect();
+                                                            const menuWidth = menu.offsetWidth;
+                                                            const menuHeight = menu.offsetHeight;
+                                                            const spacing = 8;
+                                                            const viewportLeft = window.scrollX + 16;
+                                                            const viewportRight = window.scrollX + window.innerWidth - 16;
+                                                            const viewportTop = window.scrollY + 16;
+                                                            const viewportBottom = window.scrollY + window.innerHeight - 16;
+
+                                                            let left = rect.right + window.scrollX - menuWidth;
+                                                            if (left < viewportLeft) {
+                                                                left = viewportLeft;
+                                                            }
+
+                                                            if (left + menuWidth > viewportRight) {
+                                                                left = Math.max(viewportLeft, viewportRight - menuWidth);
+                                                            }
+
+                                                            const spaceBelow = viewportBottom - rect.bottom - spacing;
+                                                            const spaceAbove = rect.top - viewportTop - spacing;
+
+                                                            this.dropUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+                                                            let top;
+                                                            if (this.dropUp) {
+                                                                top = rect.top + window.scrollY - spacing - menuHeight;
+
+                                                                if (top < viewportTop) {
+                                                                    this.dropUp = false;
+                                                                    top = rect.bottom + window.scrollY + spacing;
+                                                                }
+                                                            }
+
+                                                            if (!this.dropUp) {
+                                                                top = rect.bottom + window.scrollY + spacing;
+
+                                                                if (top + menuHeight > viewportBottom) {
+                                                                    top = Math.max(viewportTop, viewportBottom - menuHeight);
+                                                                }
+                                                            }
+
+                                                            this.menuStyle = `top: ${top}px; left: ${left}px;`;
+                                                        }
+                                                    }"
+                                                    x-init="
+                                                        $watch('menuOpen', value => {
+                                                            if (value) {
+                                                                $nextTick(() => updatePosition());
+                                                            }
+                                                        });
+                                                    "
+                                                    @keydown.escape.window.stop="closeMenu()"
+                                                    @resize.window="menuOpen && updatePosition()"
+                                                    @scroll.window="menuOpen && updatePosition()"
+                                                    @click.window="handleWindowClick($event)"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        x-ref="menuTrigger"
+                                                        @click="toggleMenu()"
+                                                        class="inline-flex w-full justify-center rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                                    >
+                                                        <span class="sr-only">Buka menu aksi</span>
+                                                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.75a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" />
+                                                        </svg>
                                                     </button>
-                                                    @endif
+
+                                                    <template x-teleport="body">
+                                                        <div
+                                                            x-cloak
+                                                            x-show="menuOpen"
+                                                            x-transition.origin.top.right
+                                                            x-ref="menuDropdown"
+                                                            :style="menuStyle"
+                                                            :class="dropUp ? 'origin-bottom-right' : 'origin-top-right'"
+                                                            class="fixed z-[9999] w-52 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                                                        >
+                                                            <div class="py-1 text-left text-sm text-gray-700">
+                                                                @if ($invoice->hasPaymentProof())
+                                                                    <button type="button" @click="menuOpen = false; showProof('{{ route('invoices.payment-proof.show', $invoice) }}')" class="block w-full px-4 py-2 text-left hover:bg-gray-100">
+                                                                        Lihat Bukti
+                                                                    </button>
+                                                                @endif
+                                                                
+                                                                <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="block px-4 py-2 hover:bg-gray-100" @click="menuOpen = false">
+                                                                    Buka PDF
+                                                                </a>
+                                                                
+                                                                <a href="{{ route('invoices.public.show', $invoice->public_token) }}" target="_blank" class="block px-4 py-2 hover:bg-gray-100" @click="menuOpen = false">
+                                                                    Buka Link Publik
+                                                                </a>
+                                                                
+                                                                @if ($invoice->needs_confirmation || $invoice->status !== 'lunas')
+                                                                    <button type="button" @click="menuOpen = false; open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})" class="block w-full px-4 py-2 text-left hover:bg-gray-100">
+                                                                        Catat Pembayaran
+                                                                    </button>
+                                                                @endif
+                                                                
+                                                                @can('delete', $invoice)
+                                                                    <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus invoice #{{ $invoice->number }}? Tindakan ini tidak dapat dibatalkan.');">
+                                                                        @csrf
+                                                                        @method('DELETE')
+                                                                        <button type="submit" class="block w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100" @click="menuOpen = false">
+                                                                            Hapus
+                                                                        </button>
+                                                                    </form>
+                                                                @endcan
+                                                            </div>
+                                                        </div>
+                                                    </template>
                                                 </div>
                                             </td>
                                         </tr>
@@ -337,6 +512,66 @@
                 paymentDate: config.defaultDate,
                 lightboxOpen: false,
                 lightboxImageUrl: null,
+                bulkActions: {
+                    selectedItems: [],
+                    selectAll: false,
+                    updateSelectedItems() {
+                        const checkboxes = Array.from(document.querySelectorAll('input[type=\'checkbox\'][name=\'selected[]\']:checked'));
+                        this.selectedItems = checkboxes.map(cb => cb.value);
+                        const total = document.querySelectorAll('input[type=\'checkbox\'][name=\'selected[]\']').length;
+                        this.selectAll = total > 0 && this.selectedItems.length === total;
+                    },
+                    toggleSelectAll() {
+                        const checkboxes = document.querySelectorAll('input[type=\'checkbox\'][name=\'selected[]\']');
+                        this.selectAll = !this.selectAll;
+                        checkboxes.forEach(checkbox => {
+                            checkbox.checked = this.selectAll;
+                        });
+                        this.updateSelectedItems();
+                    },
+                    hasSelection() {
+                        return this.selectedItems.length > 0;
+                    },
+                    getSelectedCount() {
+                        return this.selectedItems.length;
+                    },
+                    clearSelection() {
+                        this.selectedItems = [];
+                        this.selectAll = false;
+                        document.querySelectorAll('input[type=\'checkbox\'][name=\'selected[]\']').forEach(cb => cb.checked = false);
+                    },
+                    executeBulkAction(actionValue) {
+                        if (!this.hasSelection()) return;
+                        
+                        let confirmMsg = '';
+                        if (actionValue === 'delete') {
+                            confirmMsg = 'Apakah Anda yakin ingin menghapus ' + this.getSelectedCount() + ' invoice yang dipilih?';
+                        } else if (actionValue === 'approve') {
+                            confirmMsg = 'Setujui ' + this.getSelectedCount() + ' invoice yang dipilih? Invoice akan tidak lagi memerlukan konfirmasi.';
+                        }
+                        
+                        if (confirmMsg && !confirm(confirmMsg)) return;
+                        
+                        const form = document.getElementById('bulk-action-form');
+                        if (form) {
+                            form.querySelector('input[name=\'action\']').value = actionValue;
+                            
+                            // Clear existing selected inputs
+                            form.querySelectorAll('input[name=\'selected[]\']').forEach(input => input.remove());
+                            
+                            // Add selected items
+                            this.selectedItems.forEach(item => {
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = 'selected[]';
+                                input.value = item;
+                                form.appendChild(input);
+                            });
+                            
+                            form.submit();
+                        }
+                    }
+                },
                 init() {
                     this.$watch('lightboxOpen', (value) => {
                         document.body.classList.toggle('overflow-hidden', value);

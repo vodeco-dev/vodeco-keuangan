@@ -71,6 +71,9 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     // Resource Controllers (CRUD)
     Route::get('/transactions/proof/{transaction:proof_token}', [TransactionController::class, 'showProof'])
         ->name('transactions.proof.show');
+    // Route spesifik untuk transactions HARUS didefinisikan SEBELUM route resource
+    // agar tidak tertangkap oleh route resource
+    Route::post('transactions/bulk-action', [TransactionController::class, 'bulkAction'])->name('transactions.bulk-action');
     Route::resource('transactions', TransactionController::class)->except(['show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::post('debts/category-preferences', [DebtController::class, 'updateCategoryPreferences'])->name('debts.category-preferences.update');
@@ -87,16 +90,13 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('pass-through/invoice-category', [PassThroughPackageController::class, 'updateInvoiceCategory'])
         ->middleware('role:admin,accountant,staff')
         ->name('pass-through.invoice-category.update');
-    Route::get('invoices/{invoice}/payment-proof', [InvoiceController::class, 'showPaymentProof'])
-        ->name('invoices.payment-proof.show');
-    Route::resource('invoices', InvoiceController::class);
+    
+    // Route spesifik untuk invoices HARUS didefinisikan SEBELUM route resource
+    // agar tidak tertangkap oleh route resource
     Route::get('invoices/reference/{number}', [InvoiceController::class, 'reference'])
         ->name('invoices.reference');
-    Route::get('customer-services/create', [CustomerServiceController::class, 'create'])->name('customer-services.create');
-    Route::post('customer-services', [CustomerServiceController::class, 'store'])->name('customer-services.store');
-
-    // Route untuk Aksi Spesifik
-    // Invoicing
+    Route::get('invoices/{invoice}/payment-proof', [InvoiceController::class, 'showPaymentProof'])
+        ->name('invoices.payment-proof.show');
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdfHosted'])->name('invoices.pdf');
     Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
     Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'storePayment'])->name('invoices.pay');
@@ -104,6 +104,13 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
         ->name('invoices.settlement-token.refresh');
     Route::delete('invoices/{invoice}/settlement-token', [InvoiceController::class, 'revokeSettlementToken'])
         ->name('invoices.settlement-token.revoke');
+    Route::post('invoices/bulk-action', [InvoiceController::class, 'bulkAction'])->name('invoices.bulk-action');
+    
+    // Route resource untuk invoices (CRUD standar)
+    Route::resource('invoices', InvoiceController::class);
+    
+    Route::get('customer-services/create', [CustomerServiceController::class, 'create'])->name('customer-services.create');
+    Route::post('customer-services', [CustomerServiceController::class, 'store'])->name('customer-services.store');
     // Debts
     Route::post('debts/{debt}/pay', [DebtController::class, 'storePayment'])->name('debts.pay');
     Route::post('debts/{debt}/fail', [DebtController::class, 'markAsFailed'])->name('debts.fail');
