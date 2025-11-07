@@ -352,7 +352,16 @@ class InvoiceController extends Controller
         }
 
         if ($invoice) {
-            $this->regenerateInvoicePdf($invoice);
+            try {
+                $this->regenerateInvoicePdf($invoice);
+            } catch (Throwable $exception) {
+                \Log::error('Failed to generate PDF for invoice after creation', [
+                    'invoice_id' => $invoice->id,
+                    'invoice_number' => $invoice->number,
+                    'error' => $exception->getMessage(),
+                ]);
+                // Continue even if PDF generation fails
+            }
         }
 
         return redirect()->route('invoices.index');
@@ -472,12 +481,30 @@ class InvoiceController extends Controller
         }
 
         if ($invoice) {
-            $this->regenerateInvoicePdf($invoice);
+            try {
+                $this->regenerateInvoicePdf($invoice);
+            } catch (Throwable $exception) {
+                \Log::error('Failed to generate PDF for public invoice after creation', [
+                    'invoice_id' => $invoice->id,
+                    'invoice_number' => $invoice->number,
+                    'error' => $exception->getMessage(),
+                ]);
+                // Continue even if PDF generation fails
+            }
         }
 
         $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'submission');
 
-        $pdfUrl = $this->invoicePdfService->ensureHostedUrl($invoice);
+        try {
+            $pdfUrl = $this->invoicePdfService->ensureHostedUrl($invoice);
+        } catch (Throwable $exception) {
+            \Log::error('Failed to get PDF URL for public invoice', [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'error' => $exception->getMessage(),
+            ]);
+            $pdfUrl = null;
+        }
 
         return redirect()
             ->route('invoices.public.create')
@@ -868,7 +895,13 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $this->authorize('view', $invoice);
+        try {
+            $this->authorize('view', $invoice);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $exception) {
+            abort(403, 'Anda tidak memiliki izin untuk melihat invoice ini.');
+        }
+
+        $invoice->loadMissing('items', 'customerService');
 
         return view('invoices.show', compact('invoice'));
     }
