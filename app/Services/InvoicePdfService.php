@@ -145,11 +145,15 @@ class InvoicePdfService
 
         // For on_demand strategy with caching enabled
         if ($strategy === 'on_demand' && $this->isCacheEnabled()) {
-            return $this->ensureCachedPdfPath($invoice);
+            $path = $this->ensureCachedPdfPath($invoice);
+        } else {
+            // For persistent strategy (legacy behavior)
+            $path = $this->ensurePersistentPdfPath($invoice);
         }
 
-        // For persistent strategy (legacy behavior)
-        return $this->ensurePersistentPdfPath($invoice);
+        $this->syncInvoicePdfPath($invoice, $path);
+
+        return $path;
     }
 
     /**
@@ -334,5 +338,18 @@ class InvoicePdfService
                 $this->removeCacheMetadata($file);
             }
         }
+    }
+
+    /**
+     * Ensure the invoice record keeps track of the latest PDF path.
+     */
+    protected function syncInvoicePdfPath(Invoice $invoice, string $path): void
+    {
+        if ($invoice->pdf_path === $path) {
+            return;
+        }
+
+        $invoice->forceFill(['pdf_path' => $path])->saveQuietly();
+        $invoice->refresh();
     }
 }
