@@ -45,47 +45,36 @@
                         @endif
                     </td>
                     <td class="px-4 py-3 text-sm text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            @if ($debt->status == \App\Models\Debt::STATUS_BELUM_LUNAS)
-                                <button @click='openPaymentModal(@js($debt->toArray()))' class="text-blue-600 hover:text-blue-900" title="Tambah Pembayaran">
-                                    <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                    </svg>
-                                </button>
-
-                                <a href="{{ route('debts.edit', $debt) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit">
-                                    <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m14.3 4.8 2.9 2.9M7 7H4a1 1 0 0 0-1 1v10c0 .6.4 1 1 1h11c.6 0 1-.4 1-1v-4.5m2.4-10a2 2 0 0 1 0 3l-6.8 6.8L8 18l.7-3.6 6.9-6.8a2 2 0 0 1 2.8 0Z"/>
-                                    </svg>
-                                </a>
-
-                                <form action="{{ route('debts.fail', $debt) }}" method="POST" class="inline" onsubmit="return confirm('Tandai catatan ini sebagai gagal project?');">
-                                    @csrf
-                                    <button type="submit" class="text-red-500 hover:text-red-800" title="Tandai Gagal">
-                                        <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.071 19h13.858c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.339 16c-.77 1.333.192 3 1.732 3Z"></path>
-                                        </svg>
-                                    </button>
-                                </form>
-                            @endif
-
-                            {{-- Tombol Detail Riwayat --}}
-                            <button @click='detailModal = true; selectedDebt = @js($debt->toArray())' class="text-gray-500 hover:text-gray-700" title="Lihat Riwayat">
-                                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        <div class="relative inline-block text-left" x-data="{ open: false }" @keydown.escape.stop="open = false">
+                            <button type="button" @click="open = !open" class="inline-flex w-full justify-center rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                <span class="sr-only">Buka menu aksi</span>
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.75a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" />
                                 </svg>
                             </button>
 
-                            <form action="{{ route('debts.destroy', $debt) }}" method="POST" onsubmit="return confirm('Anda yakin ingin menghapus catatan ini?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-500 hover:text-red-800" title="Hapus">
-                                    <svg fill="none" height="20" stroke="currentColor" viewBox="0 0 24 24" width="20">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                </button>
-                            </form>
+                            <div x-cloak x-show="open" x-transition.origin.top.right @click.away="open = false" class="absolute right-0 z-20 mt-2 w-52 origin-top-right rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                <div class="py-1 text-left text-sm text-gray-700">
+                                    @if ($debt->status == \App\Models\Debt::STATUS_BELUM_LUNAS)
+                                        <button type="button" @click="open = false; openPaymentModal(@js($debt->toArray()))" class="block w-full px-4 py-2 text-left hover:bg-gray-100">Tambah Pembayaran</button>
+
+                                        <a href="{{ route('debts.edit', $debt) }}" class="block px-4 py-2 hover:bg-gray-100" @click="open = false">Edit</a>
+
+                                        <form action="{{ route('debts.fail', $debt) }}" method="POST" onsubmit="return confirm('Tandai catatan ini sebagai gagal project?');">
+                                            @csrf
+                                            <button type="submit" class="block w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100" @click="open = false">Tandai Gagal</button>
+                                        </form>
+                                    @endif
+
+                                    <button type="button" @click="open = false; detailModal = true; selectedDebt = @js($debt->toArray())" class="block w-full px-4 py-2 text-left hover:bg-gray-100">Lihat Riwayat</button>
+
+                                    <form action="{{ route('debts.destroy', $debt) }}" method="POST" onsubmit="return confirm('Anda yakin ingin menghapus catatan ini?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="block w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100" @click="open = false">Hapus</button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
                     </td>
                 </tr>
