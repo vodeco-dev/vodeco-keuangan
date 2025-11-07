@@ -185,6 +185,10 @@
                                         @click="activePortalTab = 'confirm_payment'">
                                         Konfirmasi Pembayaran
                                     </button>
+                                    <a href="{{ route('invoices.public.check-confirmation') }}"
+                                        class="flex-1 rounded-lg px-4 py-2 text-sm font-semibold text-center transition bg-blue-600 text-white shadow hover:bg-blue-700">
+                                        Cek Konfirmasi
+                                    </a>
                                 </div>
                                 <p class="text-xs text-gray-500 md:text-sm" x-show="activePortalTab === 'confirm_payment'" x-cloak>
                                     Unggah bukti pembayaran dengan menyertakan nomor invoice yang telah diterbitkan.
