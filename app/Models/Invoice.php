@@ -50,6 +50,7 @@ class Invoice extends Model
         'payment_proof_filename',
         'payment_proof_original_name',
         'payment_proof_uploaded_at',
+        'pdf_path',
     ];
 
     /**
@@ -177,6 +178,11 @@ class Invoice extends Model
         return ! empty($this->payment_proof_path);
     }
 
+    public function hasPdf(): bool
+    {
+        return ! empty($this->pdf_path);
+    }
+
     public function getPaymentProofUrlAttribute(): ?string
     {
         if (! $this->hasPaymentProof()) {
@@ -206,5 +212,32 @@ class Invoice extends Model
         } catch (\Throwable $exception) {
             return null;
         }
+    }
+
+    public function getPdfUrlAttribute(): ?string
+    {
+        if (! $this->hasPdf()) {
+            return null;
+        }
+
+        $disk = config('filesystems.default');
+
+        try {
+            $storage = Storage::disk($disk);
+
+            if (! $storage->exists($this->pdf_path)) {
+                return null;
+            }
+
+            $url = $storage->url($this->pdf_path);
+
+            if (is_string($url) && $url !== '') {
+                return $url;
+            }
+        } catch (\Throwable $exception) {
+            return null;
+        }
+
+        return null;
     }
 }
