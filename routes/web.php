@@ -52,6 +52,8 @@ Route::post('/invoices/settlement/{token}', [InvoiceSettlementController::class,
 
 // Route untuk melihat invoice secara publik tanpa perlu login
 Route::get('/invoices/view/{token}', [InvoiceController::class, 'showPublic'])->name('invoices.public.show');
+Route::get('/invoices/view/{token}/pdf-hosted', [InvoiceController::class, 'showPublicHosted'])
+    ->name('invoices.public.pdf-hosted');
 
 // Menggunakan middleware 'auth' untuk memastikan hanya user yang sudah login
 // yang bisa mengakses halaman-halaman ini.
@@ -92,6 +94,8 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::resource('invoices', InvoiceController::class);
     Route::get('invoices/reference/{number}', [InvoiceController::class, 'reference'])
         ->name('invoices.reference');
+    Route::get('invoices/{invoice}/pdf-hosted', [InvoiceController::class, 'pdfHosted'])
+        ->name('invoices.pdf-hosted');
     Route::get('customer-services/create', [CustomerServiceController::class, 'create'])->name('customer-services.create');
     Route::post('customer-services', [CustomerServiceController::class, 'store'])->name('customer-services.store');
 
