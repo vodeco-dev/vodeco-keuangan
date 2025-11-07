@@ -477,13 +477,6 @@ class InvoiceController extends Controller
 
         $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'submission');
 
-        if (app()->runningUnitTests()) {
-            return response()
-                ->view('invoices.pdf', $this->invoicePdfService->viewData($invoice))
-                ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'inline; filename="' . $invoice->number . '.pdf"');
-        }
-
         return $this->invoicePdfService
             ->makePdf($invoice)
             ->download($invoice->number . '.pdf');
@@ -792,15 +785,14 @@ class InvoiceController extends Controller
     {
         $this->authorize('view', $invoice);
 
-        $disk = Storage::disk('public');
-
-        if (! $invoice->pdf_path || ! $disk->exists($invoice->pdf_path)) {
-            $this->regenerateInvoicePdf($invoice);
-            $invoice->refresh();
+        try {
+            $path = $this->invoicePdfService->ensureStoredPdfPath($invoice);
+        } catch (Throwable $exception) {
+            abort(404, 'PDF invoice tidak tersedia.');
         }
 
-        return $disk->response(
-            $invoice->pdf_path,
+        return Storage::disk('public')->response(
+            $path,
             $invoice->number . '.pdf',
             ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
         );
@@ -826,15 +818,14 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::where('public_token', $token)->firstOrFail();
 
-        $disk = Storage::disk('public');
-
-        if (! $invoice->pdf_path || ! $disk->exists($invoice->pdf_path)) {
-            $this->regenerateInvoicePdf($invoice);
-            $invoice->refresh();
+        try {
+            $path = $this->invoicePdfService->ensureStoredPdfPath($invoice);
+        } catch (Throwable $exception) {
+            abort(404, 'PDF invoice tidak tersedia.');
         }
 
-        return $disk->response(
-            $invoice->pdf_path,
+        return Storage::disk('public')->response(
+            $path,
             $invoice->number . '.pdf',
             ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
         );

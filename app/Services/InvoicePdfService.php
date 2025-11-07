@@ -8,6 +8,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
+use Throwable;
 
 class InvoicePdfService
 {
@@ -51,6 +53,52 @@ class InvoicePdfService
         $disk->put($path, $this->makePdf($invoice)->output());
 
         return $path;
+    }
+
+    public function ensureStoredPdfPath(Invoice $invoice): string
+    {
+        $disk = Storage::disk('public');
+
+        $currentPath = $invoice->pdf_path;
+
+        if ($currentPath && $disk->exists($currentPath)) {
+            return $currentPath;
+        }
+
+        if ($currentPath) {
+            $disk->delete($currentPath);
+        }
+
+        $newPath = $this->store($invoice);
+
+        if (! $newPath) {
+            throw new RuntimeException('Unable to store invoice PDF.');
+        }
+
+        $invoice->forceFill(['pdf_path' => $newPath])->saveQuietly();
+
+        return $newPath;
+    }
+
+    public function ensureHostedUrl(Invoice $invoice): ?string
+    {
+        try {
+            $path = $this->ensureStoredPdfPath($invoice);
+        } catch (Throwable $exception) {
+            return null;
+        }
+
+        try {
+            $url = Storage::disk('public')->url($path);
+        } catch (Throwable $exception) {
+            return null;
+        }
+
+        if (! is_string($url) || $url === '') {
+            return null;
+        }
+
+        return $url;
     }
 
     protected function generatePath(Invoice $invoice): string
