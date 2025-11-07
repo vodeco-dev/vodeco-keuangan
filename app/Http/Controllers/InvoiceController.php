@@ -495,8 +495,39 @@ class InvoiceController extends Controller
 
         $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'submission');
 
-        // Generate and return PDF directly
-        return $this->generateInvoicePdfResponse($invoice);
+        $previewUrl = null;
+
+        if ($invoice) {
+            try {
+                $this->invoicePdfService->ensureStoredPdfPath($invoice);
+                $previewUrl = route('invoices.public.pdf-hosted', ['token' => $invoice->public_token]);
+            } catch (Throwable $exception) {
+                \Log::error('Failed to prepare PDF preview for public invoice', [
+                    'invoice_id' => $invoice->id,
+                    'invoice_number' => $invoice->number,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        $statusMessage = $previewUrl
+            ? 'Invoice berhasil dibuat. Gunakan tautan di bawah ini untuk membuka pratinjau PDF.'
+            : 'Invoice berhasil dibuat, tetapi pratinjau PDF belum tersedia. Silakan coba lagi nanti.';
+
+        $redirect = redirect()
+            ->route('invoices.public.create')
+            ->with('status', $statusMessage)
+            ->with('active_portal_tab', 'create_invoice');
+
+        if ($invoice) {
+            $redirect->with('invoice_number', $invoice->number);
+        }
+
+        if ($previewUrl) {
+            $redirect->with('invoice_pdf_url', $previewUrl);
+        }
+
+        return $redirect;
     }
 
     public function confirmPublicPayment(PublicConfirmPaymentRequest $request): RedirectResponse
@@ -1096,14 +1127,13 @@ class InvoiceController extends Controller
                 $downPaymentDue = isset($data['down_payment_due']) ? (float) $data['down_payment_due'] : null;
             }
 
-        $status = match ($transactionType) {
-            'down_payment' => 'belum lunas',
-            'full_payment' => 'lunas',
-            default => 'belum bayar',
-        };
+            $requiresConfirmation = $transactionType === 'full_payment';
 
-        $downPayment = $transactionType === 'full_payment' ? $total : 0;
-        $paymentDate = $transactionType === 'full_payment' ? now() : null;
+            $status = match ($transactionType) {
+                'down_payment' => 'belum lunas',
+                'full_payment' => 'belum lunas',
+                default => 'belum bayar',
+            };
 
             $invoice = Invoice::create([
                 'user_id' => $ownerId ?? auth()->id(),
@@ -1120,9 +1150,10 @@ class InvoiceController extends Controller
                 'total' => $total,
                 'type' => Invoice::TYPE_STANDARD,
                 'reference_invoice_id' => null,
-                'down_payment' => $downPayment,
+                'down_payment' => 0,
                 'down_payment_due' => $downPaymentDue,
-                'payment_date' => $paymentDate,
+                'payment_date' => null,
+                'needs_confirmation' => $requiresConfirmation,
                 'payment_proof_disk' => $data['payment_proof_disk'] ?? null,
                 'payment_proof_path' => $data['payment_proof_path'] ?? null,
                 'payment_proof_filename' => $data['payment_proof_filename'] ?? null,

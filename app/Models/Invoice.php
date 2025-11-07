@@ -32,6 +32,7 @@ class Invoice extends Model
         'issue_date',
         'due_date',
         'status',
+        'needs_confirmation',
         'total',
         'client_name',
         'client_whatsapp',
@@ -67,6 +68,7 @@ class Invoice extends Model
         'down_payment_due' => 'decimal:2',
         'settlement_token_expires_at' => 'datetime',
         'payment_proof_uploaded_at' => 'datetime',
+        'needs_confirmation' => 'boolean',
     ];
 
     /**

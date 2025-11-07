@@ -33,6 +33,7 @@ class InvoiceFactory extends Factory
             'issue_date' => now(),
             'due_date' => $this->faker->dateTimeBetween('+1 week', '+1 month'),
             'status' => 'belum bayar',
+            'needs_confirmation' => false,
             'total' => $this->faker->randomFloat(2, 100, 1000),
             'settlement_token' => Str::random(64),
             'settlement_token_expires_at' => now()->addDays(7),
