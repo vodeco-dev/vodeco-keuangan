@@ -477,9 +477,13 @@ class InvoiceController extends Controller
 
         $passphrase->markAsUsed($request->ip(), $request->userAgent(), 'submission');
 
-        return $this->invoicePdfService
-            ->makePdf($invoice)
-            ->download($invoice->number . '.pdf');
+        $pdfUrl = $this->invoicePdfService->ensureHostedUrl($invoice);
+
+        return redirect()
+            ->route('invoices.public.create')
+            ->with('status', 'Invoice berhasil dibuat.')
+            ->with('invoice_pdf_url', $pdfUrl)
+            ->with('invoice_number', $invoice->number);
     }
 
     public function confirmPublicPayment(PublicConfirmPaymentRequest $request): RedirectResponse
@@ -765,22 +769,6 @@ class InvoiceController extends Controller
         return back()->with('status', 'Token pelunasan berhasil dicabut.');
     }
 
-    public function pdf(Invoice $invoice)
-    {
-        $this->authorize('view', $invoice);
-
-        if (app()->runningUnitTests()) {
-            return response()
-                ->view('invoices.pdf', $this->invoicePdfService->viewData($invoice))
-                ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'inline; filename="'.$invoice->number.'.pdf"');
-        }
-
-        return $this->invoicePdfService
-            ->makePdf($invoice)
-            ->download($invoice->number . '.pdf');
-    }
-
     public function pdfHosted(Invoice $invoice): Response
     {
         $this->authorize('view', $invoice);
@@ -796,22 +784,6 @@ class InvoiceController extends Controller
             $invoice->number . '.pdf',
             ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
         );
-    }
-
-    public function showPublic(string $token)
-    {
-        $invoice = Invoice::where('public_token', $token)->firstOrFail();
-
-        if (app()->runningUnitTests()) {
-            return response()
-                ->view('invoices.pdf', $this->invoicePdfService->viewData($invoice))
-                ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'inline; filename="'.$invoice->number.'.pdf"');
-        }
-
-        return $this->invoicePdfService
-            ->makePdf($invoice)
-            ->download($invoice->number . '.pdf');
     }
 
     public function showPublicHosted(string $token): Response
