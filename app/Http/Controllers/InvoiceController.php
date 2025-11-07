@@ -813,13 +813,18 @@ class InvoiceController extends Controller
             abort(404, 'PDF invoice tidak tersedia: ' . $exception->getMessage());
         }
 
-        $disk = Storage::disk('public');
+        $diskName = config('pdf.cache.enabled') && config('pdf.generation.strategy') === 'on_demand'
+            ? config('pdf.cache.disk', 'public')
+            : 'public';
+
+        $disk = Storage::disk($diskName);
 
         if (! $disk->exists($path)) {
             \Log::error('PDF file not found in storage', [
                 'invoice_id' => $invoice->id,
                 'invoice_number' => $invoice->number,
                 'path' => $path,
+                'disk' => $diskName,
             ]);
 
             abort(404, 'File PDF tidak ditemukan di storage.');
@@ -861,7 +866,11 @@ class InvoiceController extends Controller
             abort(404, 'PDF invoice tidak tersedia: ' . $exception->getMessage());
         }
 
-        $disk = Storage::disk('public');
+        $diskName = config('pdf.cache.enabled') && config('pdf.generation.strategy') === 'on_demand'
+            ? config('pdf.cache.disk', 'public')
+            : 'public';
+
+        $disk = Storage::disk($diskName);
 
         if (! $disk->exists($path)) {
             \Log::error('PDF file not found in storage (public)', [
@@ -869,6 +878,7 @@ class InvoiceController extends Controller
                 'invoice_number' => $invoice->number,
                 'token' => $token,
                 'path' => $path,
+                'disk' => $diskName,
             ]);
 
             abort(404, 'File PDF tidak ditemukan di storage.');
@@ -1055,6 +1065,15 @@ class InvoiceController extends Controller
 
     private function regenerateInvoicePdf(Invoice $invoice, ?string $previousPath = null): void
     {
+        $strategy = config('pdf.generation.strategy', 'on_demand');
+
+        // For on_demand strategy, just invalidate cache
+        if ($strategy === 'on_demand') {
+            $this->invoicePdfService->invalidateCache($invoice);
+            return;
+        }
+
+        // For persistent strategy, regenerate and store
         $disk = Storage::disk('public');
 
         $pathToDelete = $previousPath ?? $invoice->pdf_path;
