@@ -659,20 +659,30 @@ class InvoiceController extends Controller
     {
         $this->authorize('storePayment', $invoice);
 
+        $invoice->loadMissing('items');
+
+        $invoiceTotal = round((float) $invoice->total, 2);
+        $currentDownPayment = round((float) $invoice->down_payment, 2);
+        $remainingBalance = max($invoiceTotal - $currentDownPayment, 0);
+        
+        // If invoice is already fully paid (lunas) or has no remaining balance,
+        // just confirm it without requiring payment amount
+        if ($invoice->status === 'lunas' || $remainingBalance <= 0) {
+            $invoice->needs_confirmation = false;
+            $invoice->save();
+            
+            return redirect()->route('invoices.index')->with('success', 'Invoice berhasil dikonfirmasi.');
+        }
+
         $request->validate([
             'payment_amount' => 'required|numeric|min:0.01',
             'payment_date' => 'required|date',
             'category_id' => 'nullable|exists:categories,id',
         ]);
 
-        $invoice->loadMissing('items');
-
         $paymentAmount = round((float) $request->input('payment_amount'), 2);
         $paymentDate = $request->input('payment_date');
         $categoryId = $request->input('category_id');
-        $currentDownPayment = round((float) $invoice->down_payment, 2);
-        $invoiceTotal = round((float) $invoice->total, 2);
-        $remainingBalance = max($invoiceTotal - $currentDownPayment, 0);
         $willBePaidOff = $invoiceTotal > 0 && round($currentDownPayment + $paymentAmount, 2) >= $invoiceTotal;
 
         if ($willBePaidOff && empty($categoryId)) {
