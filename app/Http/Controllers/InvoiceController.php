@@ -1583,13 +1583,8 @@ class InvoiceController extends Controller
                 ->with('settlement_error', 'Invoice dengan nomor "' . $invoiceNumber . '" tidak ditemukan.');
         }
 
-        // Generate settlement token jika belum ada atau sudah expired
-        if (!$invoice->settlement_token || $invoice->isSettlementTokenExpired()) {
-            $invoice->generateSettlementToken();
-        }
-
-        // Generate settlement URL
-        $settlementUrl = route('invoices.settlement.show', ['token' => $invoice->settlement_token]);
+        // Generate PDF URL menggunakan public token
+        $pdfUrl = route('invoices.public.show', ['token' => $invoice->public_token]);
 
         return back()->with([
             'settlement_invoice' => [
@@ -1600,8 +1595,7 @@ class InvoiceController extends Controller
                 'down_payment' => $invoice->down_payment,
                 'remaining_balance' => $invoice->remaining_balance,
                 'status' => $invoice->status,
-                'settlement_url' => $settlementUrl,
-                'settlement_token_expires_at' => $invoice->settlement_token_expires_at?->format('d M Y H:i'),
+                'pdf_url' => $pdfUrl,
             ],
         ]);
     }
