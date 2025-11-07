@@ -788,6 +788,24 @@ class InvoiceController extends Controller
             ->download($invoice->number . '.pdf');
     }
 
+    public function pdfHosted(Invoice $invoice): Response
+    {
+        $this->authorize('view', $invoice);
+
+        $disk = Storage::disk('public');
+
+        if (! $invoice->pdf_path || ! $disk->exists($invoice->pdf_path)) {
+            $this->regenerateInvoicePdf($invoice);
+            $invoice->refresh();
+        }
+
+        return $disk->response(
+            $invoice->pdf_path,
+            $invoice->number . '.pdf',
+            ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
+        );
+    }
+
     public function showPublic(string $token)
     {
         $invoice = Invoice::where('public_token', $token)->firstOrFail();
@@ -802,6 +820,24 @@ class InvoiceController extends Controller
         return $this->invoicePdfService
             ->makePdf($invoice)
             ->download($invoice->number . '.pdf');
+    }
+
+    public function showPublicHosted(string $token): Response
+    {
+        $invoice = Invoice::where('public_token', $token)->firstOrFail();
+
+        $disk = Storage::disk('public');
+
+        if (! $invoice->pdf_path || ! $disk->exists($invoice->pdf_path)) {
+            $this->regenerateInvoicePdf($invoice);
+            $invoice->refresh();
+        }
+
+        return $disk->response(
+            $invoice->pdf_path,
+            $invoice->number . '.pdf',
+            ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
+        );
     }
 
     public function show(Invoice $invoice)
