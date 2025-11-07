@@ -1560,9 +1560,9 @@ class InvoiceController extends Controller
     }
 
     /**
-     * Search invoice for settlement by Admin Pelunasan
+     * Search invoice for settlement by Admin Pelunasan (JSON response for AJAX)
      */
-    public function publicSearchSettlement(Request $request): RedirectResponse
+    public function publicSearchSettlement(Request $request)
     {
         $request->validate([
             'invoice_number' => 'required|string|max:255',
@@ -1578,16 +1578,18 @@ class InvoiceController extends Controller
             ->first();
 
         if (!$invoice) {
-            return back()
-                ->withInput()
-                ->with('settlement_error', 'Invoice dengan nomor "' . $invoiceNumber . '" tidak ditemukan.');
+            return response()->json([
+                'success' => false,
+                'message' => 'Invoice dengan nomor "' . $invoiceNumber . '" tidak ditemukan.',
+            ], 404);
         }
 
         // Generate PDF URL menggunakan public token
         $pdfUrl = route('invoices.public.show', ['token' => $invoice->public_token]);
 
-        return back()->with([
-            'settlement_invoice' => [
+        return response()->json([
+            'success' => true,
+            'invoice' => [
                 'number' => $invoice->number,
                 'client_name' => $invoice->client_name,
                 'client_whatsapp' => $invoice->client_whatsapp,
