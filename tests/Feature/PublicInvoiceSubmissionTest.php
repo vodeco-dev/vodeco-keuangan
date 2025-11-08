@@ -246,7 +246,7 @@ class PublicInvoiceSubmissionTest extends TestCase
 
         $transactionButtons = $xpath->query("//h3[text()='Jenis Transaksi']/following-sibling::div[1]//button");
         $this->assertSame(1, $transactionButtons->length);
-        $this->assertSame('Bayar Lunas', trim($transactionButtons->item(0)?->textContent ?? ''));
+        $this->assertSame('Menunggu Pembayaran', trim($transactionButtons->item(0)?->textContent ?? ''));
 
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
@@ -391,7 +391,7 @@ class PublicInvoiceSubmissionTest extends TestCase
         foreach ($transactionButtons as $button) {
             $buttonTexts[] = trim($button->textContent ?? '');
         }
-        $this->assertContains('Bayar Lunas', $buttonTexts);
+        $this->assertContains('Menunggu Pembayaran', $buttonTexts);
         $this->assertContains('Pelunasan', $buttonTexts);
 
         // Test creating invoice with full_payment

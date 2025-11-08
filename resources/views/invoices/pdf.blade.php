@@ -41,7 +41,7 @@
     $transactionLabel = match (true) {
         $invoice->type === InvoiceModel::TYPE_SETTLEMENT => 'Pelunasan',
         ! is_null($invoice->down_payment_due) => 'Down Payment',
-        default => 'Bayar Lunas',
+        default => 'Menunggu Pembayaran',
     };
 
     $paymentStatusLabel = $invoice->status ? ucwords($invoice->status) : 'Menunggu Pembayaran';

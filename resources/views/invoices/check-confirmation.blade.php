@@ -63,9 +63,35 @@
                     @isset($invoice)
                         <!-- Hasil Pencarian -->
                         <div class="border-t border-gray-200 dark:border-gray-700 pt-8">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                                Hasil Pencarian
-                            </h3>
+                            <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                    Hasil Pencarian
+                                </h3>
+                                <!-- Link PDF dengan Status -->
+                                <div class="flex items-center gap-3">
+                                    <div class="text-right">
+                                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Status Invoice</p>
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                                            {{ $confirmationStatus['color'] === 'green' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
+                                               ($confirmationStatus['color'] === 'yellow' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 
+                                               ($confirmationStatus['color'] === 'red' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
+                                               ($confirmationStatus['color'] === 'orange' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : 
+                                               'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'))) }}">
+                                            {{ $confirmationStatus['icon'] }} {{ $confirmationStatus['label'] }}
+                                        </span>
+                                    </div>
+                                    <a 
+                                        href="{{ route('invoices.pdf', $invoice) }}" 
+                                        target="_blank"
+                                        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md shadow-sm transition-colors duration-200"
+                                    >
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                        </svg>
+                                        Unduh PDF
+                                    </a>
+                                </div>
+                            </div>
 
                             <!-- Status Card -->
                             <div class="mb-6 rounded-lg border-2 {{ $confirmationStatus['color'] === 'green' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ($confirmationStatus['color'] === 'yellow' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' : ($confirmationStatus['color'] === 'red' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ($confirmationStatus['color'] === 'orange' ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'border-gray-500 bg-gray-50 dark:bg-gray-900/20'))) }} p-6">
