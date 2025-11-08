@@ -24,7 +24,7 @@ enum InvoicePortalPassphraseAccessType: string
     {
         return match ($this) {
             self::CUSTOMER_SERVICE => ['down_payment', 'full_payment', 'pass_through'],
-            self::ADMIN_PELUNASAN => ['settlement'],
+            self::ADMIN_PELUNASAN => ['settlement', 'full_payment'],
             self::ADMIN_PERPANJANGAN => ['full_payment'],
         };
     }

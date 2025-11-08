@@ -341,6 +341,95 @@ class PublicInvoiceSubmissionTest extends TestCase
         ]);
     }
 
+    public function test_admin_pelunasan_passphrase_allows_full_payment_and_settlement_transactions(): void
+    {
+        $admin = User::factory()->create([
+            'role' => Role::ADMIN,
+        ]);
+
+        $category = Category::factory()->create([
+            'type' => 'pemasukan',
+        ]);
+
+        $passphrase = new InvoicePortalPassphrase([
+            'public_id' => InvoicePortalPassphrase::makePublicId(),
+            'access_type' => InvoicePortalPassphraseAccessType::ADMIN_PELUNASAN,
+            'label' => 'Tim Pelunasan',
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+        $passphrase->setPassphrase('RahasiaPelunasan12');
+        $passphrase->save();
+
+        $session = [
+            'invoice_portal_passphrase' => [
+                'id' => $passphrase->id,
+                'token' => Crypt::encryptString((string) $passphrase->id),
+                'access_type' => $passphrase->access_type->value,
+                'access_label' => $passphrase->access_type->label(),
+                'label' => $passphrase->label,
+                'display_label' => $passphrase->displayLabel(),
+                'verified_at' => now()->toIso8601String(),
+            ],
+        ];
+
+        $response = $this->withSession($session)->get(route('invoices.public.create'));
+        $response->assertOk();
+
+        $dom = new \DOMDocument();
+        @$dom->loadHTML($response->getContent());
+
+        $xpath = new \DOMXPath($dom);
+        $transactionInput = $xpath->query('//input[@name="transaction_type"]')->item(0);
+        // Default should be first allowed transaction (settlement)
+        $this->assertContains($transactionInput?->getAttribute('value'), ['settlement', 'full_payment']);
+
+        $transactionButtons = $xpath->query("//h3[text()='Jenis Transaksi']/following-sibling::div[1]//button");
+        $this->assertSame(2, $transactionButtons->length);
+        
+        $buttonTexts = [];
+        foreach ($transactionButtons as $button) {
+            $buttonTexts[] = trim($button->textContent ?? '');
+        }
+        $this->assertContains('Bayar Lunas', $buttonTexts);
+        $this->assertContains('Pelunasan', $buttonTexts);
+
+        // Test creating invoice with full_payment
+        $submissionData = [
+            'passphrase_token' => $session['invoice_portal_passphrase']['token'],
+            'transaction_type' => 'full_payment',
+            'client_name' => 'Budi Santoso',
+            'client_whatsapp' => '081333444555',
+            'client_address' => 'Jl. Mawar No. 10',
+            'due_date' => now()->addWeek()->toDateString(),
+            'items' => [
+                [
+                    'description' => 'Layanan Pelunasan',
+                    'quantity' => 1,
+                    'price' => 2000000,
+                    'category_id' => $category->id,
+                ],
+            ],
+            'payment_proof' => UploadedFile::fake()->image('bukti.png', 600, 600),
+        ];
+
+        Storage::fake('public');
+
+        $response = $this->withSession($session)->post(route('invoices.public.store'), $submissionData);
+
+        $response->assertRedirect(route('invoices.public.create'));
+        $response->assertSessionHas('invoice_pdf_url');
+
+        $invoice = Invoice::where('client_name', 'Budi Santoso')->latest('id')->firstOrFail();
+
+        $this->assertSame('belum lunas', $invoice->status);
+        $this->assertTrue($invoice->needs_confirmation);
+        $this->assertSame(0.0, (float) $invoice->down_payment);
+        $this->assertNull($invoice->payment_date);
+
+        Storage::disk('public')->assertExists($invoice->pdf_path);
+    }
+
     public function test_public_payment_confirmation_uploads_payment_proof(): void
     {
         $admin = User::factory()->create([
