@@ -103,7 +103,7 @@ class StoreInvoiceRequest extends FormRequest
                 Rule::in(['paid_full', 'paid_partial']),
             ],
             'settlement_paid_amount' => ['required_if:transaction_type,settlement', 'nullable', 'numeric', 'min:0'],
-            'payment_proof' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:5120'],
+            'payment_proof' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'mimetypes:image/png,image/jpeg,image/jpg', 'max:5120'],
         ];
     }
 

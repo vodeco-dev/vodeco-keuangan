@@ -27,7 +27,7 @@ class PublicConfirmPaymentRequest extends FormRequest
         return [
             'passphrase_token' => ['required', 'string'],
             'invoice_number' => ['required', 'string'],
-            'payment_proof' => ['required', 'image', 'mimes:png,jpg,jpeg', 'max:5120'],
+            'payment_proof' => ['required', 'image', 'mimes:png,jpg,jpeg', 'mimetypes:image/png,image/jpeg,image/jpg', 'max:5120'],
         ];
     }
 

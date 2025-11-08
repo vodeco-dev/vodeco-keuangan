@@ -21,9 +21,21 @@ class DashboardController extends Controller
         // Filter dan ringkasan keadaan keuangan per bulan
         $selectedMonth = $request->input('month');
         if ($selectedMonth) {
+            // Validasi format input (YYYY-MM)
+            if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
+                $selectedMonth = now()->format('Y-m');
+            }
             // Format input dari <input type="month"> adalah YYYY-MM
             [$year, $month] = explode('-', $selectedMonth);
+            $year = (int) $year;
             $month = (int) $month;
+            
+            // Validasi range tahun dan bulan
+            if ($year < 1900 || $year > 2100 || $month < 1 || $month > 12) {
+                $year = now()->year;
+                $month = now()->month;
+                $selectedMonth = now()->format('Y-m');
+            }
         } else {
             $year  = now()->year;
             $month = now()->month;

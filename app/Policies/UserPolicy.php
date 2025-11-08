@@ -9,7 +9,7 @@ class UserPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->role === Role::ADMIN;
     }
 
     public function view(User $user, User $model): bool
@@ -19,7 +19,7 @@ class UserPolicy
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->role === Role::ADMIN;
     }
 
     public function update(User $user, User $model): bool
@@ -29,6 +29,7 @@ class UserPolicy
 
     public function delete(User $user, User $model): bool
     {
-        return $user->id === $model->id || $user->role === Role::ADMIN;
+        // Hanya admin yang bisa menghapus user, dan tidak bisa menghapus diri sendiri
+        return $user->role === Role::ADMIN && $user->id !== $model->id;
     }
 }

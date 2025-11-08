@@ -26,7 +26,7 @@ class StoreTransactionRequest extends FormRequest
             'category_id' => 'required|exists:categories,id',
             'amount' => 'required|numeric|min:0',
             'description' => 'required|string|max:255',
-            'proof' => 'nullable|image|max:250',
+            'proof' => 'nullable|image|mimes:png,jpg,jpeg|mimetypes:image/png,image/jpeg,image/jpg|max:250',
             'proof_name' => 'nullable|string|max:100',
         ];
     }
