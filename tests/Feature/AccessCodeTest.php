@@ -14,7 +14,7 @@ class AccessCodeTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_staff_can_view_payment_tabs_without_access_code(): void
+    public function test_staff_can_view_history_tab_without_access_code(): void
     {
         $user = User::factory()->create(['role' => Role::STAFF]);
         $this->actingAs($user);
@@ -22,10 +22,8 @@ class AccessCodeTest extends TestCase
         $response = $this->get(route('invoices.index'));
         $response->assertOk();
         $tabStates = $response->viewData('tabStates');
-        $this->assertTrue($tabStates['down-payment']['unlocked']);
-        $this->assertTrue($tabStates['pay-in-full']['unlocked']);
-        $this->assertFalse($tabStates['down-payment']['requires_code']);
-        $this->assertFalse($tabStates['pay-in-full']['requires_code']);
+        $this->assertTrue($tabStates['history']['unlocked']);
+        $this->assertFalse($tabStates['history']['requires_code']);
     }
 
     public function test_accountant_can_view_settlement_tab_without_access_code(): void

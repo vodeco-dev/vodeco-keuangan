@@ -12,13 +12,13 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="font-sans antialiased bg-gray-100">
+<body class="font-sans antialiased bg-gray-900" style="background-image: url('{{ asset('background-vodeco.jpg') }}'); background-size: cover; background-position: center; background-attachment: fixed;">
     <div class="min-h-screen py-10">
         <div class="max-w-5xl mx-auto px-4">
             <div class="mb-10 text-center">
                 <img src="{{ asset('logo-vodeco-dark-mode.png') }}" alt="Logo Vodeco" class="mx-auto h-16">
-                <h1 class="mt-4 text-3xl font-semibold text-gray-900">Formulir Pembuatan Invoice</h1>
-                <p class="mt-2 text-gray-600">Isi detail berikut untuk membuat invoice. Setelah formulir dikirim, tautan publik untuk mengakses PDF akan dibuat.</p>
+                <h1 class="mt-4 text-3xl font-semibold text-white">Formulir Pembuatan Invoice</h1>
+                <p class="mt-2 text-indigo-100">Isi detail berikut untuk membuat invoice. Setelah formulir dikirim, tautan publik untuk mengakses PDF akan dibuat.</p>
             </div>
 
             <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
@@ -521,7 +521,7 @@
                 </div>
             </div>
 
-            <p class="mt-8 text-center text-sm text-gray-500">
+            <p class="mt-8 text-center text-sm text-indigo-100/80">
                 Setelah invoice dibuat, Anda juga dapat membagikan link publik kepada klien menggunakan token yang tersedia di dashboard customer service.
             </p>
         </div>
