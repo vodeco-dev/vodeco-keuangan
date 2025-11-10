@@ -386,6 +386,7 @@ class InvoiceController extends Controller
         }
 
         $data['created_by'] = $passphrase->created_by;
+        $data['passphrase_access_type'] = $passphrase->access_type->value;
 
         $transactionType = $data['transaction_type'] ?? 'down_payment';
 
@@ -558,6 +559,8 @@ class InvoiceController extends Controller
 
         Storage::disk($disk)->putFileAs($directory, $proofFile, $filename);
 
+        // Setelah upload bukti pembayaran, invoice masuk ke status "Menunggu Konfirmasi"
+        // untuk semua jenis passphrase (termasuk Admin Perpanjangan dan Admin Pelunasan)
         $invoice->forceFill(array_merge($metadataUpdates, [
             'payment_proof_disk' => $disk,
             'payment_proof_path' => $path,
@@ -1115,11 +1118,22 @@ class InvoiceController extends Controller
                 $downPaymentDue = isset($data['down_payment_due']) ? (float) $data['down_payment_due'] : null;
             }
 
-            $requiresConfirmation = $transactionType === 'full_payment';
+            // Untuk passphrase Admin Perpanjangan dan Admin Pelunasan,
+            // invoice tidak langsung masuk ke "Menunggu Konfirmasi" saat dibuat.
+            // Hanya masuk setelah ada bukti pembayaran.
+            $passphraseAccessType = $data['passphrase_access_type'] ?? null;
+            $isAdminPassphrase = in_array($passphraseAccessType, ['admin_perpanjangan', 'admin_pelunasan'], true);
+            
+            // Hanya set needs_confirmation jika:
+            // 1. Transaction type adalah full_payment, DAN
+            // 2. Bukan dari passphrase Admin Perpanjangan/Pelunasan, ATAU
+            // 3. Sudah ada bukti pembayaran
+            $hasPaymentProof = !empty($data['payment_proof_path']);
+            $requiresConfirmation = $transactionType === 'full_payment' && (!$isAdminPassphrase || $hasPaymentProof);
 
             $status = match ($transactionType) {
                 'down_payment' => 'belum lunas',
-                'full_payment' => 'belum lunas',
+                'full_payment' => $hasPaymentProof ? 'belum lunas' : 'belum bayar',
                 default => 'belum bayar',
             };
 
