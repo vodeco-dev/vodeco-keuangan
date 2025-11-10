@@ -110,7 +110,9 @@ class InvoiceController extends Controller
         }
 
         $needsConfirmationInvoicesQuery = $tabStates['needs-confirmation']['unlocked'] && $baseQuery
-            ? (clone $baseQuery)->where('needs_confirmation', true)
+            ? (clone $baseQuery)
+                ->where('needs_confirmation', true)
+                ->whereNotNull('payment_proof_path')
             : null;
 
         if ($needsConfirmationInvoicesQuery) {
