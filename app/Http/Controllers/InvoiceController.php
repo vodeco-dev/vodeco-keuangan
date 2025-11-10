@@ -238,12 +238,10 @@ class InvoiceController extends Controller
             $sessionData = [];
         }
 
-        $allowedTransactionTypes = $passphrase?->allowedTransactionTypes() ?? [];
-        $passphraseToken = $sessionData['token'] ?? null;
+    $allowedTransactionTypes = $passphrase?->allowedTransactionTypes() ?? [];
+    $passphraseToken = $sessionData['token'] ?? null;
 
-        \Illuminate\Support\Facades\Storage::put('debug_packages.json', json_encode($passThroughPackages));
-
-        return view('invoices.public-create', [
+    return view('invoices.public-create', [
             'incomeCategories' => $incomeCategories,
             'passphraseSession' => $passphrase ? $sessionData : null,
             'allowedTransactionTypes' => $allowedTransactionTypes,
