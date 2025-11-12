@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Enums\Role;
 use App\Models\Category;
 use App\Models\Debt;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Setting;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Support\PassThroughPackage;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -42,9 +44,17 @@ class PassThroughInvoiceCreator
                 $durationDays = $package->durationDays;
             }
 
+            if ($durationDays <= 0) {
+                throw new \RuntimeException('Durasi paket harus lebih dari 0 hari.');
+            }
+
             $dailyBalanceUnit = (float) ($attributes['daily_balance_unit'] ?? $package->dailyBalance ?? 0);
             if ($dailyBalanceUnit <= 0 && $package->dailyBalance > 0) {
                 $dailyBalanceUnit = $package->dailyBalance;
+            }
+
+            if ($dailyBalanceUnit <= 0) {
+                throw new \RuntimeException('Saldo harian paket harus lebih dari 0.');
             }
 
             $maintenanceUnit = (float) ($attributes['maintenance_unit'] ?? $package->maintenanceFee ?? 0);
@@ -109,7 +119,12 @@ class PassThroughInvoiceCreator
 
             $debtUserId = $attributes['debt_user_id']
                 ?? $createdBy
-                ?? $ownerId;
+                ?? $ownerId
+                ?? $this->getDefaultAdminUserId();
+
+            if ($debtUserId === null) {
+                throw new \RuntimeException('User ID tidak dapat ditentukan untuk catatan hutang.');
+            }
 
             $dailyBalanceTotal = round($dailyBalanceUnit * $normalizedQuantity, 2);
             $debtDescription = $this->makeDebtDescription($package, $description, $normalizedQuantity);
@@ -126,12 +141,20 @@ class PassThroughInvoiceCreator
                 'daily_deduction' => $dailyBalanceTotal,
             ]);
 
+            $transactionUserId = $ownerId
+                ?? $createdBy
+                ?? $this->getDefaultAdminUserId();
+
+            if ($transactionUserId === null) {
+                throw new \RuntimeException('User ID tidak dapat ditentukan untuk transaksi.');
+            }
+
             $this->recordTransactions(
                 $maintenanceTotal,
                 $accountCreationTotal,
                 $normalizedQuantity,
                 $invoice,
-                $ownerId ?? $createdBy,
+                $transactionUserId,
                 $issueDateCarbon,
                 $incomeCategoryId
             );
@@ -182,6 +205,10 @@ class PassThroughInvoiceCreator
     {
         if (! $categoryId) {
             return;
+        }
+
+        if ($userId === null) {
+            throw new \RuntimeException('User ID tidak dapat null untuk transaksi.');
         }
 
         $transactions = [];
@@ -235,10 +262,31 @@ class PassThroughInvoiceCreator
     protected function generateInvoiceNumber(): string
     {
         $date = now()->format('Ymd');
-        $count = Invoice::whereDate('created_at', today())->count();
+        
+        // Gunakan lock untuk mencegah race condition
+        // Karena method ini dipanggil dari dalam DB::transaction, lockForUpdate akan bekerja dengan baik
+        $count = Invoice::whereDate('created_at', today())
+            ->lockForUpdate()
+            ->count();
+        
         $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        $invoiceNumber = "{$date}-{$sequence}";
 
-        return "{$date}-{$sequence}";
+        // Double check untuk memastikan nomor belum digunakan (fallback jika masih terjadi race condition)
+        $maxRetries = 10;
+        $retry = 0;
+        while (Invoice::where('number', $invoiceNumber)->exists() && $retry < $maxRetries) {
+            $count++;
+            $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+            $invoiceNumber = "{$date}-{$sequence}";
+            $retry++;
+        }
+
+        if ($retry >= $maxRetries) {
+            throw new \RuntimeException('Gagal menghasilkan nomor invoice unik setelah beberapa percobaan.');
+        }
+
+        return $invoiceNumber;
     }
 
     protected function formatCurrency(float $value): string
@@ -279,6 +327,16 @@ class PassThroughInvoiceCreator
         $quantityLabel = $quantity > 1 ? ' (x' . $quantity . ')' : '';
 
         return trim('Invoices Iklan ' . ($label !== '' ? $label : '')) . $quantityLabel;
+    }
+
+    /**
+     * Mendapatkan ID user admin sebagai fallback jika user_id tidak tersedia.
+     */
+    protected function getDefaultAdminUserId(): ?int
+    {
+        return User::where('role', Role::ADMIN)
+            ->orderBy('id')
+            ->value('id');
     }
 }
 

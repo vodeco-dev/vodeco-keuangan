@@ -77,11 +77,29 @@ window.passThroughForm = function passThroughForm(config = {}) {
     const defaultTotals = defaults.totals || {};
     const defaultDuration = defaults.durationDays;
 
+    // If custom package is selected by default and there are no explicit custom values from old form,
+    // initialize fields to empty/zero instead of using values from defaultUnits (which might come from other packages)
+    const isCustomDefault = normalizedPackageId === 'custom';
+    const hasExplicitCustomValues = defaultCustom.dailyBalance !== undefined 
+        || defaultCustom.durationDays !== undefined 
+        || defaultCustom.maintenanceFee !== undefined 
+        || defaultCustom.accountCreationFee !== undefined;
+
     const initialCustomerType = sanitizeCustomerType(defaultCustom.customerType);
-    const initialDailyBalance = sanitizeCurrency(firstDefined(defaultCustom.dailyBalance, defaultUnits.dailyBalance));
-    const initialDurationDays = sanitizeInteger(firstDefined(defaultCustom.durationDays, defaultDuration));
-    const initialMaintenanceFee = sanitizeCurrency(firstDefined(defaultCustom.maintenanceFee, defaultUnits.maintenance));
-    const initialAccountCreationFeeRaw = sanitizeCurrency(firstDefined(defaultCustom.accountCreationFee, defaultUnits.accountCreation));
+    // Only use defaultUnits if we're NOT on custom default OR if there are explicit custom values
+    // This prevents custom fields from being pre-filled with values from other packages
+    const initialDailyBalance = (isCustomDefault && !hasExplicitCustomValues)
+        ? 0 
+        : sanitizeCurrency(firstDefined(defaultCustom.dailyBalance, isCustomDefault ? undefined : defaultUnits.dailyBalance));
+    const initialDurationDays = (isCustomDefault && !hasExplicitCustomValues)
+        ? 0 
+        : sanitizeInteger(firstDefined(defaultCustom.durationDays, isCustomDefault ? undefined : defaultDuration));
+    const initialMaintenanceFee = (isCustomDefault && !hasExplicitCustomValues)
+        ? 0 
+        : sanitizeCurrency(firstDefined(defaultCustom.maintenanceFee, isCustomDefault ? undefined : defaultUnits.maintenance));
+    const initialAccountCreationFeeRaw = (isCustomDefault && !hasExplicitCustomValues)
+        ? 0 
+        : sanitizeCurrency(firstDefined(defaultCustom.accountCreationFee, isCustomDefault ? undefined : defaultUnits.accountCreation));
 
     return {
         passThroughPackages: packages,
@@ -117,41 +135,47 @@ window.passThroughForm = function passThroughForm(config = {}) {
                     }
                 }
 
-                const adBudgetUnitDefault = sanitizeCurrency(firstDefined(defaultTotals.adBudget, defaults.adBudgetTotal));
-                const maintenanceTotalDefault = sanitizeCurrency(firstDefined(defaultTotals.maintenance, defaults.maintenanceTotal));
-                const accountCreationTotalDefault = sanitizeCurrency(firstDefined(defaultTotals.accountCreation, defaults.accountCreationTotal));
-                const totalPriceDefault = sanitizeCurrency(firstDefined(defaultTotals.overall, defaults.totalPrice));
-                const dailyBalanceTotalDefault = sanitizeCurrency(firstDefined(defaultTotals.dailyBalance, defaults.dailyBalanceTotal));
+                // Only infer values from totals if we're NOT on custom default OR if there are explicit custom values
+                // This prevents custom fields from being auto-filled when custom is selected by default
+                const shouldInferValues = !isCustomDefault || hasExplicitCustomValues;
+                
+                if (shouldInferValues) {
+                    const adBudgetUnitDefault = sanitizeCurrency(firstDefined(defaultTotals.adBudget, defaults.adBudgetTotal));
+                    const maintenanceTotalDefault = sanitizeCurrency(firstDefined(defaultTotals.maintenance, defaults.maintenanceTotal));
+                    const accountCreationTotalDefault = sanitizeCurrency(firstDefined(defaultTotals.accountCreation, defaults.accountCreationTotal));
+                    const totalPriceDefault = sanitizeCurrency(firstDefined(defaultTotals.overall, defaults.totalPrice));
+                    const dailyBalanceTotalDefault = sanitizeCurrency(firstDefined(defaultTotals.dailyBalance, defaults.dailyBalanceTotal));
 
-                if (adBudgetUnitDefault > 0 && this.passThroughDailyBalanceUnit() <= 0) {
-                    const durationInput = this.customDurationInput();
-                    if (durationInput && this.customFields.durationDays <= 0 && this.customFields.dailyBalance > 0) {
-                        const inferredDuration = Math.round(adBudgetUnitDefault / Math.max(this.customFields.dailyBalance, 1));
-                        this.customFields.durationDays = inferredDuration > 0 ? inferredDuration : this.customFields.durationDays;
-                        durationInput.value = this.customFields.durationDays > 0 ? String(this.customFields.durationDays) : '';
+                    if (adBudgetUnitDefault > 0 && this.passThroughDailyBalanceUnit() <= 0) {
+                        const durationInput = this.customDurationInput();
+                        if (durationInput && this.customFields.durationDays <= 0 && this.customFields.dailyBalance > 0) {
+                            const inferredDuration = Math.round(adBudgetUnitDefault / Math.max(this.customFields.dailyBalance, 1));
+                            this.customFields.durationDays = inferredDuration > 0 ? inferredDuration : this.customFields.durationDays;
+                            durationInput.value = this.customFields.durationDays > 0 ? String(this.customFields.durationDays) : '';
+                        }
                     }
-                }
 
-                if (maintenanceTotalDefault > 0 && this.customFields.maintenanceFee <= 0 && this.passThroughQuantity() > 0) {
-                    this.customFields.maintenanceFee = Math.round(maintenanceTotalDefault / this.passThroughQuantity());
-                    this.setInputFormattedValue(this.customCurrencyInput('maintenanceFee'), this.customFields.maintenanceFee);
-                }
+                    if (maintenanceTotalDefault > 0 && this.customFields.maintenanceFee <= 0 && this.passThroughQuantity() > 0) {
+                        this.customFields.maintenanceFee = Math.round(maintenanceTotalDefault / this.passThroughQuantity());
+                        this.setInputFormattedValue(this.customCurrencyInput('maintenanceFee'), this.customFields.maintenanceFee);
+                    }
 
-                if (
-                    this.customFields.customerType === 'new'
-                    && accountCreationTotalDefault > 0
-                    && this.customFields.accountCreationFee <= 0
-                    && this.passThroughQuantity() > 0
-                ) {
-                    this.customFields.accountCreationFee = Math.round(accountCreationTotalDefault / this.passThroughQuantity());
-                    this.setInputFormattedValue(this.customCurrencyInput('accountCreationFee'), this.customFields.accountCreationFee);
-                }
+                    if (
+                        this.customFields.customerType === 'new'
+                        && accountCreationTotalDefault > 0
+                        && this.customFields.accountCreationFee <= 0
+                        && this.passThroughQuantity() > 0
+                    ) {
+                        this.customFields.accountCreationFee = Math.round(accountCreationTotalDefault / this.passThroughQuantity());
+                        this.setInputFormattedValue(this.customCurrencyInput('accountCreationFee'), this.customFields.accountCreationFee);
+                    }
 
-                if (totalPriceDefault <= 0 && dailyBalanceTotalDefault > 0 && this.passThroughAdBudgetTotal() <= 0) {
-                    const inferredDailyBalance = Math.round(dailyBalanceTotalDefault / Math.max(this.passThroughQuantity(), 1));
-                    if (inferredDailyBalance > 0 && this.customFields.dailyBalance <= 0) {
-                        this.customFields.dailyBalance = inferredDailyBalance;
-                        this.setInputFormattedValue(this.customCurrencyInput('dailyBalance'), this.customFields.dailyBalance);
+                    if (totalPriceDefault <= 0 && dailyBalanceTotalDefault > 0 && this.passThroughAdBudgetTotal() <= 0) {
+                        const inferredDailyBalance = Math.round(dailyBalanceTotalDefault / Math.max(this.passThroughQuantity(), 1));
+                        if (inferredDailyBalance > 0 && this.customFields.dailyBalance <= 0) {
+                            this.customFields.dailyBalance = inferredDailyBalance;
+                            this.setInputFormattedValue(this.customCurrencyInput('dailyBalance'), this.customFields.dailyBalance);
+                        }
                     }
                 }
             });
@@ -262,7 +286,8 @@ window.passThroughForm = function passThroughForm(config = {}) {
 
             const numeric = Number(value);
             const sanitized = Number.isFinite(numeric) ? Math.max(Math.round(numeric), 0) : 0;
-            input.value = this.formatNumber(sanitized);
+            // Show empty string for zero values instead of "0"
+            input.value = sanitized > 0 ? this.formatNumber(sanitized) : '';
         },
         summaryPackageName() {
             if (this.isCustomSelected()) {
