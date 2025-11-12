@@ -390,6 +390,24 @@ class InvoiceController extends Controller
         $data['created_by'] = $passphrase->created_by;
         $data['passphrase_access_type'] = $passphrase->access_type->value;
 
+        // Process payment proof file if present
+        $proofFile = $request->file('payment_proof');
+        if ($proofFile) {
+            $disk = 'public';
+            $directory = 'invoice-proofs/' . now()->format('Y/m');
+            $extension = strtolower($proofFile->getClientOriginalExtension() ?: $proofFile->extension() ?: 'png');
+            $filename = 'payment-proof-' . Str::uuid()->toString() . '.' . $extension;
+            $path = trim($directory . '/' . $filename, '/');
+
+            Storage::disk($disk)->putFileAs($directory, $proofFile, $filename);
+
+            $data['payment_proof_disk'] = $disk;
+            $data['payment_proof_path'] = $path;
+            $data['payment_proof_filename'] = $filename;
+            $data['payment_proof_original_name'] = $proofFile->getClientOriginalName();
+            $data['payment_proof_uploaded_at'] = now();
+        }
+
         $transactionType = $data['transaction_type'] ?? 'down_payment';
 
         if ($transactionType === 'pass_through') {
@@ -1135,7 +1153,7 @@ class InvoiceController extends Controller
 
             $status = match ($transactionType) {
                 'down_payment' => 'belum lunas',
-                'full_payment' => $hasPaymentProof ? 'belum lunas' : 'belum bayar',
+                'full_payment' => $requiresConfirmation ? 'belum lunas' : ($hasPaymentProof ? 'belum lunas' : 'belum bayar'),
                 default => 'belum bayar',
             };
 

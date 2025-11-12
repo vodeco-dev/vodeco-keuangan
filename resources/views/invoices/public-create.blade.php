@@ -69,7 +69,9 @@
                         </div>
                     @else
                         @php
-                            $allowedTransactions = array_values(array_intersect(['down_payment', 'full_payment', 'pass_through', 'settlement'], $allowedTransactionTypes));
+                            // Preserve order from enum's allowedTransactionTypes() method
+                            $allPossibleTypes = ['down_payment', 'full_payment', 'pass_through', 'settlement'];
+                            $allowedTransactions = array_values(array_filter($allowedTransactionTypes, fn($type) => in_array($type, $allPossibleTypes, true)));
                             $defaultTransaction = old('transaction_type');
 
                             if (! $defaultTransaction || ! in_array($defaultTransaction, $allowedTransactions, true)) {
