@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Role;
 use App\Models\Transaction;
-use App\Services\TransactionService; // Tambahkan ini
+use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -16,7 +17,8 @@ class DashboardController extends Controller
 
     public function index(Request $request)
     {
-        $summary = $this->transactionService->getAllSummary($request);
+        $user = $request->user();
+        $isAdminOrAccountant = in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT]);
 
         // Filter dan ringkasan keadaan keuangan per bulan
         $selectedMonth = $request->input('month');
@@ -42,25 +44,69 @@ class DashboardController extends Controller
             $selectedMonth = now()->format('Y-m');
         }
 
+        // Untuk summary, gunakan getAllSummary jika admin/accountant, atau buat query khusus untuk user biasa
+        if ($isAdminOrAccountant) {
+            $summaryRequest = new Request([
+                'month' => $month,
+                'year' => $year,
+            ]);
+            $summary = $this->transactionService->getAllSummary($summaryRequest);
+        } else {
+            // Untuk user biasa, hitung summary berdasarkan transaksi mereka di bulan yang dipilih
+            $userSummaryQuery = Transaction::query()
+                ->join('categories', 'transactions.category_id', '=', 'categories.id')
+                ->where('transactions.user_id', $user->id)
+                ->whereYear('transactions.date', $year)
+                ->whereMonth('transactions.date', $month);
+            
+            $userSummary = $userSummaryQuery
+                ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) AS totalPemasukan")
+                ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN transactions.amount ELSE 0 END) AS totalPengeluaran")
+                ->first();
+            
+            $pemasukan = $userSummary->totalPemasukan ?? 0;
+            $pengeluaran = $userSummary->totalPengeluaran ?? 0;
+            
+            $summary = [
+                'totalPemasukan' => $pemasukan,
+                'totalPengeluaran' => $pengeluaran,
+                'saldo' => $pemasukan - $pengeluaran,
+            ];
+        }
+
         // Total pemasukan & pengeluaran bulan terpilih
-        $currentTotals = Transaction::query()
+        $currentTotalsQuery = Transaction::query()
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
-            ->whereYear('date', $year)
-            ->whereMonth('date', $month)
-            ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN amount ELSE 0 END) as pemasukan")
-            ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN amount ELSE 0 END) as pengeluaran")
+            ->whereYear('transactions.date', $year)
+            ->whereMonth('transactions.date', $month);
+
+        // Filter berdasarkan user jika bukan admin/accountant
+        if (!$isAdminOrAccountant) {
+            $currentTotalsQuery->where('transactions.user_id', $user->id);
+        }
+
+        $currentTotals = $currentTotalsQuery
+            ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) as pemasukan")
+            ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN transactions.amount ELSE 0 END) as pengeluaran")
             ->first();
 
         $currentNet = ($currentTotals->pemasukan ?? 0) - ($currentTotals->pengeluaran ?? 0);
 
         // Hitung data bulan sebelumnya untuk perbandingan
         $previous = Carbon::create($year, $month)->subMonth();
-        $previousTotals = Transaction::query()
+        $previousTotalsQuery = Transaction::query()
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
-            ->whereYear('date', $previous->year)
-            ->whereMonth('date', $previous->month)
-            ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN amount ELSE 0 END) as pemasukan")
-            ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN amount ELSE 0 END) as pengeluaran")
+            ->whereYear('transactions.date', $previous->year)
+            ->whereMonth('transactions.date', $previous->month);
+
+        // Filter berdasarkan user jika bukan admin/accountant
+        if (!$isAdminOrAccountant) {
+            $previousTotalsQuery->where('transactions.user_id', $user->id);
+        }
+
+        $previousTotals = $previousTotalsQuery
+            ->selectRaw("SUM(CASE WHEN categories.type = 'pemasukan' THEN transactions.amount ELSE 0 END) as pemasukan")
+            ->selectRaw("SUM(CASE WHEN categories.type = 'pengeluaran' THEN transactions.amount ELSE 0 END) as pengeluaran")
             ->first();
 
         $previousNet = ($previousTotals->pemasukan ?? 0) - ($previousTotals->pengeluaran ?? 0);
@@ -77,11 +123,19 @@ class DashboardController extends Controller
             'percent_change' => $percentChange,
         ];
 
-        $recent_transactions = Transaction::with(['category', 'user'])
+        // Transaksi terbaru dengan filter bulan yang dipilih
+        $recentTransactionsQuery = Transaction::with(['category', 'user'])
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
             ->orderBy('date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get();
+            ->orderBy('created_at', 'desc');
+
+        // Filter berdasarkan user jika bukan admin/accountant
+        if (!$isAdminOrAccountant) {
+            $recentTransactionsQuery->where('user_id', $user->id);
+        }
+
+        $recent_transactions = $recentTransactionsQuery->take(5)->get();
 
         return view('dashboard', [
             'title'               => 'Dashboard',
@@ -89,7 +143,7 @@ class DashboardController extends Controller
             'financial_overview'  => $financialOverview,
             'selected_month'      => $selectedMonth,
             'recent_transactions' => $recent_transactions,
-            'show_user_column'    => true,
+            'show_user_column'    => $isAdminOrAccountant,
         ]);
     }
 }

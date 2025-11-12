@@ -129,6 +129,8 @@ class PassThroughInvoiceCreator
             $dailyBalanceTotal = round($dailyBalanceUnit * $normalizedQuantity, 2);
             $debtDescription = $this->makeDebtDescription($package, $description, $normalizedQuantity);
 
+            // Debt amount adalah adBudgetTotal (saldo harian × waktu tayang × quantity)
+            // Ini adalah uang dari perhitungan saldo harian dengan waktu tayang
             Debt::create([
                 'user_id' => $debtUserId,
                 'invoice_id' => $invoice->id,
@@ -139,6 +141,7 @@ class PassThroughInvoiceCreator
                 'due_date' => $dueDate,
                 'status' => Debt::STATUS_BELUM_LUNAS,
                 'daily_deduction' => $dailyBalanceTotal,
+                'category_id' => $incomeCategoryId, // Set category untuk memudahkan pelunasan
             ]);
 
             $transactionUserId = $ownerId
@@ -150,8 +153,7 @@ class PassThroughInvoiceCreator
             }
 
             $this->recordTransactions(
-                $maintenanceTotal,
-                $accountCreationTotal,
+                $total,
                 $normalizedQuantity,
                 $invoice,
                 $transactionUserId,
@@ -201,7 +203,7 @@ class PassThroughInvoiceCreator
         return $items;
     }
 
-    protected function recordTransactions(float $maintenanceTotal, float $accountCreationTotal, int $quantity, Invoice $invoice, ?int $userId, Carbon $issueDate, ?int $categoryId): void
+    protected function recordTransactions(float $totalAmount, int $quantity, Invoice $invoice, ?int $userId, Carbon $issueDate, ?int $categoryId): void
     {
         if (! $categoryId) {
             return;
@@ -211,31 +213,21 @@ class PassThroughInvoiceCreator
             throw new \RuntimeException('User ID tidak dapat null untuk transaksi.');
         }
 
-        $transactions = [];
-
-        if ($maintenanceTotal > 0) {
-            $transactions[] = [
-                'amount' => $maintenanceTotal,
-                'description' => 'Jasa Maintenance' . ($quantity > 1 ? ' (x' . $quantity . ')' : '') . ' - ' . ($invoice->client_name ?: $invoice->client_whatsapp ?: $invoice->number),
-            ];
+        if ($totalAmount <= 0) {
+            return;
         }
 
-        if ($accountCreationTotal > 0 && $invoice->type === Invoice::TYPE_PASS_THROUGH_NEW) {
-            $transactions[] = [
-                'amount' => $accountCreationTotal,
-                'description' => 'Biaya Pembuatan Akun' . ($quantity > 1 ? ' (x' . $quantity . ')' : '') . ' - ' . ($invoice->client_name ?: $invoice->client_whatsapp ?: $invoice->number),
-            ];
-        }
-
-        foreach ($transactions as $transaction) {
-            Transaction::create([
-                'category_id' => $categoryId,
-                'user_id' => $userId,
-                'amount' => $transaction['amount'],
-                'description' => $transaction['description'],
-                'date' => $issueDate->toDateString(),
-            ]);
-        }
+        // Buat 1 transaksi untuk total invoice (termasuk maintenance + account creation + ad budget)
+        $clientInfo = $invoice->client_name ?: $invoice->client_whatsapp ?: 'Klien';
+        $description = 'Invoices Iklan' . ($quantity > 1 ? ' (x' . $quantity . ')' : '') . ' - ' . $clientInfo . ' (' . $invoice->number . ')';
+        
+        Transaction::create([
+            'category_id' => $categoryId,
+            'user_id' => $userId,
+            'amount' => $totalAmount,
+            'description' => $description,
+            'date' => $issueDate->toDateString(),
+        ]);
     }
 
     protected function resolveIncomeCategory(): ?Category

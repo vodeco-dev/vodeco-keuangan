@@ -114,11 +114,22 @@ class Invoice extends Model
             ->filter()
             ->implode(', ');
 
+        $invoiceNumber = '(' . $this->number . ')';
+
         if ($summary === '') {
             return 'Invoice #' . $this->number;
         }
 
-        return Str::limit($summary, $maxLength);
+        $fullDescription = Str::limit($summary, $maxLength) . ' ' . $invoiceNumber;
+        
+        // Jika terlalu panjang, potong summary agar invoice number tetap masuk
+        if (strlen($fullDescription) > $maxLength + 20) {
+            $availableLength = $maxLength - strlen($invoiceNumber) - 1;
+            $summary = Str::limit($summary, max($availableLength, 10));
+            $fullDescription = $summary . ' ' . $invoiceNumber;
+        }
+
+        return $fullDescription;
     }
 
     public function transactionDescription(int $maxLength = 120): string
@@ -127,7 +138,12 @@ class Invoice extends Model
             $referenceInvoice = $this->referenceInvoice;
 
             if ($referenceInvoice) {
-                return $referenceInvoice->itemDescriptionSummary($maxLength);
+                $description = $referenceInvoice->itemDescriptionSummary($maxLength);
+                // Tambahkan nomor invoice settlement jika belum ada
+                if (strpos($description, '(' . $this->number . ')') === false) {
+                    return $description . ' (' . $this->number . ')';
+                }
+                return $description;
             }
         }
 

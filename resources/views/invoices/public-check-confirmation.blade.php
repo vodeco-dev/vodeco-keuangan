@@ -229,8 +229,8 @@
                                                     <tr>
                                                         <td class="px-6 py-4 text-sm text-gray-900">{{ $item->description }}</td>
                                                         <td class="px-6 py-4 text-sm text-right text-gray-900">{{ $item->quantity }}</td>
-                                                        <td class="px-6 py-4 text-sm text-right text-gray-900">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                                                        <td class="px-6 py-4 text-sm text-right font-semibold text-gray-900">Rp {{ number_format($item->quantity * $item->unit_price, 0, ',', '.') }}</td>
+                                                        <td class="px-6 py-4 text-sm text-right text-gray-900">Rp {{ number_format($item->price, 0, ',', '.') }}</td>
+                                                        <td class="px-6 py-4 text-sm text-right font-semibold text-gray-900">Rp {{ number_format($item->quantity * $item->price, 0, ',', '.') }}</td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>

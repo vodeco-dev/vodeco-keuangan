@@ -186,11 +186,24 @@ class DebtController extends Controller
 
                     $debt->status = Debt::STATUS_LUNAS;
 
+                    // Tambahkan nomor invoice dalam tanda kurung jika debt terkait dengan invoice
+                    $description = $debt->description;
+                    if ($debt->invoice_id) {
+                        $debt->loadMissing('invoice');
+                        if ($debt->invoice) {
+                            $invoiceNumber = '(' . $debt->invoice->number . ')';
+                            // Cek apakah sudah ada nomor invoice di deskripsi
+                            if (strpos($description, $invoiceNumber) === false) {
+                                $description = $description . ' ' . $invoiceNumber;
+                            }
+                        }
+                    }
+
                     Transaction::create([
                         'category_id' => $debt->category_id,
                         'date' => $validated['payment_date'] ?? now(),
                         'amount' => $debt->amount,
-                        'description' => $debt->description,
+                        'description' => $description,
                         'user_id' => $request->user()->id, // Keamanan: Pastikan transaksi memiliki pemilik
                     ]);
 
@@ -287,11 +300,24 @@ class DebtController extends Controller
                 return;
             }
 
+            // Tambahkan nomor invoice dalam tanda kurung jika debt terkait dengan invoice
+            $description = ($auto ? '[Otomatis] ' : '') . 'Gagal Project: ' . $debt->description;
+            if ($debt->invoice_id) {
+                $debt->loadMissing('invoice');
+                if ($debt->invoice) {
+                    $invoiceNumber = '(' . $debt->invoice->number . ')';
+                    // Cek apakah sudah ada nomor invoice di deskripsi
+                    if (strpos($description, $invoiceNumber) === false) {
+                        $description = $description . ' ' . $invoiceNumber;
+                    }
+                }
+            }
+
             Transaction::create([
                 'category_id' => $debt->category_id,
                 'date' => now(),
                 'amount' => $remainingAmount,
-                'description' => ($auto ? '[Otomatis] ' : '') . 'Gagal Project: ' . $debt->description,
+                'description' => $description,
                 'user_id' => $user->id,
             ]);
 
