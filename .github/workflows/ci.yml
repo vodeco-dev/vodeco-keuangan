@@ -30,6 +30,9 @@ jobs:
           extensions: mbstring, bcmath, intl, pcntl, sqlite3, zip
           tools: composer:v2
 
+      - name: Clear Composer cache
+        run: composer clear-cache
+
       - name: Validate Composer files
         run: composer validate --strict
 
