@@ -31,6 +31,9 @@ jobs:
           tools: composer:latest
           ini-values: memory_limit=512M
 
+      - name: Clear Composer cache
+        run: composer clear-cache
+
       - name: Validate Composer files
         run: composer validate --strict
 
