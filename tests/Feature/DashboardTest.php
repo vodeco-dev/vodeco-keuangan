@@ -19,25 +19,6 @@ class DashboardTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2024-05-15 12:00:00'));
 
-        $summary = [
-            'totalPemasukan' => 300000,
-            'totalPengeluaran' => 120000,
-            'saldo' => 180000,
-        ];
-
-        $this->app->bind(TransactionService::class, function () use ($summary) {
-            return new class($summary) extends TransactionService {
-                public function __construct(private array $summary)
-                {
-                }
-
-                public function getAllSummary(?Request $request = null): array
-                {
-                    return $this->summary;
-                }
-            };
-        });
-
         $user = User::factory()->create();
 
         $incomeCategory = Category::factory()->create(['type' => 'pemasukan']);
@@ -75,7 +56,13 @@ class DashboardTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('dashboard');
-        $response->assertViewHas('summary', $summary);
+        // Summary sekarang memfilter berdasarkan bulan yang dipilih (Mei 2024)
+        // Hanya transaksi di bulan Mei yang dihitung: 150000 pemasukan, 50000 pengeluaran
+        $response->assertViewHas('summary', [
+            'totalPemasukan' => 150000,
+            'totalPengeluaran' => 50000,
+            'saldo' => 100000,
+        ]);
         $response->assertViewHas('financial_overview', function (array $overview) {
             $this->assertSame(150000, $overview['pemasukan']);
             $this->assertSame(50000, $overview['pengeluaran']);
@@ -86,7 +73,14 @@ class DashboardTest extends TestCase
         });
         $response->assertViewHas('selected_month', '2024-05');
         $response->assertViewHas('recent_transactions', function ($transactions) {
-            $this->assertCount(4, $transactions);
+            // Hanya transaksi di bulan yang dipilih (Mei 2024) yang ditampilkan
+            $this->assertCount(2, $transactions);
+            
+            // Pastikan semua transaksi berada di bulan Mei 2024
+            foreach ($transactions as $transaction) {
+                $this->assertEquals(2024, $transaction->date->year);
+                $this->assertEquals(5, $transaction->date->month);
+            }
 
             return $transactions->first()->date->greaterThanOrEqualTo($transactions->last()->date);
         });

@@ -103,17 +103,31 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'description' => 'Invoices Iklan Kampanye Marketplace',
         ]);
 
+        // Hanya ada 1 transaksi untuk total invoice
         $this->assertDatabaseHas('transactions', [
             'category_id' => $category->id,
-            'amount' => 50000,
+            'amount' => 425000,
             'user_id' => $owner->id,
+        ]);
+        // Pastikan deskripsi berisi nomor invoice dalam tanda kurung
+        $transaction = Transaction::where('category_id', $category->id)
+            ->where('amount', 425000)
+            ->where('user_id', $owner->id)
+            ->first();
+        $this->assertNotNull($transaction);
+        $this->assertStringContainsString('Invoices Iklan - PT Maju Bersama', $transaction->description);
+        $this->assertStringContainsString('(' . $invoice->number . ')', $transaction->description);
+
+        // Pastikan tidak ada transaksi terpisah untuk maintenance atau account creation
+        $this->assertDatabaseMissing('transactions', [
+            'category_id' => $category->id,
+            'amount' => 50000,
             'description' => 'Jasa Maintenance - PT Maju Bersama',
         ]);
 
-        $this->assertDatabaseHas('transactions', [
+        $this->assertDatabaseMissing('transactions', [
             'category_id' => $category->id,
             'amount' => 75000,
-            'user_id' => $owner->id,
             'description' => 'Biaya Pembuatan Akun - PT Maju Bersama',
         ]);
 
@@ -197,10 +211,25 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'description' => 'Invoices Iklan Promo Ramadhan (x2)',
         ]);
 
+        // Hanya ada 1 transaksi untuk total invoice
         $this->assertDatabaseHas('transactions', [
             'category_id' => $category->id,
-            'amount' => 60000,
+            'amount' => 260000,
             'user_id' => $owner->id,
+        ]);
+        // Pastikan deskripsi berisi nomor invoice dalam tanda kurung
+        $transaction = Transaction::where('category_id', $category->id)
+            ->where('amount', 260000)
+            ->where('user_id', $owner->id)
+            ->first();
+        $this->assertNotNull($transaction);
+        $this->assertStringContainsString('Invoices Iklan (x2) - CV Lancar', $transaction->description);
+        $this->assertStringContainsString('(' . $invoice->number . ')', $transaction->description);
+
+        // Pastikan tidak ada transaksi terpisah untuk maintenance
+        $this->assertDatabaseMissing('transactions', [
+            'category_id' => $category->id,
+            'amount' => 60000,
             'description' => 'Jasa Maintenance (x2) - CV Lancar',
         ]);
 
@@ -364,17 +393,31 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'description' => 'Invoices Iklan Paket Custom (x2)',
         ]);
 
+        // Hanya ada 1 transaksi untuk total invoice
         $this->assertDatabaseHas('transactions', [
             'category_id' => $category->id,
-            'amount' => 400000,
+            'amount' => 3000000,
             'user_id' => $owner->id,
+        ]);
+        // Pastikan deskripsi berisi nomor invoice dalam tanda kurung
+        $transaction = Transaction::where('category_id', $category->id)
+            ->where('amount', 3000000)
+            ->where('user_id', $owner->id)
+            ->first();
+        $this->assertNotNull($transaction);
+        $this->assertStringContainsString('Invoices Iklan (x2) - PT Custom Mandiri', $transaction->description);
+        $this->assertStringContainsString('(' . $invoice->number . ')', $transaction->description);
+
+        // Pastikan tidak ada transaksi terpisah untuk maintenance atau account creation
+        $this->assertDatabaseMissing('transactions', [
+            'category_id' => $category->id,
+            'amount' => 400000,
             'description' => 'Jasa Maintenance (x2) - PT Custom Mandiri',
         ]);
 
-        $this->assertDatabaseHas('transactions', [
+        $this->assertDatabaseMissing('transactions', [
             'category_id' => $category->id,
             'amount' => 600000,
-            'user_id' => $owner->id,
             'description' => 'Biaya Pembuatan Akun (x2) - PT Custom Mandiri',
         ]);
 

@@ -9,8 +9,9 @@ $tabLabels = [
 ];
 
 $allowedTransactions = $allowedTransactions ?? array_keys($tabLabels);
+// Preserve order from input, only filter out invalid transaction types
 $allowedTransactions = array_values(
-  array_intersect(array_keys($tabLabels), $allowedTransactions),
+  array_filter($allowedTransactions, fn($type) => array_key_exists($type, $tabLabels))
 );
 if (empty($allowedTransactions)) {
   $allowedTransactions = array_keys($tabLabels);

@@ -202,7 +202,7 @@ class PublicInvoiceSubmissionTest extends TestCase
         ]);
     }
 
-    public function test_admin_perpanjangan_passphrase_only_allows_full_payment_transactions(): void
+    public function test_admin_perpanjangan_passphrase_allows_full_payment_and_down_payment_transactions(): void
     {
         $admin = User::factory()->create([
             'role' => Role::ADMIN,
@@ -242,11 +242,15 @@ class PublicInvoiceSubmissionTest extends TestCase
 
         $xpath = new \DOMXPath($dom);
         $transactionInput = $xpath->query('//input[@name="transaction_type"]')->item(0);
+        // Default should be first allowed transaction (full_payment)
         $this->assertSame('full_payment', $transactionInput?->getAttribute('value'));
 
-        $transactionButtons = $xpath->query("//h3[text()='Jenis Transaksi']/following-sibling::div[1]//button");
-        $this->assertSame(1, $transactionButtons->length);
-        $this->assertSame('Menunggu Pembayaran', trim($transactionButtons->item(0)?->textContent ?? ''));
+        // Find buttons in the transaction type section
+        $transactionTypeSection = $xpath->query("//h3[contains(text(), 'Jenis Transaksi')]")->item(0);
+        $this->assertNotNull($transactionTypeSection, 'Transaction type section should exist');
+        
+        $transactionButtons = $xpath->query(".//button", $transactionTypeSection->parentNode);
+        $this->assertSame(2, $transactionButtons->length, 'Should have 2 transaction type buttons (full_payment and down_payment)');
 
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
@@ -283,7 +287,7 @@ class PublicInvoiceSubmissionTest extends TestCase
         Storage::disk('public')->assertExists($invoice->pdf_path);
     }
 
-    public function test_admin_perpanjangan_passphrase_rejects_non_full_payment_transactions(): void
+    public function test_admin_perpanjangan_passphrase_rejects_non_allowed_transactions(): void
     {
         $admin = User::factory()->create([
             'role' => Role::ADMIN,
@@ -315,14 +319,14 @@ class PublicInvoiceSubmissionTest extends TestCase
             ],
         ];
 
+        // Test that settlement is rejected (not allowed for admin_perpanjangan)
         $submissionData = [
             'passphrase_token' => $session['invoice_portal_passphrase']['token'],
-            'transaction_type' => 'down_payment',
+            'transaction_type' => 'settlement',
             'client_name' => 'Agus Tono',
             'client_whatsapp' => '081555666777',
             'client_address' => 'Jl. Flamboyan No. 5',
             'due_date' => now()->addWeek()->toDateString(),
-            'down_payment_due' => 900000,
             'items' => [
                 [
                     'description' => 'Layanan Perpanjangan Tahunan',
@@ -341,7 +345,7 @@ class PublicInvoiceSubmissionTest extends TestCase
         ]);
     }
 
-    public function test_admin_pelunasan_passphrase_allows_full_payment_and_settlement_transactions(): void
+    public function test_admin_pelunasan_passphrase_allows_settlement_full_payment_and_down_payment_transactions(): void
     {
         $admin = User::factory()->create([
             'role' => Role::ADMIN,
@@ -382,10 +386,14 @@ class PublicInvoiceSubmissionTest extends TestCase
         $xpath = new \DOMXPath($dom);
         $transactionInput = $xpath->query('//input[@name="transaction_type"]')->item(0);
         // Default should be first allowed transaction (settlement)
-        $this->assertContains($transactionInput?->getAttribute('value'), ['settlement', 'full_payment']);
+        $this->assertContains($transactionInput?->getAttribute('value'), ['settlement', 'full_payment', 'down_payment']);
 
-        $transactionButtons = $xpath->query("//h3[text()='Jenis Transaksi']/following-sibling::div[1]//button");
-        $this->assertSame(2, $transactionButtons->length);
+        // Find buttons in the transaction type section
+        $transactionTypeSection = $xpath->query("//h3[contains(text(), 'Jenis Transaksi')]")->item(0);
+        $this->assertNotNull($transactionTypeSection, 'Transaction type section should exist');
+        
+        $transactionButtons = $xpath->query(".//button", $transactionTypeSection->parentNode);
+        $this->assertSame(3, $transactionButtons->length, 'Should have 3 transaction type buttons (settlement, full_payment, and down_payment)');
         
         $buttonTexts = [];
         foreach ($transactionButtons as $button) {
@@ -393,6 +401,7 @@ class PublicInvoiceSubmissionTest extends TestCase
         }
         $this->assertContains('Menunggu Pembayaran', $buttonTexts);
         $this->assertContains('Pelunasan', $buttonTexts);
+        $this->assertContains('Down Payment', $buttonTexts);
 
         // Test creating invoice with full_payment
         $submissionData = [
