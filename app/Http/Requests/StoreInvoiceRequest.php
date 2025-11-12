@@ -258,9 +258,28 @@ class StoreInvoiceRequest extends FormRequest
                 'pass_through_custom_account_creation_fee',
             ];
 
+            // Sanitize pass_through_quantity - ensure it's always present for validation
+            // The key issue: if sanitization returns null, the field gets filtered out,
+            // causing required_if validation to fail. We must always include this field.
+            $passThroughQuantityRaw = $this->input('pass_through_quantity');
+            $passThroughQuantity = $this->sanitizeInteger($passThroughQuantityRaw);
+            
+            // If sanitization failed, try one more aggressive parse
+            // This handles edge cases like formatted numbers that might not pass is_numeric
+            if ($passThroughQuantity === null && $passThroughQuantityRaw !== null && $passThroughQuantityRaw !== '') {
+                $normalized = preg_replace('/[^\d]/', '', (string) $passThroughQuantityRaw);
+                if ($normalized !== '') {
+                    $passThroughQuantity = (int) $normalized;
+                }
+                // If still null after aggressive parse, keep null (not empty string)
+                // This ensures required_if validation can properly catch it
+            }
+            // If passThroughQuantity is still null at this point (no value or empty string),
+            // we keep it as null so validation can catch it with required_if rule
+
             $passThroughFields = [
                 'pass_through_package_id' => $passThroughPackageId,
-                'pass_through_quantity' => $this->sanitizeInteger($this->input('pass_through_quantity')),
+                'pass_through_quantity' => $passThroughQuantity,
                 'pass_through_ad_budget_total' => $this->sanitizeCurrency($this->input('pass_through_ad_budget_total')),
                 'pass_through_maintenance_total' => $this->sanitizeCurrency($this->input('pass_through_maintenance_total')),
                 'pass_through_account_creation_total' => $this->sanitizeCurrency($this->input('pass_through_account_creation_total')),
@@ -302,7 +321,16 @@ class StoreInvoiceRequest extends FormRequest
                 }
             }
 
-            $merged = array_merge($merged, array_filter($passThroughFields, fn ($value) => $value !== null));
+            // Filter out null values, but always keep pass_through_quantity for validation
+            $filteredPassThroughFields = array_filter($passThroughFields, function ($value, $key) {
+                // Always include pass_through_quantity even if null, so validation can handle it
+                if ($key === 'pass_through_quantity') {
+                    return true;
+                }
+                return $value !== null;
+            }, ARRAY_FILTER_USE_BOTH);
+
+            $merged = array_merge($merged, $filteredPassThroughFields);
 
             if ($isCustomPackage) {
                 $merged = array_merge($merged, array_filter($customPassThroughFields, fn ($value) => $value !== null));
@@ -337,11 +365,21 @@ class StoreInvoiceRequest extends FormRequest
             return null;
         }
 
-        if (is_numeric($value)) {
-            return (int) $value;
+        // Handle empty string
+        if ($value === '' || (is_string($value) && trim($value) === '')) {
+            return null;
         }
 
-        $digits = preg_replace('/\D/', '', (string) $value);
+        // Handle numeric values (including formatted numbers like "1.000")
+        if (is_numeric($value)) {
+            // For formatted numbers with dots (thousand separators), PHP's is_numeric
+            // will treat "1.000" as valid, but we need to handle it carefully
+            // Cast to float first to handle decimal strings, then to int
+            return (int) (float) $value;
+        }
+
+        // Extract digits from strings that might contain formatting
+        $digits = preg_replace('/[^\d]/', '', (string) $value);
 
         return $digits === '' ? null : (int) $digits;
     }
