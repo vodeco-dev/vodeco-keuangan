@@ -117,32 +117,8 @@ class PassThroughInvoiceCreator
                 ]);
             }
 
-            $debtUserId = $attributes['debt_user_id']
-                ?? $createdBy
-                ?? $ownerId
-                ?? $this->getDefaultAdminUserId();
-
-            if ($debtUserId === null) {
-                throw new \RuntimeException('User ID tidak dapat ditentukan untuk catatan hutang.');
-            }
-
-            $dailyBalanceTotal = round($dailyBalanceUnit * $normalizedQuantity, 2);
-            $debtDescription = $this->makeDebtDescription($package, $description, $normalizedQuantity);
-
-            // Debt amount adalah adBudgetTotal (saldo harian × waktu tayang × quantity)
-            // Ini adalah uang dari perhitungan saldo harian dengan waktu tayang
-            Debt::create([
-                'user_id' => $debtUserId,
-                'invoice_id' => $invoice->id,
-                'description' => $debtDescription,
-                'related_party' => $clientName ?: $clientWhatsapp,
-                'type' => Debt::TYPE_PASS_THROUGH,
-                'amount' => $adBudgetTotal,
-                'due_date' => $dueDate,
-                'status' => Debt::STATUS_BELUM_LUNAS,
-                'daily_deduction' => $dailyBalanceTotal,
-                'category_id' => $incomeCategoryId, // Set category untuk memudahkan pelunasan
-            ]);
+            // Catatan: Debt untuk pass-through invoice akan dibuat setelah konfirmasi pembayaran
+            // di method storePayment() untuk memastikan invoice melewati konfirmasi terlebih dahulu
 
             $transactionUserId = $ownerId
                 ?? $createdBy

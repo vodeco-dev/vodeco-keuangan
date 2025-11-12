@@ -14,9 +14,18 @@ class DebtService
      */
     public function getDebts(Request $request, User $user): LengthAwarePaginator
     {
-        $query = Debt::with(['payments', 'category'])
+        $query = Debt::with(['payments', 'category', 'invoice'])
             ->where('user_id', $user->id)
             ->latest();
+
+        // Filter out debts where related invoice still needs confirmation
+        // Ini memastikan invoice iklan melewati konfirmasi pembayaran sebelum muncul di halaman hutang
+        $query->where(function ($q) {
+            $q->whereNull('invoice_id')
+              ->orWhereHas('invoice', function ($invoiceQuery) {
+                  $invoiceQuery->where('needs_confirmation', false);
+              });
+        });
 
         if ($request->filled('type_filter')) {
             $query->where('type', $request->type_filter);

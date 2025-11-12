@@ -740,18 +740,76 @@ class InvoiceController extends Controller
                 ? 'Pelunasan invoice #' . $invoice->number
                 : 'Pembayaran down payment invoice #' . $invoice->number;
 
-            $debt = Debt::updateOrCreate(
-                ['invoice_id' => $invoice->id],
-                [
-                    'description' => $invoice->transactionDescription(),
-                    'related_party' => $relatedParty,
-                    'type' => Debt::TYPE_DOWN_PAYMENT,
-                    'amount' => $invoice->total,
-                    'due_date' => $invoice->due_date,
-                    'status' => $willBePaidOff ? Debt::STATUS_LUNAS : Debt::STATUS_BELUM_LUNAS,
-                    'user_id' => $invoice->user_id,
-                ]
-            );
+            // Cek apakah invoice adalah pass-through type
+            $isPassThrough = in_array($invoice->type, [
+                Invoice::TYPE_PASS_THROUGH_NEW,
+                Invoice::TYPE_PASS_THROUGH_EXISTING
+            ], true);
+
+            $adBudgetTotal = null;
+            $dailyBalanceTotal = null;
+
+            if ($isPassThrough) {
+                // Untuk pass-through invoice, cari item "Dana Invoices Iklan" untuk mendapatkan adBudgetTotal
+                $adBudgetItem = $invoice->items->first(function ($item) {
+                    return strpos($item->description, 'Dana Invoices Iklan') !== false;
+                });
+
+                if (!$adBudgetItem) {
+                    // Fallback: gunakan total invoice jika item tidak ditemukan
+                    $adBudgetTotal = $invoice->total;
+                    $dailyBalanceTotal = 0;
+                } else {
+                    // adBudgetTotal = price * quantity dari item "Dana Invoices Iklan"
+                    $adBudgetTotal = round($adBudgetItem->price * $adBudgetItem->quantity, 2);
+                    
+                    // Parse durationDays dari description untuk menghitung dailyBalanceTotal
+                    // Format: "Dana Invoices Iklan (X x Y hari)" atau serupa
+                    // adBudgetUnit = dailyBalanceUnit * durationDays
+                    // adBudgetTotal = adBudgetUnit * quantity = (dailyBalanceUnit * durationDays) * quantity
+                    // dailyBalanceTotal = dailyBalanceUnit * quantity = adBudgetTotal / durationDays
+                    $description = $adBudgetItem->description;
+                    $durationDays = 1;
+                    if (preg_match('/(\d+)\s*hari/i', $description, $matches)) {
+                        $durationDays = max(1, (int) $matches[1]);
+                    }
+                    
+                    // dailyBalanceTotal = adBudgetTotal / durationDays
+                    // Ini setara dengan dailyBalanceUnit * quantity
+                    $dailyBalanceTotal = $durationDays > 0 
+                        ? round($adBudgetTotal / $durationDays, 2) 
+                        : 0;
+                }
+
+                // Buat Debt untuk pass-through invoice setelah konfirmasi pembayaran
+                $debt = Debt::updateOrCreate(
+                    ['invoice_id' => $invoice->id],
+                    [
+                        'description' => $invoice->transactionDescription(),
+                        'related_party' => $relatedParty,
+                        'type' => Debt::TYPE_PASS_THROUGH,
+                        'amount' => $adBudgetTotal,
+                        'due_date' => $invoice->due_date,
+                        'status' => $willBePaidOff ? Debt::STATUS_LUNAS : Debt::STATUS_BELUM_LUNAS,
+                        'user_id' => $invoice->user_id,
+                        'daily_deduction' => $dailyBalanceTotal,
+                    ]
+                );
+            } else {
+                // Untuk invoice biasa (down payment), gunakan logika yang sudah ada
+                $debt = Debt::updateOrCreate(
+                    ['invoice_id' => $invoice->id],
+                    [
+                        'description' => $invoice->transactionDescription(),
+                        'related_party' => $relatedParty,
+                        'type' => Debt::TYPE_DOWN_PAYMENT,
+                        'amount' => $invoice->total,
+                        'due_date' => $invoice->due_date,
+                        'status' => $willBePaidOff ? Debt::STATUS_LUNAS : Debt::STATUS_BELUM_LUNAS,
+                        'user_id' => $invoice->user_id,
+                    ]
+                );
+            }
 
             if ($debt->wasRecentlyCreated && !$debt->category_id) {
                 $firstItem = $invoice->items()->first();
@@ -792,7 +850,12 @@ class InvoiceController extends Controller
                     ? Debt::STATUS_LUNAS
                     : Debt::STATUS_BELUM_LUNAS;
                 $debt->description = $invoice->transactionDescription();
-                $debt->amount = $invoice->total;
+                // Untuk pass-through invoice, gunakan adBudgetTotal; untuk yang lain gunakan invoice total
+                if ($isPassThrough && isset($adBudgetTotal)) {
+                    $debt->amount = $adBudgetTotal;
+                } else {
+                    $debt->amount = $invoice->total;
+                }
                 $debt->due_date = $invoice->due_date;
                 $debt->related_party = $relatedParty;
                 $debt->save();
