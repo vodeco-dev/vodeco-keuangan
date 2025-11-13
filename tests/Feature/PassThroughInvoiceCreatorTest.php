@@ -93,17 +93,39 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'category_id' => $category->id,
         ]);
 
+        // CHANGED: Debt dan transaction tidak dibuat saat invoice dibuat
+        // Mereka akan dibuat saat invoice dikonfirmasi
+        $this->assertDatabaseMissing('debts', [
+            'invoice_id' => $invoice->id,
+        ]);
+
+        $this->assertDatabaseMissing('transactions', [
+            'category_id' => $category->id,
+            'amount' => 425000,
+            'user_id' => $owner->id,
+        ]);
+
+        // CHANGED: Simulasikan konfirmasi invoice (storePayment)
+        $invoice->update(['needs_confirmation' => true]);
+        
+        $this->actingAs($owner)
+            ->post(route('invoices.pay', $invoice), [
+                'payment_amount' => $invoice->total,
+                'payment_date' => Carbon::now()->toDateString(),
+                'category_id' => $category->id,
+            ]);
+
+        // Sekarang debt dan transaction harus ada setelah konfirmasi
         $this->assertDatabaseHas('debts', [
             'invoice_id' => $invoice->id,
             'user_id' => $owner->id,
             'type' => Debt::TYPE_PASS_THROUGH,
-            'amount' => 300000,
+            'amount' => 300000, // Hanya dana iklan (Saldo Harian × Durasi)
             'daily_deduction' => 30000,
             'status' => Debt::STATUS_BELUM_LUNAS,
-            'description' => 'Invoices Iklan Kampanye Marketplace',
         ]);
 
-        // Hanya ada 1 transaksi untuk total invoice
+        // Hanya ada 1 transaksi untuk total invoice (saat dikonfirmasi)
         $this->assertDatabaseHas('transactions', [
             'category_id' => $category->id,
             'amount' => 425000,
@@ -203,15 +225,39 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'category_id' => $category->id,
         ]);
 
+        // CHANGED: Debt dan transaction tidak dibuat saat invoice dibuat
+        // Mereka akan dibuat saat invoice dikonfirmasi
+        $this->assertDatabaseMissing('debts', [
+            'invoice_id' => $invoice->id,
+        ]);
+
+        $this->assertDatabaseMissing('transactions', [
+            'category_id' => $category->id,
+            'amount' => 260000,
+            'user_id' => $owner->id,
+        ]);
+
+        // CHANGED: Simulasikan konfirmasi invoice (storePayment)
+        $invoice->update(['needs_confirmation' => true]);
+        
+        $this->actingAs($owner)
+            ->post(route('invoices.pay', $invoice), [
+                'payment_amount' => $invoice->total,
+                'payment_date' => Carbon::now()->toDateString(),
+                'category_id' => $category->id,
+            ]);
+
+        // Sekarang debt dan transaction harus ada setelah konfirmasi
         $this->assertDatabaseHas('debts', [
             'invoice_id' => $invoice->id,
             'user_id' => $owner->id,
-            'amount' => 200000,
+            'type' => Debt::TYPE_PASS_THROUGH,
+            'amount' => 200000, // Hanya dana iklan (Saldo Harian × Durasi)
             'daily_deduction' => 40000,
-            'description' => 'Invoices Iklan Promo Ramadhan (x2)',
+            'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
 
-        // Hanya ada 1 transaksi untuk total invoice
+        // Hanya ada 1 transaksi untuk total invoice (saat dikonfirmasi)
         $this->assertDatabaseHas('transactions', [
             'category_id' => $category->id,
             'amount' => 260000,
@@ -384,16 +430,39 @@ class PassThroughInvoiceCreatorTest extends TestCase
             'category_id' => $category->id,
         ]);
 
+        // CHANGED: Debt dan transaction tidak dibuat saat invoice dibuat
+        // Mereka akan dibuat saat invoice dikonfirmasi
+        $this->assertDatabaseMissing('debts', [
+            'invoice_id' => $invoice->id,
+        ]);
+
+        $this->assertDatabaseMissing('transactions', [
+            'category_id' => $category->id,
+            'amount' => 3000000,
+            'user_id' => $owner->id,
+        ]);
+
+        // CHANGED: Simulasikan konfirmasi invoice (storePayment)
+        $invoice->update(['needs_confirmation' => true]);
+        
+        $this->actingAs($owner)
+            ->post(route('invoices.pay', $invoice), [
+                'payment_amount' => $invoice->total,
+                'payment_date' => Carbon::now()->toDateString(),
+                'category_id' => $category->id,
+            ]);
+
+        // Sekarang debt dan transaction harus ada setelah konfirmasi
         $this->assertDatabaseHas('debts', [
             'invoice_id' => $invoice->id,
             'user_id' => $owner->id,
             'type' => Debt::TYPE_PASS_THROUGH,
-            'amount' => 2000000,
+            'amount' => 2000000, // Hanya dana iklan (Saldo Harian × Durasi)
             'daily_deduction' => 200000,
-            'description' => 'Invoices Iklan Paket Custom (x2)',
+            'status' => Debt::STATUS_BELUM_LUNAS,
         ]);
 
-        // Hanya ada 1 transaksi untuk total invoice
+        // Hanya ada 1 transaksi untuk total invoice (saat dikonfirmasi)
         $this->assertDatabaseHas('transactions', [
             'category_id' => $category->id,
             'amount' => 3000000,
