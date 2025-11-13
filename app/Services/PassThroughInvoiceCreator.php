@@ -117,25 +117,11 @@ class PassThroughInvoiceCreator
                 ]);
             }
 
-            // Catatan: Debt untuk pass-through invoice akan dibuat setelah konfirmasi pembayaran
-            // di method storePayment() untuk memastikan invoice melewati konfirmasi terlebih dahulu
-
-            $transactionUserId = $ownerId
-                ?? $createdBy
-                ?? $this->getDefaultAdminUserId();
-
-            if ($transactionUserId === null) {
-                throw new \RuntimeException('User ID tidak dapat ditentukan untuk transaksi.');
-            }
-
-            $this->recordTransactions(
-                $total,
-                $normalizedQuantity,
-                $invoice,
-                $transactionUserId,
-                $issueDateCarbon,
-                $incomeCategoryId
-            );
+            // Catatan: 
+            // 1. Debt untuk pass-through invoice akan dibuat setelah konfirmasi pembayaran
+            //    di method storePayment() untuk memastikan invoice melewati konfirmasi terlebih dahulu
+            // 2. Transaksi pemasukan akan dicatat saat invoice dikonfirmasi, bukan saat dibuat
+            //    untuk memastikan uang benar-benar sudah masuk setelah konfirmasi
 
             return $invoice->load('items', 'customerService');
         });

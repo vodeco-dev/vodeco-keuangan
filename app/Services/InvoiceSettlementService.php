@@ -41,6 +41,9 @@ class InvoiceSettlementService
 
             $invoice->loadMissing('items', 'debt.payments');
 
+            // Simpan status needs_confirmation sebelum diubah
+            $wasNeedingConfirmation = $invoice->needs_confirmation;
+
             $currentDownPayment = round((float) $invoice->down_payment, 2);
             $invoiceTotal = round((float) $invoice->total, 2);
             $remainingBalance = max($invoiceTotal - $currentDownPayment, 0);
@@ -48,28 +51,92 @@ class InvoiceSettlementService
             $relatedParty = $invoice->client_name
                 ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
 
-            $debt = Debt::updateOrCreate(
-                ['invoice_id' => $invoice->id],
-                [
-                    'description' => $invoice->transactionDescription(),
-                    'related_party' => $relatedParty,
-                    'type' => Debt::TYPE_DOWN_PAYMENT,
-                    'amount' => $invoiceTotal,
-                    'due_date' => $invoice->due_date,
-                    'status' => Debt::STATUS_LUNAS,
-                    'user_id' => $invoice->user_id,
-                ]
-            );
+            // Cek apakah invoice adalah pass-through type
+            $isPassThrough = in_array($invoice->type, [
+                Invoice::TYPE_PASS_THROUGH_NEW,
+                Invoice::TYPE_PASS_THROUGH_EXISTING
+            ], true);
 
-            if ($debt->wasRecentlyCreated && ! $debt->category_id) {
-                $firstItem = $invoice->items()->first();
-                if ($firstItem && $firstItem->category_id) {
-                    $debt->category_id = $firstItem->category_id;
-                    $debt->save();
+            $adBudgetTotal = null;
+            $dailyBalanceTotal = null;
+
+            if ($isPassThrough) {
+                // Untuk pass-through invoice, cari item "Dana Invoices Iklan" untuk mendapatkan adBudgetTotal
+                $adBudgetItem = $invoice->items->first(function ($item) {
+                    return strpos($item->description, 'Dana Invoices Iklan') !== false;
+                });
+
+                if (!$adBudgetItem) {
+                    // Fallback: gunakan total invoice jika item tidak ditemukan
+                    $adBudgetTotal = $invoiceTotal;
+                    $dailyBalanceTotal = 0;
+                } else {
+                    // adBudgetTotal = price * quantity dari item "Dana Invoices Iklan"
+                    $adBudgetTotal = round($adBudgetItem->price * $adBudgetItem->quantity, 2);
+                    
+                    // Parse durationDays dari description untuk menghitung dailyBalanceTotal
+                    $description = $adBudgetItem->description;
+                    $durationDays = 1;
+                    if (preg_match('/(\d+)\s*hari/i', $description, $matches)) {
+                        $durationDays = max(1, (int) $matches[1]);
+                    }
+                    
+                    $dailyBalanceTotal = $durationDays > 0 
+                        ? round($adBudgetTotal / $durationDays, 2) 
+                        : 0;
+                }
+
+                // Buat Debt untuk pass-through invoice
+                // Catatan: Debt untuk pass-through invoice mencatat Saldo Harian × Durasi (adBudgetTotal)
+                // Debt ini akan dicatat sebagai pengeluaran nanti ketika dana iklan digunakan
+                // Debt status = BELUM_LUNAS karena paid_amount masih 0 (belum ada penggunaan dana iklan)
+                // Debt tidak menggunakan kategori dari invoice items karena invoice items menggunakan kategori pemasukan
+                // Kategori akan di-set saat pembayaran/penggunaan debt dilakukan (kategori pengeluaran)
+                $debt = Debt::updateOrCreate(
+                    ['invoice_id' => $invoice->id],
+                    [
+                        'description' => $invoice->transactionDescription(),
+                        'related_party' => $relatedParty,
+                        'type' => Debt::TYPE_PASS_THROUGH,
+                        'amount' => $adBudgetTotal, // Amount = Saldo Harian × Durasi (hanya dana iklan)
+                        'due_date' => $invoice->due_date,
+                        'status' => Debt::STATUS_BELUM_LUNAS, // Status belum lunas karena paid_amount masih 0
+                        'user_id' => $invoice->user_id,
+                        'daily_deduction' => $dailyBalanceTotal,
+                        // Jangan set category_id dari invoice items karena invoice items menggunakan kategori pemasukan
+                        // Debt untuk pass-through invoice harus menggunakan kategori pengeluaran
+                    ]
+                );
+            } else {
+                // Untuk invoice biasa (down payment), gunakan logika yang sudah ada
+                $debt = Debt::updateOrCreate(
+                    ['invoice_id' => $invoice->id],
+                    [
+                        'description' => $invoice->transactionDescription(),
+                        'related_party' => $relatedParty,
+                        'type' => Debt::TYPE_DOWN_PAYMENT,
+                        'amount' => $invoiceTotal,
+                        'due_date' => $invoice->due_date,
+                        'status' => Debt::STATUS_LUNAS,
+                        'user_id' => $invoice->user_id,
+                    ]
+                );
+
+                // Untuk invoice biasa, set kategori dari invoice items jika debt baru dibuat
+                if ($debt->wasRecentlyCreated && ! $debt->category_id) {
+                    $firstItem = $invoice->items()->first();
+                    if ($firstItem && $firstItem->category_id) {
+                        $debt->category_id = $firstItem->category_id;
+                        $debt->save();
+                    }
                 }
             }
 
-            if ($remainingBalance > 0) {
+            // Untuk pass-through invoice, tidak perlu membuat payment ke debt saat konfirmasi
+            // karena debt mencatat dana iklan yang akan digunakan nanti (belum digunakan, paid_amount = 0)
+            // Payment ke debt akan dibuat nanti ketika dana iklan digunakan (dicatat sebagai pengeluaran)
+            // Untuk invoice biasa, buat payment ke debt seperti biasa
+            if (!$isPassThrough && $remainingBalance > 0) {
                 $debt->payments()->create([
                     'amount' => $remainingBalance,
                     'payment_date' => $now,
@@ -77,25 +144,63 @@ class InvoiceSettlementService
                 ]);
             }
 
-            $debt->load('payments');
+            // Untuk pass-through invoice, langsung set invoice sebagai lunas karena dana sudah masuk
+            // Untuk invoice biasa, hitung down_payment dari payments
+            if ($isPassThrough) {
+                $invoice->forceFill([
+                    'down_payment' => $invoiceTotal,
+                    'payment_date' => $now,
+                    'status' => 'lunas',
+                    'needs_confirmation' => false,
+                ])->save();
+            } else {
+                $debt->load('payments');
+                $downPaymentTotal = $debt->payments->sum('amount');
+                
+                $invoice->forceFill([
+                    'down_payment' => min($invoiceTotal, $downPaymentTotal),
+                    'payment_date' => $now,
+                    'status' => 'lunas',
+                    'needs_confirmation' => false,
+                ])->save();
+            }
 
-            $downPaymentTotal = $debt->payments->sum('amount');
-
-            $invoice->forceFill([
-                'down_payment' => min($invoiceTotal, $downPaymentTotal),
-                'payment_date' => $now,
-                'status' => 'lunas',
-            ])->save();
-
+            // Untuk pass-through invoice, amount = adBudgetTotal (Saldo Harian × Durasi)
+            // Status tetap BELUM_LUNAS karena paid_amount masih 0 (belum ada penggunaan dana iklan)
+            // Untuk invoice biasa, update amount sesuai invoice total
+            $debtAmount = $isPassThrough && isset($adBudgetTotal) ? $adBudgetTotal : $invoiceTotal;
+            $debtStatus = $isPassThrough ? Debt::STATUS_BELUM_LUNAS : Debt::STATUS_LUNAS;
+            
             $debt->forceFill([
-                'status' => Debt::STATUS_LUNAS,
+                'status' => $debtStatus,
                 'description' => $invoice->transactionDescription(),
-                'amount' => $invoiceTotal,
+                'amount' => $debtAmount,
                 'due_date' => $invoice->due_date,
                 'related_party' => $relatedParty,
             ])->save();
 
-            if ($remainingBalance > 0) {
+            // Untuk pass-through invoice, catat transaksi pemasukan saat invoice dikonfirmasi pertama kali
+            // (saat needs_confirmation berubah dari true ke false)
+            if ($isPassThrough && $wasNeedingConfirmation) {
+                $incomeCategoryId = $invoice->items->first()?->category_id;
+                if ($incomeCategoryId) {
+                    // Ambil quantity dari item pertama (semua items menggunakan quantity yang sama)
+                    $firstItem = $invoice->items->first();
+                    $quantity = $firstItem ? max(1, (int) $firstItem->quantity) : 1;
+                    
+                    $clientInfo = $invoice->client_name ?: $invoice->client_whatsapp ?: 'Klien';
+                    $description = 'Invoices Iklan' . ($quantity > 1 ? ' (x' . $quantity . ')' : '') . ' - ' . $clientInfo . ' (' . $invoice->number . ')';
+                    
+                    Transaction::create([
+                        'category_id' => $incomeCategoryId,
+                        'user_id' => $invoice->user_id,
+                        'amount' => $invoiceTotal,
+                        'description' => $description,
+                        'date' => $now,
+                    ]);
+                }
+            } elseif (!$isPassThrough && $remainingBalance > 0) {
+                // Untuk invoice biasa, catat transaksi saat remaining balance dibayar
                 $categoryId = $debt->category_id;
 
                 if (! $categoryId) {
