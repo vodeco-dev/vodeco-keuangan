@@ -495,4 +495,23 @@ class DebtController extends Controller
 
         return $category;
     }
+
+    /**
+     * Sync missing debts for invoices that should have debts.
+     */
+    public function syncMissingDebts(Request $request): RedirectResponse|JsonResponse
+    {
+        $this->authorize('viewAny', Debt::class);
+
+        $count = $this->debtService->syncMissingDebts();
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess([
+                'count' => $count,
+            ], "Successfully created {$count} debt record(s).");
+        }
+
+        return redirect()->route('debts.index')
+            ->with('success', "Berhasil membuat {$count} catatan hutang yang hilang.");
+    }
 }

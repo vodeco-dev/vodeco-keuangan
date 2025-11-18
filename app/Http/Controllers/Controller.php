@@ -32,7 +32,7 @@ abstract class Controller extends BaseController
     /**
      * Return success response for API requests
      */
-    protected function apiSuccess($data = null, string $message = null, int $status = 200): JsonResponse
+    protected function apiSuccess($data = null, ?string $message = null, int $status = 200): JsonResponse
     {
         $response = [];
         if ($message) {
@@ -59,7 +59,7 @@ abstract class Controller extends BaseController
     /**
      * Handle response for both API and web requests
      */
-    protected function handleResponse(Request $request, $data, string $successMessage = null, string $redirectRoute = null): JsonResponse|RedirectResponse
+    protected function handleResponse(Request $request, $data, ?string $successMessage = null, ?string $redirectRoute = null): JsonResponse|RedirectResponse
     {
         if ($this->isApiRequest($request)) {
             return $this->apiSuccess($data, $successMessage);
