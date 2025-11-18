@@ -205,7 +205,7 @@
                                                         </form>
                                                     @else
                                                         <button type="button"
-                                                            @click.stop="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})"
+                                                            @click.stop="open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }}, {{ (float) ($invoice->down_payment_due ?? 0) }})"
                                                             class="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
                                                             Konfirmasi Pembayaran
                                                         </button>
@@ -480,7 +480,7 @@
                                                                 </a>
                                                                 
                                                                 @if ($invoice->needs_confirmation || $invoice->status !== 'lunas')
-                                                                    <button type="button" @click="menuOpen = false; open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }})" class="block w-full px-4 py-2 text-left hover:bg-gray-100">
+                                                                    <button type="button" @click="menuOpen = false; open({{ $invoice->id }}, {{ (float) $invoice->total }}, {{ (float) $invoice->down_payment }}, {{ (float) ($invoice->down_payment_due ?? 0) }})" class="block w-full px-4 py-2 text-left hover:bg-gray-100">
                                                                         Catat Pembayaran
                                                                     </button>
                                                                 @endif
@@ -702,17 +702,25 @@
                     const remaining = this.total - this.paid;
                     return remaining > 0 ? Number(remaining.toFixed(2)) : 0;
                 },
-                open(id, total, downPayment, plannedDownPayment = 0) {
+                open(id, total, downPayment, downPaymentDue = 0) {
                     this.selectedInvoice = id;
                     this.total = Number(total || 0);
                     this.paid = Number(downPayment || 0);
-                    this.plannedDownPayment = Number(plannedDownPayment || 0);
+                    this.plannedDownPayment = Number(downPaymentDue || 0);
                     const remaining = this.remaining;
-                    if (remaining > 0) {
-                        const suggested = this.plannedDownPayment > 0
-                            ? Math.min(remaining, this.plannedDownPayment)
-                            : remaining;
-                        this.paymentAmount = suggested > 0 ? Number(suggested.toFixed(2)) : '';
+                    
+                    // Prioritas: gunakan down_payment_due (total DP yang perlu dibayar) sebagai nominal pembayaran
+                    // Jika down_payment_due tidak ada atau 0, gunakan logika fallback
+                    if (this.plannedDownPayment > 0) {
+                        // Gunakan down_payment_due sebagai nominal pembayaran, tapi tidak boleh melebihi sisa tagihan
+                        this.paymentAmount = Math.min(this.plannedDownPayment, remaining);
+                        this.paymentAmount = this.paymentAmount > 0 ? Number(this.paymentAmount.toFixed(2)) : '';
+                    } else if (this.paid > 0) {
+                        // Jika invoice sudah memiliki down_payment tapi tidak ada down_payment_due, gunakan down_payment untuk konfirmasi
+                        this.paymentAmount = Number(this.paid.toFixed(2));
+                    } else if (remaining > 0) {
+                        // Jika tidak ada down_payment_due dan belum ada down_payment, gunakan sisa tagihan
+                        this.paymentAmount = remaining > 0 ? Number(remaining.toFixed(2)) : '';
                     } else {
                         this.paymentAmount = '';
                     }

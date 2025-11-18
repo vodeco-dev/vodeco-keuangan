@@ -711,6 +711,53 @@ class InvoiceController extends Controller
         $paymentAmount = round((float) $request->input('payment_amount'), 2);
         $paymentDate = $request->input('payment_date');
         $categoryId = $request->input('category_id');
+        
+        // Cek apakah ini konfirmasi down_payment yang sudah ada (paymentAmount sama dengan currentDownPayment)
+        // Jika ya, ini adalah konfirmasi, bukan pembayaran baru
+        $isConfirmingExistingDownPayment = $currentDownPayment > 0 && abs($paymentAmount - $currentDownPayment) < 0.01;
+        
+        // Jika ini konfirmasi down_payment yang sudah ada dan down_payment >= total, langsung lunas
+        if ($isConfirmingExistingDownPayment && $currentDownPayment >= $invoiceTotal && $invoiceTotal > 0) {
+            DB::transaction(function () use ($invoice, $paymentDate) {
+                $invoice->loadMissing('items', 'debt');
+                
+                // Update invoice status menjadi lunas
+                $invoice->forceFill([
+                    'status' => 'lunas',
+                    'needs_confirmation' => false,
+                    'payment_date' => $paymentDate,
+                ])->save();
+                
+                // Update debt status jika ada
+                if ($invoice->debt) {
+                    $invoice->debt->forceFill([
+                        'status' => \App\Models\Debt::STATUS_LUNAS,
+                    ])->save();
+                    
+                    // Catat transaksi pemasukan saat invoice dilunasi
+                    $categoryId = $invoice->debt->category_id;
+                    if (!$categoryId) {
+                        $firstItem = $invoice->items()->first();
+                        if ($firstItem && $firstItem->category_id) {
+                            $categoryId = $firstItem->category_id;
+                        }
+                    }
+                    
+                    if ($categoryId) {
+                        \App\Models\Transaction::create([
+                            'category_id' => $categoryId,
+                            'user_id' => auth()->id(),
+                            'amount' => $invoice->total,
+                            'description' => $invoice->transactionDescription(),
+                            'date' => $paymentDate,
+                        ]);
+                    }
+                }
+            });
+            
+            return redirect()->route('invoices.index')->with('success', 'Invoice berhasil dikonfirmasi dan dilunasi.');
+        }
+        
         $willBePaidOff = $invoiceTotal > 0 && round($currentDownPayment + $paymentAmount, 2) >= $invoiceTotal;
 
         if ($willBePaidOff && empty($categoryId)) {
@@ -731,7 +778,7 @@ class InvoiceController extends Controller
 
         $categoryId = $categoryId ? (int) $categoryId : null;
 
-        DB::transaction(function () use ($invoice, $paymentAmount, $paymentDate, $categoryId, $willBePaidOff) {
+        DB::transaction(function () use ($invoice, $paymentAmount, $paymentDate, $categoryId, $willBePaidOff, $isConfirmingExistingDownPayment) {
             $invoice->loadMissing('items', 'debt.payments');
 
             // Simpan status needs_confirmation sebelum diubah
@@ -807,15 +854,16 @@ class InvoiceController extends Controller
                 );
             } else {
                 // Untuk invoice biasa (down payment), gunakan logika yang sudah ada
+                // Status debt akan di-update setelah payment dibuat dan dihitung
                 $debt = Debt::updateOrCreate(
                     ['invoice_id' => $invoice->id],
                     [
                         'description' => $invoice->transactionDescription(),
                         'related_party' => $relatedParty,
                         'type' => Debt::TYPE_DOWN_PAYMENT,
-                        'amount' => $invoice->total,
+                        'amount' => $invoice->total, // Total hutang = invoice total
                         'due_date' => $invoice->due_date,
-                        'status' => $willBePaidOff ? Debt::STATUS_LUNAS : Debt::STATUS_BELUM_LUNAS,
+                        'status' => Debt::STATUS_BELUM_LUNAS, // Status awal belum lunas, akan di-update setelah payment
                         'user_id' => $invoice->user_id,
                     ]
                 );
@@ -834,7 +882,8 @@ class InvoiceController extends Controller
             // karena debt mencatat dana iklan yang akan digunakan nanti (belum digunakan, paid_amount = 0)
             // Payment ke debt akan dibuat nanti ketika dana iklan digunakan (dicatat sebagai pengeluaran)
             // Untuk invoice biasa, buat payment ke debt seperti biasa
-            if ($debt && !$isPassThrough) {
+            // Kecuali jika ini adalah konfirmasi down_payment yang sudah ada (tidak perlu membuat payment baru)
+            if ($debt && !$isPassThrough && !$isConfirmingExistingDownPayment) {
                 $debt->payments()->create([
                     'amount' => $paymentAmount,
                     'payment_date' => $paymentDate,
@@ -842,6 +891,20 @@ class InvoiceController extends Controller
                 ]);
 
                 $debt->load('payments');
+            } elseif ($debt && !$isPassThrough && $isConfirmingExistingDownPayment) {
+                // Jika ini konfirmasi down_payment yang sudah ada, pastikan debt sudah memiliki payment yang sesuai
+                // Jika belum ada payment di debt, buat payment dengan jumlah down_payment
+                $debt->load('payments');
+                $existingPaymentsTotal = $debt->payments->sum('amount');
+                if ($existingPaymentsTotal < $paymentAmount) {
+                    // Buat payment untuk selisihnya
+                    $debt->payments()->create([
+                        'amount' => $paymentAmount - $existingPaymentsTotal,
+                        'payment_date' => $paymentDate,
+                        'notes' => 'Konfirmasi down payment invoice #' . $invoice->number,
+                    ]);
+                    $debt->load('payments');
+                }
             }
 
             // Untuk pass-through invoice, langsung set invoice sebagai lunas karena dana sudah masuk

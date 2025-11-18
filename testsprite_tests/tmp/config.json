@@ -1,0 +1,17 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:8000",
+  "loginUser": "admin@vodeco.co.id",
+  "loginPassword": "password",
+  "executionArgs": {
+    "projectName": "vodeco-keuangan",
+    "projectPath": "/home/ademas-wahyu/vodeco/dev/vodeco-keuangan",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user-LM3FwB1eeTok6U0rpu5Gq5Vc5Na-8b2IklwIdi5famS_neZnpcw8ZBNNBkOjiYTNsXbkzMp-6IamqfVjTARi9PrH3Pc0UobhlGj2kCpoHhGE4QbrtACcr_AzbFuUYK-PMSs"
+    }
+  }
+}
