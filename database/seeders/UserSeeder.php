@@ -20,19 +20,38 @@ class UserSeeder extends Seeder
             // Jangan jalankan seeder ini di lingkungan produksi
             return;
         }
-        // hapus user yang mungkin sudah ada dengan email yang sama
-        User::whereIn('email', [
-            'admin@vodeco.co.id',
-            'staff@vodeco.co.id',
-            'accountant@vodeco.co.id',
-        ])->delete();
 
-        // Buat User Admin baru
+        // Cek apakah sudah ada user, jika sudah ada maka skip
+        if (User::count() > 0) {
+            return;
+        }
+
+        // Buat 3 user dengan role berbeda
+        // 1. Admin
         User::create([
             'name' => 'Admin',
             'email' => 'admin@vodeco.co.id',
-            'password' => Hash::make('3#T$uV#lP9'),
+            'password' => Hash::make('password'),
             'role' => Role::ADMIN,
+            'email_verified_at' => now(),
+        ]);
+
+        // 2. Accountant
+        User::create([
+            'name' => 'Accountant',
+            'email' => 'accountant@vodeco.co.id',
+            'password' => Hash::make('password'),
+            'role' => Role::ACCOUNTANT,
+            'email_verified_at' => now(),
+        ]);
+
+        // 3. Staff
+        User::create([
+            'name' => 'Staff',
+            'email' => 'staff@vodeco.co.id',
+            'password' => Hash::make('password'),
+            'role' => Role::STAFF,
+            'email_verified_at' => now(),
         ]);
     }
 }

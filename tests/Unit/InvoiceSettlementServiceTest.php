@@ -83,20 +83,30 @@ class InvoiceSettlementServiceTest extends TestCase
         $this->service->confirmSettlement($invoice, '127.0.0.1', '/test-url');
 
         $invoice->refresh();
-        $this->assertEquals('lunas', $invoice->status);
-        $this->assertNotNull($invoice->payment_date);
-
+        
+        // Logika baru: Payment dibuat = currentDownPayment (300) + remainingBalance (700) = 1000
+        // Total payments = 1000, status menjadi 'lunas' karena 1000 >= 1000
+        
         $debt = Debt::where('invoice_id', $invoice->id)->first();
         $this->assertNotNull($debt);
-        $this->assertEquals(Debt::STATUS_LUNAS, $debt->status);
-
+        
         $payment = Payment::where('debt_id', $debt->id)->first();
         $this->assertNotNull($payment);
-        $this->assertEquals(700, $payment->amount); // 1000 - 300
-
+        $this->assertEquals(1000, $payment->amount);
+        
+        $totalPayments = $debt->payments()->sum('amount');
+        $this->assertEquals(1000, $totalPayments);
+        
+        $this->assertEquals('lunas', $invoice->status);
+        $this->assertEquals(1000, (float) $invoice->down_payment);
+        $this->assertNotNull($invoice->payment_date);
+        
+        $debt->refresh();
+        $this->assertEquals(Debt::STATUS_LUNAS, $debt->status);
+        
         $transaction = Transaction::where('description', $invoice->transactionDescription())->first();
         $this->assertNotNull($transaction);
-        $this->assertEquals(700, $transaction->amount);
+        $this->assertEquals(1000, (float) $transaction->amount);
 
         $activityLog = ActivityLog::where('description', 'like', '%Konfirmasi pelunasan invoice%')->first();
         $this->assertNotNull($activityLog);
@@ -121,16 +131,29 @@ class InvoiceSettlementServiceTest extends TestCase
         $this->service->confirmSettlement($invoice, '127.0.0.1', '/test-url');
 
         $invoice->refresh();
-        $this->assertEquals('lunas', $invoice->status);
-
+        
+        // Logika baru: Payment dibuat = currentDownPayment (1000) + remainingBalance (0) = 1000
+        // Total payments = 1000, status menjadi 'lunas' karena 1000 >= 1000
+        
         $debt = Debt::where('invoice_id', $invoice->id)->first();
         $this->assertNotNull($debt);
 
         $payment = Payment::where('debt_id', $debt->id)->first();
-        $this->assertNull($payment); // No payment needed if already fully paid
+        $this->assertNotNull($payment);
+        $this->assertEquals(1000, $payment->amount);
+        
+        $totalPayments = $debt->payments()->sum('amount');
+        $this->assertEquals(1000, $totalPayments);
+        
+        $this->assertEquals('lunas', $invoice->status);
+        $this->assertEquals(1000, (float) $invoice->down_payment);
+        
+        $debt->refresh();
+        $this->assertEquals(Debt::STATUS_LUNAS, $debt->status);
 
         $transaction = Transaction::where('description', $invoice->transactionDescription())->first();
-        $this->assertNull($transaction); // No transaction needed if already fully paid
+        $this->assertNotNull($transaction);
+        $this->assertEquals(1000, (float) $transaction->amount);
     }
 }
 

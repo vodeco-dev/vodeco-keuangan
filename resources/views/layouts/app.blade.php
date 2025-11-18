@@ -24,7 +24,7 @@
     <body class="font-sans antialiased h-full">
         <div class="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
 
-            <div class="flex-shrink-0 hidden md:block">
+            <div class="flex-shrink-0 hidden md:block" style="overflow-x: visible; overflow-y: visible;">
                 @include('partials.sidebar')
             </div>
 

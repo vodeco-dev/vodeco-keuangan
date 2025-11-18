@@ -12,6 +12,7 @@ use App\Models\Setting;
 use App\Notifications\TransactionDeleted;
 use App\Services\TransactionProofService;
 use App\Services\TransactionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -31,14 +32,14 @@ class TransactionController extends Controller
     )
     {
         $this->authorizeResource(Transaction::class, 'transaction', [
-            'except' => ['destroy', 'index'],
+            'except' => ['destroy', 'index', 'show'],
         ]);
     }
 
     /**
      * Menampilkan daftar semua transaksi.
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         if ($request->filled('start_date') || $request->filled('end_date')) {
             $request->request->remove('month');
@@ -69,6 +70,20 @@ class TransactionController extends Controller
         $summary = $this->transactionService->getAllSummary($request);
         $availableMonths = $this->transactionService->getAvailableMonths();
 
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess([
+                'transactions' => $transactions->items(),
+                'pagination' => [
+                    'current_page' => $transactions->currentPage(),
+                    'last_page' => $transactions->lastPage(),
+                    'per_page' => $transactions->perPage(),
+                    'total' => $transactions->total(),
+                ],
+                'summary' => $summary,
+                'available_months' => $availableMonths,
+            ]);
+        }
+
         return view(
             'transactions.index',
             array_merge(
@@ -94,6 +109,18 @@ class TransactionController extends Controller
     }
 
     /**
+     * Menampilkan detail transaksi.
+     */
+    public function show(Request $request, Transaction $transaction): View|JsonResponse
+    {
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess($transaction->load('category', 'user'));
+        }
+
+        return view('transactions.show', compact('transaction'));
+    }
+
+    /**
      * Menampilkan form untuk mengubah transaksi.
      */
     public function edit(Transaction $transaction): View
@@ -115,7 +142,7 @@ class TransactionController extends Controller
     /**
      * Menyimpan transaksi baru.
      */
-    public function store(StoreTransactionRequest $request): RedirectResponse
+    public function store(StoreTransactionRequest $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validated();
 
@@ -135,8 +162,12 @@ class TransactionController extends Controller
         $transactionData['user_id'] = $request->user()->id;
         $transactionData = array_merge($transactionData, $proofData);
 
-        Transaction::create($transactionData);
+        $transaction = Transaction::create($transactionData);
         $this->transactionService->clearAllSummaryCache();
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess($transaction->load('category', 'user'), 'Transaksi berhasil ditambahkan.', 201);
+        }
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil ditambahkan.');
@@ -145,7 +176,7 @@ class TransactionController extends Controller
     /**
      * Memperbarui data transaksi.
      */
-    public function update(UpdateTransactionRequest $request, Transaction $transaction): RedirectResponse
+    public function update(UpdateTransactionRequest $request, Transaction $transaction): RedirectResponse|JsonResponse
     {
         $validated = $request->validated();
 
@@ -167,6 +198,10 @@ class TransactionController extends Controller
 
         $transaction->update($updateData);
         $this->transactionService->clearAllSummaryCache();
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess($transaction->load('category', 'user'), 'Transaksi berhasil diperbarui.');
+        }
 
         return redirect()->route('transactions.index')
             ->with('success', 'Transaksi berhasil diperbarui.');
@@ -212,19 +247,23 @@ class TransactionController extends Controller
     /**
      * Menghapus transaksi.
      */
-    public function destroy(Request $request, Transaction $transaction): RedirectResponse
+    public function destroy(Request $request, Transaction $transaction): RedirectResponse|JsonResponse
     {
         if ($request->user()->role !== Role::ADMIN) {
             $validated = $request->validate([
                 'reason' => ['required', 'string', 'max:500'],
             ]);
 
-            TransactionDeletionRequest::create([
+            $deletionRequest = TransactionDeletionRequest::create([
                 'transaction_id' => $transaction->id,
                 'requested_by' => $request->user()->id,
                 'status' => 'pending',
                 'deletion_reason' => $validated['reason'],
             ]);
+
+            if ($this->isApiRequest($request)) {
+                return $this->apiSuccess($deletionRequest, 'Permintaan penghapusan transaksi menunggu persetujuan admin.', 201);
+            }
 
             return redirect()->route('transactions.index')
                 ->with('success', 'Permintaan penghapusan transaksi menunggu persetujuan admin.');
@@ -238,6 +277,10 @@ class TransactionController extends Controller
 
         if (Setting::get('notify_transaction_deleted')) {
             $user->notify(new TransactionDeleted($transaction));
+        }
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess(null, 'Transaksi berhasil dihapus.');
         }
 
         return redirect()->route('transactions.index')

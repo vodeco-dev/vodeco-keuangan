@@ -137,6 +137,16 @@ class DashboardController extends Controller
 
         $recent_transactions = $recentTransactionsQuery->take(5)->get();
 
+        // Siapkan data chart untuk bulan yang dipilih
+        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+        $endDate = Carbon::create($year, $month, 1)->endOfMonth();
+        
+        $chartData = $this->transactionService->prepareChartData(
+            $isAdminOrAccountant ? null : $user,
+            $startDate->toDateString(),
+            $endDate->toDateString()
+        );
+
         return view('dashboard', [
             'title'               => 'Dashboard',
             'summary'             => $summary,
@@ -144,6 +154,7 @@ class DashboardController extends Controller
             'selected_month'      => $selectedMonth,
             'recent_transactions' => $recent_transactions,
             'show_user_column'    => $isAdminOrAccountant,
+            'chartData'           => $chartData,
         ]);
     }
 }

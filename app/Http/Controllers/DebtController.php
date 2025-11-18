@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\DebtService;
 use App\Services\PassThroughPackageManager;
 use App\Services\TransactionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -47,7 +48,7 @@ class DebtController extends Controller
      * Menampilkan daftar hutang & piutang milik pengguna yang sedang login.
      * Menggabungkan logika query dari 'codex/...'
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $user = $request->user();
 
@@ -80,6 +81,19 @@ class DebtController extends Controller
             }
         }
 
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess([
+                'debts' => $debts->items(),
+                'pagination' => [
+                    'current_page' => $debts->currentPage(),
+                    'last_page' => $debts->lastPage(),
+                    'per_page' => $debts->perPage(),
+                    'total' => $debts->total(),
+                ],
+                'summary' => $summary,
+            ]);
+        }
+
         return view('debts.index', array_merge([
             'title' => 'Hutang & Piutang',
             'debts' => $debts,
@@ -99,7 +113,7 @@ class DebtController extends Controller
     /**
      * Menyimpan catatan hutang/piutang baru.
      */
-    public function store(StoreDebtRequest $request): RedirectResponse
+    public function store(StoreDebtRequest $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validated();
 
@@ -109,10 +123,14 @@ class DebtController extends Controller
 
         $this->ensureCategorySelectionIsAllowed($request->user()->id, $validated['type'], (int) $validated['category_id']);
 
-        Debt::create(array_merge($validated, [
+        $debt = Debt::create(array_merge($validated, [
             'status' => Debt::STATUS_BELUM_LUNAS,
             'user_id' => $request->user()->id, // Keamanan: Pastikan data baru memiliki pemilik
         ]));
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess($debt->load('payments', 'category'), 'Catatan berhasil ditambahkan.', 201);
+        }
 
         return redirect()->route('debts.index')->with('success', 'Catatan berhasil ditambahkan.');
     }
@@ -121,7 +139,7 @@ class DebtController extends Controller
      * Menyimpan pembayaran/cicilan baru.
      * Menggabungkan authorize, DB::transaction, dan try-catch dari kedua branch.
      */
-    public function storePayment(StoreDebtPaymentRequest $request, Debt $debt): RedirectResponse
+    public function storePayment(StoreDebtPaymentRequest $request, Debt $debt): RedirectResponse|JsonResponse
     {
         // Keamanan: Pastikan user boleh mengupdate data ini
         $this->authorize('update', $debt);
@@ -215,13 +233,35 @@ class DebtController extends Controller
                 $debt->save();
             });
 
+            if ($this->isApiRequest($request)) {
+                return $this->apiSuccess($debt->load('payments', 'category'), 'Pembayaran berhasil dicatat.');
+            }
+
             return redirect()->route('debts.index')->with('success', 'Pembayaran berhasil dicatat.');
         } catch (ValidationException $e) {
+            if ($this->isApiRequest($request)) {
+                return $this->apiError('Validation failed', 422, $e->errors());
+            }
             throw $e;
         } catch (\Exception $e) {
             // Jika terjadi error, tampilkan pesan kesalahan
+            if ($this->isApiRequest($request)) {
+                return $this->apiError('Terjadi kesalahan saat menyimpan pembayaran.', 500);
+            }
             return back()->withErrors('Terjadi kesalahan saat menyimpan pembayaran.');
         }
+    }
+
+    /**
+     * Menampilkan detail debt.
+     */
+    public function show(Request $request, Debt $debt): View|JsonResponse
+    {
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess($debt->load('payments', 'category', 'invoice'));
+        }
+
+        return view('debts.show', compact('debt'));
     }
 
     public function edit(Debt $debt): View
@@ -233,7 +273,7 @@ class DebtController extends Controller
         ]);
     }
 
-    public function update(Request $request, Debt $debt): RedirectResponse
+    public function update(Request $request, Debt $debt): RedirectResponse|JsonResponse
     {
         $this->authorize('update', $debt);
 
@@ -244,6 +284,10 @@ class DebtController extends Controller
         ]);
 
         $debt->update($validated);
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess($debt->load('payments', 'category'), 'Catatan berhasil diperbarui.');
+        }
 
         return redirect()->route('debts.index')->with('success', 'Catatan berhasil diperbarui.');
     }
@@ -351,10 +395,15 @@ class DebtController extends Controller
     /**
      * Menghapus catatan hutang/piutang.
      */
-    public function destroy(Debt $debt): RedirectResponse
+    public function destroy(Request $request, Debt $debt): RedirectResponse|JsonResponse
     {
         // Keamanan: Otorisasi sudah ditangani oleh __construct()
         $debt->delete();
+        
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess(null, 'Catatan berhasil dihapus.');
+        }
+        
         return redirect()->route('debts.index')->with('success', 'Catatan berhasil dihapus.');
     }
 

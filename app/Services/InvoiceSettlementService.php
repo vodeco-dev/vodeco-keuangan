@@ -109,15 +109,16 @@ class InvoiceSettlementService
                 );
             } else {
                 // Untuk invoice biasa (down payment), gunakan logika yang sudah ada
+                // Status debt akan di-update setelah payment dibuat dan dihitung
                 $debt = Debt::updateOrCreate(
                     ['invoice_id' => $invoice->id],
                     [
                         'description' => $invoice->transactionDescription(),
                         'related_party' => $relatedParty,
                         'type' => Debt::TYPE_DOWN_PAYMENT,
-                        'amount' => $invoiceTotal,
+                        'amount' => $invoiceTotal, // Total hutang = invoice total
                         'due_date' => $invoice->due_date,
-                        'status' => Debt::STATUS_LUNAS,
+                        'status' => Debt::STATUS_BELUM_LUNAS, // Status awal belum lunas, akan di-update setelah payment
                         'user_id' => $invoice->user_id,
                     ]
                 );
@@ -136,16 +137,29 @@ class InvoiceSettlementService
             // karena debt mencatat dana iklan yang akan digunakan nanti (belum digunakan, paid_amount = 0)
             // Payment ke debt akan dibuat nanti ketika dana iklan digunakan (dicatat sebagai pengeluaran)
             // Untuk invoice biasa, buat payment ke debt seperti biasa
-            if (!$isPassThrough && $remainingBalance > 0) {
-                $debt->payments()->create([
-                    'amount' => $remainingBalance,
-                    'payment_date' => $now,
-                    'notes' => 'Pelunasan invoice #' . $invoice->number . ' melalui tautan konfirmasi',
-                ]);
+            // Jika invoice sudah punya down_payment, kita perlu membuat payment untuk down_payment yang sudah ada juga
+            if (!$isPassThrough) {
+                $debt->load('payments');
+                $existingPaymentsTotal = $debt->payments->sum('amount');
+                
+                // Jika sudah ada down_payment di invoice, pastikan payment dibuat untuk down_payment tersebut
+                // Total payment yang seharusnya ada = currentDownPayment + remainingBalance
+                $totalPaymentNeeded = $currentDownPayment + $remainingBalance;
+                $paymentNeeded = max(0, $totalPaymentNeeded - $existingPaymentsTotal);
+                
+                if ($paymentNeeded > 0) {
+                    $debt->payments()->create([
+                        'amount' => $paymentNeeded,
+                        'payment_date' => $now,
+                        'notes' => $remainingBalance > 0 
+                            ? 'Pelunasan invoice #' . $invoice->number . ' melalui tautan konfirmasi'
+                            : 'Konfirmasi down payment invoice #' . $invoice->number . ' melalui tautan konfirmasi',
+                    ]);
+                }
             }
 
             // Untuk pass-through invoice, langsung set invoice sebagai lunas karena dana sudah masuk
-            // Untuk invoice biasa, hitung down_payment dari payments
+            // Untuk invoice biasa, hitung down_payment dari payments dan tentukan status berdasarkan jumlah yang sudah dibayar
             if ($isPassThrough) {
                 $invoice->forceFill([
                     'down_payment' => $invoiceTotal,
@@ -157,19 +171,40 @@ class InvoiceSettlementService
                 $debt->load('payments');
                 $downPaymentTotal = $debt->payments->sum('amount');
                 
+                // Tentukan status invoice berdasarkan down_payment vs total
+                // Untuk down payment, status tidak langsung lunas, harus berdasarkan jumlah yang sudah dibayar
+                if ($downPaymentTotal >= $invoiceTotal && $invoiceTotal > 0) {
+                    $invoiceStatus = 'lunas';
+                } elseif ($downPaymentTotal > 0) {
+                    $invoiceStatus = 'belum lunas';
+                } else {
+                    $invoiceStatus = 'belum bayar';
+                }
+                
                 $invoice->forceFill([
-                    'down_payment' => min($invoiceTotal, $downPaymentTotal),
+                    'down_payment' => min($invoiceTotal, $downPaymentTotal), // Jumlah yang sudah dibayar = down_payment
                     'payment_date' => $now,
-                    'status' => 'lunas',
+                    'status' => $invoiceStatus,
                     'needs_confirmation' => false,
                 ])->save();
             }
 
             // Untuk pass-through invoice, amount = adBudgetTotal (Saldo Harian × Durasi)
             // Status tetap BELUM_LUNAS karena paid_amount masih 0 (belum ada penggunaan dana iklan)
-            // Untuk invoice biasa, update amount sesuai invoice total
-            $debtAmount = $isPassThrough && isset($adBudgetTotal) ? $adBudgetTotal : $invoiceTotal;
-            $debtStatus = $isPassThrough ? Debt::STATUS_BELUM_LUNAS : Debt::STATUS_LUNAS;
+            // Untuk invoice biasa, update amount sesuai invoice total dan status berdasarkan paid_amount
+            if ($isPassThrough) {
+                $debtAmount = isset($adBudgetTotal) ? $adBudgetTotal : $invoiceTotal;
+                $debtStatus = Debt::STATUS_BELUM_LUNAS;
+            } else {
+                // Untuk down payment invoice, total hutang = invoice total
+                $debtAmount = $invoiceTotal;
+                // Status debt ditentukan berdasarkan paid_amount vs amount
+                $debt->load('payments');
+                $paidAmount = $debt->payments->sum('amount');
+                $debtStatus = ($paidAmount >= $debtAmount && $debtAmount > 0) 
+                    ? Debt::STATUS_LUNAS 
+                    : Debt::STATUS_BELUM_LUNAS;
+            }
             
             $debt->forceFill([
                 'status' => $debtStatus,
@@ -199,27 +234,31 @@ class InvoiceSettlementService
                         'date' => $now,
                     ]);
                 }
-            } elseif (!$isPassThrough && $remainingBalance > 0) {
-                // Untuk invoice biasa, catat transaksi saat remaining balance dibayar
-                $categoryId = $debt->category_id;
+            } elseif (!$isPassThrough) {
+                // Untuk invoice biasa (down payment), catat transaksi hanya saat invoice benar-benar lunas
+                // Transaksi dicatat dengan jumlah = invoice total (bukan hanya remaining balance)
+                $invoice->refresh(); // Reload untuk mendapatkan status terbaru
+                if ($invoice->status === 'lunas') {
+                    $categoryId = $debt->category_id;
 
-                if (! $categoryId) {
-                    $firstItem = $invoice->items()->first();
-                    if ($firstItem && $firstItem->category_id) {
-                        $categoryId = $firstItem->category_id;
-                        $debt->category_id = $categoryId;
-                        $debt->save();
+                    if (! $categoryId) {
+                        $firstItem = $invoice->items()->first();
+                        if ($firstItem && $firstItem->category_id) {
+                            $categoryId = $firstItem->category_id;
+                            $debt->category_id = $categoryId;
+                            $debt->save();
+                        }
                     }
-                }
 
-                if ($categoryId) {
-                    Transaction::create([
-                        'category_id' => $categoryId,
-                        'user_id' => $invoice->user_id,
-                        'amount' => $remainingBalance,
-                        'description' => $invoice->transactionDescription(),
-                        'date' => $now,
-                    ]);
+                    if ($categoryId) {
+                        Transaction::create([
+                            'category_id' => $categoryId,
+                            'user_id' => $invoice->user_id,
+                            'amount' => $invoiceTotal, // Catat dengan jumlah invoice total saat lunas
+                            'description' => $invoice->transactionDescription(),
+                            'date' => $now,
+                        ]);
+                    }
                 }
             }
 
