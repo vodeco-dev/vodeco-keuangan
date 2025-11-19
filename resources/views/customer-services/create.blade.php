@@ -49,7 +49,19 @@
 
             <div class="mt-8 bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Daftar Customer Service</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Daftar Customer Service</h3>
+                        <x-sort-filter 
+                            :sortBy="request('sort_by', 'created_at')"
+                            :sortOrder="request('sort_order', 'desc')"
+                            :sortOptions="[
+                                'created_at' => 'Waktu Dibuat',
+                                'updated_at' => 'Waktu Diupdate',
+                                'name' => 'Nama'
+                            ]"
+                            label=""
+                        />
+                    </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">

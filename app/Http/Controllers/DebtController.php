@@ -52,12 +52,15 @@ class DebtController extends Controller
     {
         $user = $request->user();
 
+        // Check if user can view all debts (admin or accountant)
+        $canViewAllDebts = in_array($user->role->value, ['admin', 'accountant']);
+
         $this->autoFailOverdueDebts($user);
 
-        $debts = $this->debtService->getDebts($request, $user);
+        $debts = $this->debtService->getDebts($request, $canViewAllDebts ? null : $user);
         $debts->appends($request->query());
 
-        $summary = $this->debtService->getSummary($user);
+        $summary = $this->debtService->getSummary($canViewAllDebts ? null : $user);
 
         $incomeCategories = Category::where('type', 'pemasukan')->orderBy('name')->get();
         $expenseCategories = Category::where('type', 'pengeluaran')->orderBy('name')->get();
@@ -292,19 +295,31 @@ class DebtController extends Controller
         return redirect()->route('debts.index')->with('success', 'Catatan berhasil diperbarui.');
     }
 
-    public function markAsFailed(Request $request, Debt $debt): RedirectResponse
+    public function markAsFailed(Request $request, Debt $debt): RedirectResponse|JsonResponse
     {
         $this->authorize('update', $debt);
 
         if ($debt->status !== Debt::STATUS_BELUM_LUNAS) {
-            return redirect()->route('debts.index')->with('info', 'Catatan ini tidak dapat ditandai gagal.');
+            $message = 'Catatan ini tidak dapat ditandai gagal.';
+            if ($this->isApiRequest($request)) {
+                return $this->apiError($message, 422);
+            }
+            return redirect()->route('debts.index')->with('info', $message);
         }
 
         if (!$debt->category_id) {
-            return redirect()->route('debts.index')->withErrors(['error' => 'Tidak dapat menandai gagal karena tidak ada kategori yang terhubung. Silakan lakukan pembayaran parsial terlebih dahulu untuk menyambungkan kategori.']);
+            $message = 'Tidak dapat menandai gagal karena tidak ada kategori yang terhubung. Silakan lakukan pembayaran parsial terlebih dahulu untuk menyambungkan kategori.';
+            if ($this->isApiRequest($request)) {
+                return $this->apiError($message, 422);
+            }
+            return redirect()->route('debts.index')->withErrors(['error' => $message]);
         }
 
         $this->finalizeFailedDebt($debt, $request->user());
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess($debt->load('payments', 'category'), 'Catatan ditandai sebagai gagal project.');
+        }
 
         return redirect()->route('debts.index')->with('success', 'Catatan ditandai sebagai gagal project.');
     }
@@ -494,6 +509,47 @@ class DebtController extends Controller
         }
 
         return $category;
+    }
+
+    /**
+     * Sync completed debts to transactions.
+     */
+    public function syncCompletedDebtsToTransactions(Request $request): RedirectResponse|JsonResponse
+    {
+        $this->authorize('viewAny', Debt::class);
+
+        $count = $this->debtService->syncCompletedDebtsToTransactions();
+
+        // Clear cache untuk semua user karena transaksi baru mempengaruhi summary
+        $this->transactionService->clearAllSummaryCaches();
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess([
+                'count' => $count,
+            ], "Successfully created {$count} transaction record(s) from completed debts.");
+        }
+
+        return redirect()->route('debts.index')
+            ->with('success', "Berhasil membuat {$count} catatan transaksi dari hutang yang sudah lunas.");
+    }
+
+    /**
+     * Fix inconsistent debt statuses.
+     */
+    public function fixInconsistentDebtStatuses(Request $request): RedirectResponse|JsonResponse
+    {
+        $this->authorize('viewAny', Debt::class);
+
+        $count = $this->debtService->fixInconsistentDebtStatuses();
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess([
+                'count' => $count,
+            ], "Successfully fixed {$count} debt status(es).");
+        }
+
+        return redirect()->route('debts.index')
+            ->with('success', "Berhasil memperbaiki {$count} status hutang yang tidak konsisten.");
     }
 
     /**

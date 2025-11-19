@@ -13,10 +13,24 @@ class UserDeletionRequestController extends Controller
      */
     public function index(Request $request): View
     {
+        // Sorting: default terbaru ke terlama berdasarkan created_at
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        
+        // Validasi sort_by untuk keamanan
+        $allowedSortColumns = ['created_at', 'updated_at'];
+        if (!in_array($sortBy, $allowedSortColumns)) {
+            $sortBy = 'created_at';
+        }
+        
+        // Validasi sort_order
+        $sortOrder = strtolower($sortOrder) === 'asc' ? 'asc' : 'desc';
+        
         $deletionRequests = TransactionDeletionRequest::with('transaction')
             ->where('requested_by', $request->user()->id)
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->orderBy($sortBy, $sortOrder)
+            ->paginate(15)
+            ->appends($request->query());
 
         return view('user_deletion_requests.index', [
             'requests' => $deletionRequests,

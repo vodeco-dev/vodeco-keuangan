@@ -9,6 +9,16 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900 dark:text-white">
+                    <div class="mb-4 flex justify-end">
+                        <x-sort-filter 
+                            :sortBy="request('sort_by', 'created_at')"
+                            :sortOrder="request('sort_order', 'desc')"
+                            :sortOptions="[
+                                'created_at' => 'Waktu Dibuat',
+                                'updated_at' => 'Waktu Diupdate'
+                            ]"
+                        />
+                    </div>
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>

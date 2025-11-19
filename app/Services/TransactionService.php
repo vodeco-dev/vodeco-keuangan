@@ -17,8 +17,22 @@ class TransactionService
     public function getTransactionsForUser(User $user, Request $request)
     {
         $query = Transaction::with('category')
-            ->where('user_id', $user->id) // KEAMANAN: Filter berdasarkan user
-            ->latest('date');
+            ->where('user_id', $user->id); // KEAMANAN: Filter berdasarkan user
+        
+        // Sorting: default terbaru ke terlama berdasarkan created_at
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        
+        // Validasi sort_by untuk keamanan
+        $allowedSortColumns = ['created_at', 'updated_at', 'date', 'amount'];
+        if (!in_array($sortBy, $allowedSortColumns)) {
+            $sortBy = 'created_at';
+        }
+        
+        // Validasi sort_order
+        $sortOrder = strtolower($sortOrder) === 'asc' ? 'asc' : 'desc';
+        
+        $query->orderBy($sortBy, $sortOrder);
 
         if ($request->filled('search')) {
             $query->where('description', 'like', '%' . $request->search . '%');

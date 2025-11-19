@@ -74,7 +74,19 @@
 
             <div class="bg-white dark:bg-gray-900 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white dark:bg-gray-900">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Daftar Passphrase Aktif</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Daftar Passphrase Aktif</h3>
+                        <x-sort-filter 
+                            :sortBy="request('sort_by', 'created_at')"
+                            :sortOrder="request('sort_order', 'desc')"
+                            :sortOptions="[
+                                'created_at' => 'Waktu Dibuat',
+                                'updated_at' => 'Waktu Diupdate',
+                                'expires_at' => 'Kedaluwarsa'
+                            ]"
+                            label=""
+                        />
+                    </div>
 
                     @if ($errors->hasBag('rotatePassphrase'))
                         <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
