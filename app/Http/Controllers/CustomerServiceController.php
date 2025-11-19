@@ -9,9 +9,24 @@ use Illuminate\View\View;
 
 class CustomerServiceController extends Controller
 {
-    public function create(): View
+    public function create(Request $request): View
     {
-        $customerServices = CustomerService::orderBy('name')->paginate(10);
+        // Sorting: default terbaru ke terlama berdasarkan created_at
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        
+        // Validasi sort_by untuk keamanan
+        $allowedSortColumns = ['created_at', 'updated_at', 'name'];
+        if (!in_array($sortBy, $allowedSortColumns)) {
+            $sortBy = 'created_at';
+        }
+        
+        // Validasi sort_order
+        $sortOrder = strtolower($sortOrder) === 'asc' ? 'asc' : 'desc';
+        
+        $customerServices = CustomerService::orderBy($sortBy, $sortOrder)
+            ->paginate(10)
+            ->appends($request->query());
 
         return view('customer-services.create', compact('customerServices'));
     }

@@ -95,9 +95,26 @@
 
                     @if ($tabStates['needs-confirmation']['unlocked'] && $defaultTab === 'needs-confirmation')
                     <div>
+                        {{-- Filter Sorting --}}
+                        <div class="mb-4 flex justify-end">
+                            <x-sort-filter 
+                                :sortBy="request('sort_by', 'created_at')"
+                                :sortOrder="request('sort_order', 'desc')"
+                                :sortOptions="[
+                                    'created_at' => 'Waktu Dibuat',
+                                    'updated_at' => 'Waktu Diupdate',
+                                    'issue_date' => 'Tanggal Invoice',
+                                    'due_date' => 'Jatuh Tempo',
+                                    'total' => 'Total'
+                                ]"
+                            />
+                        </div>
+                        
                         <div class="mb-6 flex flex-wrap items-center gap-4">
                             <form action="{{ route('invoices.index') }}" method="GET" class="flex flex-wrap items-end gap-4">
                                 <input type="hidden" name="tab" value="needs-confirmation">
+                                <input type="hidden" name="sort_by" value="{{ request('sort_by', 'created_at') }}">
+                                <input type="hidden" name="sort_order" value="{{ request('sort_order', 'desc') }}">
                                 <div>
                                     <label for="filter_date_needs_confirmation" class="text-sm font-medium text-gray-600">Tanggal:</label>
                                     <input type="date" name="filter_date" id="filter_date_needs_confirmation" value="{{ $filters['filter_date'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
@@ -262,9 +279,26 @@
 
                     @if ($tabStates['history']['unlocked'] && $defaultTab === 'history')
                     <div x-cloak>
+                        {{-- Filter Sorting --}}
+                        <div class="mb-4 flex justify-end">
+                            <x-sort-filter 
+                                :sortBy="request('sort_by', 'created_at')"
+                                :sortOrder="request('sort_order', 'desc')"
+                                :sortOptions="[
+                                    'created_at' => 'Waktu Dibuat',
+                                    'updated_at' => 'Waktu Diupdate',
+                                    'issue_date' => 'Tanggal Invoice',
+                                    'due_date' => 'Jatuh Tempo',
+                                    'total' => 'Total'
+                                ]"
+                            />
+                        </div>
+                        
                         <div class="mb-6 flex flex-wrap items-center gap-4">
                             <form action="{{ route('invoices.index') }}" method="GET" class="flex flex-wrap items-end gap-4">
                                 <input type="hidden" name="tab" value="history">
+                                <input type="hidden" name="sort_by" value="{{ request('sort_by', 'created_at') }}">
+                                <input type="hidden" name="sort_order" value="{{ request('sort_order', 'desc') }}">
                                 <div>
                                     <label for="filter_date_history" class="text-sm font-medium text-gray-600">Tanggal:</label>
                                     <input type="date" name="filter_date" id="filter_date_history" value="{{ $filters['filter_date'] ?? '' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">

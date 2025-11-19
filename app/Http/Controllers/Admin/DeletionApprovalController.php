@@ -19,10 +19,24 @@ class DeletionApprovalController extends Controller
     {
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
+        // Sorting: default terbaru ke terlama berdasarkan created_at
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        
+        // Validasi sort_by untuk keamanan
+        $allowedSortColumns = ['created_at', 'updated_at'];
+        if (!in_array($sortBy, $allowedSortColumns)) {
+            $sortBy = 'created_at';
+        }
+        
+        // Validasi sort_order
+        $sortOrder = strtolower($sortOrder) === 'asc' ? 'asc' : 'desc';
+        
         $requests = TransactionDeletionRequest::with(['transaction', 'requester'])
             ->where('status', 'pending')
+            ->orderBy($sortBy, $sortOrder)
             ->get();
 
         return view('admin.deletion_requests.index', compact('requests'));

@@ -15,7 +15,17 @@
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <div class="flex justify-end mb-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <x-sort-filter 
+                            :sortBy="request('sort_by', 'created_at')"
+                            :sortOrder="request('sort_order', 'desc')"
+                            :sortOptions="[
+                                'created_at' => 'Waktu Dibuat',
+                                'updated_at' => 'Waktu Diupdate',
+                                'name' => 'Nama',
+                                'email' => 'Email'
+                            ]"
+                        />
                         <a href="{{ route('users.create') }}" class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
                             + Tambah User
                         </a>

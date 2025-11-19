@@ -7,17 +7,31 @@ use App\Http\Requests\RotateInvoicePortalPassphraseRequest;
 use App\Http\Requests\StoreInvoicePortalPassphraseRequest;
 use App\Models\InvoicePortalPassphrase;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
 
 class InvoicePortalPassphraseController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        // Sorting: default terbaru ke terlama berdasarkan created_at
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        
+        // Validasi sort_by untuk keamanan
+        $allowedSortColumns = ['created_at', 'updated_at', 'expires_at'];
+        if (!in_array($sortBy, $allowedSortColumns)) {
+            $sortBy = 'created_at';
+        }
+        
+        // Validasi sort_order
+        $sortOrder = strtolower($sortOrder) === 'asc' ? 'asc' : 'desc';
+        
         $passphrases = InvoicePortalPassphrase::query()
             ->with(['creator', 'deactivator'])
-            ->latest()
+            ->orderBy($sortBy, $sortOrder)
             ->get();
 
         return view('invoice-portal.passphrases.index', [

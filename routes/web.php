@@ -87,6 +87,9 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::resource('transactions', TransactionController::class)->except(['show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::post('debts/category-preferences', [DebtController::class, 'updateCategoryPreferences'])->name('debts.category-preferences.update');
+    Route::post('debts/sync-missing', [DebtController::class, 'syncMissingDebts'])->name('debts.sync-missing');
+    Route::post('debts/sync-completed-to-transactions', [DebtController::class, 'syncCompletedDebtsToTransactions'])->name('debts.sync-completed-to-transactions');
+    Route::post('debts/fix-inconsistent-statuses', [DebtController::class, 'fixInconsistentDebtStatuses'])->name('debts.fix-inconsistent-statuses');
     Route::resource('debts', DebtController::class);
     Route::match(['GET', 'POST'], 'pass-through/packages', [PassThroughPackageController::class, 'store'])
         ->middleware('role:admin,accountant,staff')

@@ -139,8 +139,24 @@
 
             {{-- Bagian Tabel dan Filter --}}
             <div class="bg-white rounded-lg shadow-sm p-6">
+                {{-- Filter Sorting --}}
+                <div class="mb-4 flex justify-end">
+                    <x-sort-filter 
+                        :sortBy="request('sort_by', 'created_at')"
+                        :sortOrder="request('sort_order', 'desc')"
+                        :sortOptions="[
+                            'created_at' => 'Waktu Dibuat',
+                            'updated_at' => 'Waktu Diupdate',
+                            'date' => 'Tanggal Transaksi',
+                            'amount' => 'Jumlah'
+                        ]"
+                    />
+                </div>
+                
                 {{-- Form Filter --}}
                 <form action="{{ route('transactions.index') }}" method="GET">
+                    <input type="hidden" name="sort_by" value="{{ request('sort_by', 'created_at') }}">
+                    <input type="hidden" name="sort_order" value="{{ request('sort_order', 'desc') }}">
                     <div class="flex flex-col gap-6 mb-6">
                         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                             <div class="flex-1">

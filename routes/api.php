@@ -98,6 +98,7 @@ Route::middleware(['auth'])->group(function () {
     // Debts
     Route::get('/debts', [DebtController::class, 'index'])->name('api.debts.index');
     Route::post('/debts', [DebtController::class, 'store'])->name('api.debts.store');
+    Route::post('/debts/sync-missing', [DebtController::class, 'syncMissingDebts'])->name('api.debts.sync-missing');
     Route::get('/debts/{debt}', [DebtController::class, 'show'])->name('api.debts.show');
     Route::put('/debts/{debt}', [DebtController::class, 'update'])->name('api.debts.update');
     Route::delete('/debts/{debt}', [DebtController::class, 'destroy'])->name('api.debts.destroy');

@@ -101,8 +101,22 @@ class InvoiceController extends Controller
 
         if ($shouldLoadInvoices) {
             $baseQuery = Invoice::query()
-                ->with('customerService')
-                ->latest('issue_date');
+                ->with('customerService');
+            
+            // Sorting: default terbaru ke terlama berdasarkan created_at
+            $sortBy = $request->input('sort_by', 'created_at');
+            $sortOrder = $request->input('sort_order', 'desc');
+            
+            // Validasi sort_by untuk keamanan
+            $allowedSortColumns = ['created_at', 'updated_at', 'issue_date', 'due_date', 'total'];
+            if (!in_array($sortBy, $allowedSortColumns)) {
+                $sortBy = 'created_at';
+            }
+            
+            // Validasi sort_order
+            $sortOrder = strtolower($sortOrder) === 'asc' ? 'asc' : 'desc';
+            
+            $baseQuery->orderBy($sortBy, $sortOrder);
 
             if ($user->role !== Role::ADMIN && $user->role !== Role::ACCOUNTANT) {
                 $baseQuery->where('user_id', $user->id);
@@ -696,8 +710,88 @@ class InvoiceController extends Controller
         // If invoice is already fully paid (lunas) or has no remaining balance,
         // just confirm it without requiring payment amount
         if ($invoice->status === 'lunas' || $remainingBalance <= 0) {
-            $invoice->needs_confirmation = false;
-            $invoice->save();
+            DB::transaction(function () use ($invoice) {
+                $invoice->loadMissing('items', 'debt');
+                
+                // Pastikan debt dibuat jika belum ada
+                if (!$invoice->debt) {
+                    $isPassThrough = in_array($invoice->type, [
+                        Invoice::TYPE_PASS_THROUGH_NEW,
+                        Invoice::TYPE_PASS_THROUGH_EXISTING
+                    ], true);
+                    
+                    $relatedParty = $invoice->client_name
+                        ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
+                    
+                    if ($isPassThrough) {
+                        // Untuk pass-through invoice, cari item "Dana Invoices Iklan"
+                        $adBudgetItem = $invoice->items->first(function ($item) {
+                            return strpos($item->description, 'Dana Invoices Iklan') !== false;
+                        });
+                        
+                        $adBudgetTotal = $adBudgetItem 
+                            ? round($adBudgetItem->price * $adBudgetItem->quantity, 2)
+                            : $invoice->total;
+                        
+                        $description = $adBudgetItem?->description ?? '';
+                        $durationDays = 1;
+                        if (preg_match('/(\d+)\s*hari/i', $description, $matches)) {
+                            $durationDays = max(1, (int) $matches[1]);
+                        }
+                        
+                        $dailyBalanceTotal = $durationDays > 0 
+                            ? round($adBudgetTotal / $durationDays, 2) 
+                            : 0;
+                        
+                        Debt::create([
+                            'invoice_id' => $invoice->id,
+                            'description' => $invoice->transactionDescription(),
+                            'related_party' => $relatedParty,
+                            'type' => Debt::TYPE_PASS_THROUGH,
+                            'amount' => $adBudgetTotal,
+                            'due_date' => $invoice->due_date,
+                            'status' => Debt::STATUS_BELUM_LUNAS,
+                            'user_id' => $invoice->user_id,
+                            'daily_deduction' => $dailyBalanceTotal,
+                        ]);
+                    } else {
+                        // Untuk invoice biasa (down payment)
+                        $firstItem = $invoice->items()->first();
+                        $categoryId = $firstItem?->category_id;
+                        
+                        $debt = Debt::create([
+                            'invoice_id' => $invoice->id,
+                            'description' => $invoice->transactionDescription(),
+                            'related_party' => $relatedParty,
+                            'type' => Debt::TYPE_DOWN_PAYMENT,
+                            'amount' => $invoice->total,
+                            'due_date' => $invoice->due_date,
+                            'status' => $invoice->status === 'lunas' ? Debt::STATUS_LUNAS : Debt::STATUS_BELUM_LUNAS,
+                            'user_id' => $invoice->user_id,
+                            'category_id' => $categoryId,
+                        ]);
+                        
+                        // Jika invoice sudah punya down_payment, buat payment untuk debt
+                        if ($invoice->down_payment > 0) {
+                            $debt->payments()->create([
+                                'amount' => $invoice->down_payment,
+                                'payment_date' => $invoice->payment_date ?? now(),
+                                'notes' => 'Down payment invoice #' . $invoice->number,
+                            ]);
+                        }
+                    }
+                } else {
+                    // Update debt status jika sudah ada
+                    if ($invoice->status === 'lunas') {
+                        $invoice->debt->forceFill([
+                            'status' => Debt::STATUS_LUNAS,
+                        ])->save();
+                    }
+                }
+                
+                $invoice->needs_confirmation = false;
+                $invoice->save();
+            });
             
             return redirect()->route('invoices.index')->with('success', 'Invoice berhasil dikonfirmasi.');
         }
@@ -721,6 +815,52 @@ class InvoiceController extends Controller
             DB::transaction(function () use ($invoice, $paymentDate) {
                 $invoice->loadMissing('items', 'debt');
                 
+                $relatedParty = $invoice->client_name
+                    ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
+                
+                // Pastikan debt dibuat jika belum ada
+                if (!$invoice->debt) {
+                    $firstItem = $invoice->items()->first();
+                    $categoryId = $firstItem?->category_id;
+                    
+                    $debt = Debt::create([
+                        'invoice_id' => $invoice->id,
+                        'description' => $invoice->transactionDescription(),
+                        'related_party' => $relatedParty,
+                        'type' => Debt::TYPE_DOWN_PAYMENT,
+                        'amount' => $invoice->total,
+                        'due_date' => $invoice->due_date,
+                        'status' => Debt::STATUS_LUNAS,
+                        'user_id' => $invoice->user_id,
+                        'category_id' => $categoryId,
+                    ]);
+                    
+                    // Buat payment untuk down_payment yang sudah ada
+                    if ($invoice->down_payment > 0) {
+                        $debt->payments()->create([
+                            'amount' => $invoice->down_payment,
+                            'payment_date' => $paymentDate,
+                            'notes' => 'Konfirmasi down payment invoice #' . $invoice->number,
+                        ]);
+                    }
+                } else {
+                    // Update debt status jika sudah ada
+                    $invoice->debt->forceFill([
+                        'status' => Debt::STATUS_LUNAS,
+                    ])->save();
+                    
+                    // Pastikan payment sudah ada untuk down_payment
+                    $invoice->debt->load('payments');
+                    $existingPaymentsTotal = $invoice->debt->payments->sum('amount');
+                    if ($existingPaymentsTotal < $invoice->down_payment) {
+                        $invoice->debt->payments()->create([
+                            'amount' => $invoice->down_payment - $existingPaymentsTotal,
+                            'payment_date' => $paymentDate,
+                            'notes' => 'Konfirmasi down payment invoice #' . $invoice->number,
+                        ]);
+                    }
+                }
+                
                 // Update invoice status menjadi lunas
                 $invoice->forceFill([
                     'status' => 'lunas',
@@ -728,30 +868,26 @@ class InvoiceController extends Controller
                     'payment_date' => $paymentDate,
                 ])->save();
                 
-                // Update debt status jika ada
-                if ($invoice->debt) {
-                    $invoice->debt->forceFill([
-                        'status' => \App\Models\Debt::STATUS_LUNAS,
-                    ])->save();
-                    
-                    // Catat transaksi pemasukan saat invoice dilunasi
-                    $categoryId = $invoice->debt->category_id;
-                    if (!$categoryId) {
-                        $firstItem = $invoice->items()->first();
-                        if ($firstItem && $firstItem->category_id) {
-                            $categoryId = $firstItem->category_id;
-                        }
+                // Catat transaksi pemasukan saat invoice dilunasi
+                $invoice->load('debt');
+                $categoryId = $invoice->debt->category_id;
+                if (!$categoryId) {
+                    $firstItem = $invoice->items()->first();
+                    if ($firstItem && $firstItem->category_id) {
+                        $categoryId = $firstItem->category_id;
+                        $invoice->debt->category_id = $categoryId;
+                        $invoice->debt->save();
                     }
-                    
-                    if ($categoryId) {
-                        \App\Models\Transaction::create([
-                            'category_id' => $categoryId,
-                            'user_id' => auth()->id(),
-                            'amount' => $invoice->total,
-                            'description' => $invoice->transactionDescription(),
-                            'date' => $paymentDate,
-                        ]);
-                    }
+                }
+                
+                if ($categoryId) {
+                    \App\Models\Transaction::create([
+                        'category_id' => $categoryId,
+                        'user_id' => auth()->id(),
+                        'amount' => $invoice->total,
+                        'description' => $invoice->transactionDescription(),
+                        'date' => $paymentDate,
+                    ]);
                 }
             });
             

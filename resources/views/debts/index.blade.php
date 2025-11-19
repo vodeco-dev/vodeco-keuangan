@@ -154,8 +154,24 @@
 
     {{-- Main Content Area --}}
     <div class="bg-white rounded-lg shadow-sm p-6">
+        {{-- Filter Sorting --}}
+        <div class="mb-4 flex justify-end">
+            <x-sort-filter 
+                :sortBy="request('sort_by', 'created_at')"
+                :sortOrder="request('sort_order', 'desc')"
+                :sortOptions="[
+                    'created_at' => 'Waktu Dibuat',
+                    'updated_at' => 'Waktu Diupdate',
+                    'due_date' => 'Jatuh Tempo',
+                    'amount' => 'Jumlah'
+                ]"
+            />
+        </div>
+        
         {{-- Filter & Search Form --}}
         <form method="GET" action="{{ route('debts.index') }}">
+            <input type="hidden" name="sort_by" value="{{ request('sort_by', 'created_at') }}">
+            <input type="hidden" name="sort_order" value="{{ request('sort_order', 'desc') }}">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-4">
                     <select name="status_filter" class="border-gray-300 rounded-lg text-sm">
