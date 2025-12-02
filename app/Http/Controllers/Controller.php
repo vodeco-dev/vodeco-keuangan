@@ -13,25 +13,16 @@ abstract class Controller extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
-    /**
-     * Check if the request is an API request
-     */
     protected function isApiRequest(Request $request): bool
     {
         return $request->is('api/*') || $request->expectsJson() || $request->wantsJson();
     }
 
-    /**
-     * Return JSON response for API requests, or redirect for web requests
-     */
     protected function apiResponse($data, int $status = 200, array $headers = []): JsonResponse
     {
         return response()->json($data, $status, $headers);
     }
 
-    /**
-     * Return success response for API requests
-     */
     protected function apiSuccess($data = null, ?string $message = null, int $status = 200): JsonResponse
     {
         $response = [];
@@ -44,9 +35,6 @@ abstract class Controller extends BaseController
         return $this->apiResponse($response, $status);
     }
 
-    /**
-     * Return error response for API requests
-     */
     protected function apiError(string $message, int $status = 400, array $errors = []): JsonResponse
     {
         $response = ['message' => $message];
@@ -56,9 +44,6 @@ abstract class Controller extends BaseController
         return $this->apiResponse($response, $status);
     }
 
-    /**
-     * Handle response for both API and web requests
-     */
     protected function handleResponse(Request $request, $data, ?string $successMessage = null, ?string $redirectRoute = null): JsonResponse|RedirectResponse
     {
         if ($this->isApiRequest($request)) {

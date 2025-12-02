@@ -2,6 +2,13 @@
     <table class="w-full text-left">
         <thead class="border-b">
             <tr>
+                <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase w-12">
+                    <input
+                        type="checkbox"
+                        id="select-all"
+                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    >
+                </th>
                 <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Deskripsi</th>
                 <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Pihak Terkait</th>
                 <th class="px-4 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">Tipe</th>
@@ -17,6 +24,9 @@
         <tbody class="divide-y">
             @forelse ($debts as $debt)
                 <tr>
+                    <td class="px-4 py-3 text-sm">
+                        <input type="checkbox" name="selected_debts[]" value="{{ $debt->id }}" class="debt-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    </td>
                     <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{{ $debt->description }}</td>
                     <td class="px-4 py-3 text-sm text-gray-500">{{ $debt->related_party }}</td>
                     <td class="px-4 py-3 text-sm">
@@ -178,7 +188,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10" class="px-4 py-6 text-center text-sm text-gray-500">{{ $emptyMessage ?? 'Belum ada catatan.' }}</td>
+                    <td colspan="11" class="px-4 py-6 text-center text-sm text-gray-500">{{ $emptyMessage ?? 'Belum ada catatan.' }}</td>
                 </tr>
             @endforelse
         </tbody>

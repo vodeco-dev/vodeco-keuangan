@@ -11,7 +11,6 @@
 <div class="flex items-center gap-2">
     <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $label }}</label>
     <form method="GET" action="{{ request()->url() }}" class="flex items-center gap-2">
-        {{-- Preserve existing query parameters --}}
         @foreach(request()->except(['sort_by', 'sort_order', 'page']) as $key => $value)
             @if(is_array($value))
                 @foreach($value as $v)

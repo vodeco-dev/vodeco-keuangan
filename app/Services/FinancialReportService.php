@@ -8,9 +8,6 @@ use Carbon\Carbon;
 
 class FinancialReportService
 {
-    /**
-     * Bangun data laporan keuangan yang sudah dipisahkan berdasarkan jenis transaksi.
-     */
     public function generate(
         ?int $userId,
         string $startDate,

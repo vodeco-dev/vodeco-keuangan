@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB; // <-- Tambahkan ini
+use Illuminate\Support\Facades\DB;
 
 class CategorySeeder extends Seeder
 {
@@ -41,7 +41,7 @@ class CategorySeeder extends Seeder
             ['name' => 'Biaya konsumsi', 'type' => 'pengeluaran'],
             ['name' => 'Biaya langganan', 'type' => 'pengeluaran'],
             ['name' => 'Biaya perlengkapan kantor', 'type' => 'pengeluaran'],
-            ['name' => 'Biaya lainnya', 'type' => 'pengeluaran'], // <-- Duplikat sudah aman
+            ['name' => 'Biaya lainnya', 'type' => 'pengeluaran'],
             ['name' => 'Biaya pemeliharaan dan perbaikan', 'type' => 'pengeluaran'],
             ['name' => 'Piutang tidak tertagih', 'type' => 'pengeluaran'],
 
@@ -56,8 +56,8 @@ class CategorySeeder extends Seeder
 
         foreach ($categories as $category) {
             Category::firstOrCreate(
-                ['name' => $category['name']], // Cek berdasarkan nama
-                ['type' => $category['type']]  // Data yang diisi jika baru
+                ['name' => $category['name']],
+                ['type' => $category['type']]
             );
         }
     }

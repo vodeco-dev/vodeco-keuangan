@@ -13,18 +13,17 @@ use Illuminate\Support\Str;
 
 class Invoice extends Model
 {
+    public const TYPE_DOWN_PAYMENT = 'down_payment';           
+    public const TYPE_PENDING_PAYMENT = 'pending_payment';     
+    public const TYPE_INVOICES_IKLAN = 'invoices_iklan';       
+    public const TYPE_SETTLEMENT = 'settlement';               
+
     public const TYPE_STANDARD = 'standard';
-    public const TYPE_SETTLEMENT = 'settlement';
     public const TYPE_PASS_THROUGH_NEW = 'pass_through_new';
     public const TYPE_PASS_THROUGH_EXISTING = 'pass_through_existing';
 
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'user_id',
         'public_token',
@@ -55,11 +54,6 @@ class Invoice extends Model
         'pdf_path',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'issue_date' => 'date',
         'due_date' => 'date',
@@ -71,10 +65,6 @@ class Invoice extends Model
         'needs_confirmation' => 'boolean',
     ];
 
-    /**
-     * The "booted" method of the model.
-     * Penetapan token publik dilakukan ketika invoice dibuat.
-     */
     protected static function booted()
     {
         static::creating(function (Invoice $invoice) {
@@ -90,13 +80,8 @@ class Invoice extends Model
                 $invoice->settlement_token_expires_at = now()->addDays(7);
             }
         });
-
-        // Pencatatan transaksi dipindahkan ke proses pembayaran agar lebih fleksibel
     }
 
-    /**
-     * Mendapatkan item-item yang ada di dalam invoice.
-     */
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
@@ -122,7 +107,6 @@ class Invoice extends Model
 
         $fullDescription = Str::limit($summary, $maxLength) . ' ' . $invoiceNumber;
         
-        // Jika terlalu panjang, potong summary agar invoice number tetap masuk
         if (strlen($fullDescription) > $maxLength + 20) {
             $availableLength = $maxLength - strlen($invoiceNumber) - 1;
             $summary = Str::limit($summary, max($availableLength, 10));
@@ -132,6 +116,35 @@ class Invoice extends Model
         return $fullDescription;
     }
 
+    public function getTypeLabel(): string
+    {
+        return match ($this->type) {
+            self::TYPE_DOWN_PAYMENT => 'Down Payment',
+            self::TYPE_PENDING_PAYMENT => 'Menunggu Pembayaran',
+            self::TYPE_INVOICES_IKLAN => 'Invoices Iklan',
+            self::TYPE_SETTLEMENT => 'Pelunasan',
+            self::TYPE_STANDARD => 'Standard',
+            self::TYPE_PASS_THROUGH_NEW => 'Pass Through Baru',
+            self::TYPE_PASS_THROUGH_EXISTING => 'Pass Through Existing',
+            default => 'Unknown'
+        };
+    }
+
+    public function canShowInWaitingConfirmation(): bool
+    {
+        return !empty($this->payment_proof_path) && !empty($this->payment_proof_filename);
+    }
+
+    public function canEnterDebt(): bool
+    {
+        return $this->needs_confirmation === false;
+    }
+
+    public function canEnterTransactionWhenPaid(): bool
+    {
+        return $this->type !== self::TYPE_INVOICES_IKLAN;
+    }
+
     public function transactionDescription(int $maxLength = 120): string
     {
         if ($this->type === self::TYPE_SETTLEMENT) {
@@ -139,7 +152,6 @@ class Invoice extends Model
 
             if ($referenceInvoice) {
                 $description = $referenceInvoice->itemDescriptionSummary($maxLength);
-                // Tambahkan nomor invoice settlement jika belum ada
                 if (strpos($description, '(' . $this->number . ')') === false) {
                     return $description . ' (' . $this->number . ')';
                 }
@@ -223,7 +235,6 @@ class Invoice extends Model
                 return $url;
             }
         } catch (\Throwable $exception) {
-            // Fallback handled below.
         }
 
         try {
@@ -238,9 +249,6 @@ class Invoice extends Model
         return app(InvoicePdfService::class)->ensureHostedUrl($this);
     }
 
-    /**
-     * Generate a new settlement token for this invoice
-     */
     public function generateSettlementToken(int $daysValid = 7): void
     {
         $this->settlement_token = Str::random(64);
@@ -248,9 +256,6 @@ class Invoice extends Model
         $this->save();
     }
 
-    /**
-     * Check if the settlement token is expired
-     */
     public function isSettlementTokenExpired(): bool
     {
         if (!$this->settlement_token_expires_at) {

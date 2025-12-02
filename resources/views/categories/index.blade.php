@@ -8,7 +8,6 @@
     <div class="py-12" x-data="{ editModalOpen: false, editCategory: {} }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
-            {{-- Form Tambah Kategori --}}
             <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
                 <h3 class="text-xl font-semibold text-gray-800 mb-4">Tambah Kategori Baru</h3>
                 <form action="{{ route('categories.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
@@ -34,7 +33,6 @@
                 </form>
             </div>
 
-            {{-- Notifikasi Sukses atau Error --}}
             @if (session('success'))
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
                     <p>{{ session('success') }}</p>
@@ -45,10 +43,7 @@
                     <p>{{ session('error') }}</p>
                 </div>
             @endif
-
-            {{-- Daftar Kategori --}}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Kategori Pemasukan -->
                 <div class="bg-white rounded-lg shadow-sm p-6">
                     <h3 class="text-xl font-semibold text-green-600 mb-4">Kategori Pemasukan</h3>
                     <div class="overflow-x-auto">
@@ -82,12 +77,11 @@
                     </div>
                 </div>
 
-                <!-- Kategori Pengeluaran -->
                 <div class="bg-white rounded-lg shadow-sm p-6">
                     <h3 class="text-xl font-semibold text-red-600 mb-4">Kategori Pengeluaran</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
-                           <thead class="border-b">
+                            <thead class="border-b">
                                 <tr>
                                     <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Nama</th>
                                     <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Aksi</th>
@@ -95,7 +89,7 @@
                             </thead>
                             <tbody class="divide-y">
                                 @forelse ($pengeluaran as $category)
-                                     <tr>
+                                    <tr>
                                         <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $category->name }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                                             <div class="flex justify-center items-center gap-4">
@@ -118,7 +112,6 @@
             </div>
         </div>
 
-        <!-- Modal Edit -->
         <div x-show="editModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
             <div @click.away="editModalOpen = false" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
                 <h3 class="text-xl font-semibold mb-4">Edit Kategori</h3>

@@ -18,7 +18,6 @@ class SendInvoiceReminder extends Command
             ->get();
 
         foreach ($invoices as $invoice) {
-            // Di sini bisa ditambahkan logika pengiriman email/notifikasi
             $this->info("Reminder sent for invoice {$invoice->number}");
         }
 

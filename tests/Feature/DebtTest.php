@@ -161,7 +161,7 @@ class DebtTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('transactions', [
-            'description' => '[Otomatis] Gagal Project: Overdue Debt',
+            'description' => 'Iklan Gagal: Overdue Debt',
             'amount' => 1500,
             'category_id' => $category->id,
             'user_id' => $user->id,

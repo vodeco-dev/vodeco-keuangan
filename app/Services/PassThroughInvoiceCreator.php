@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\Role;
 use App\Models\Category;
-use App\Models\Debt;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Setting;
@@ -18,9 +17,6 @@ class PassThroughInvoiceCreator
 {
     private const CATEGORY_SETTING_KEY = 'pass_through_invoice_category_id';
 
-    /**
-     * Membuat Invoices Iklan beserta catatan hutang terkait berdasarkan paket yang dipilih.
-     */
     public function create(PassThroughPackage $package, int $quantity, array $attributes): Invoice
     {
         return DB::transaction(function () use ($package, $quantity, $attributes) {
@@ -117,12 +113,6 @@ class PassThroughInvoiceCreator
                 ]);
             }
 
-            // Catatan: 
-            // 1. Debt untuk pass-through invoice akan dibuat setelah konfirmasi pembayaran
-            //    di method storePayment() untuk memastikan invoice melewati konfirmasi terlebih dahulu
-            // 2. Transaksi pemasukan akan dicatat saat invoice dikonfirmasi, bukan saat dibuat
-            //    untuk memastikan uang benar-benar sudah masuk setelah konfirmasi
-
             return $invoice->load('items', 'customerService');
         });
     }
@@ -179,7 +169,6 @@ class PassThroughInvoiceCreator
             return;
         }
 
-        // Buat 1 transaksi untuk total invoice (termasuk maintenance + account creation + ad budget)
         $clientInfo = $invoice->client_name ?: $invoice->client_whatsapp ?: 'Klien';
         $description = 'Invoices Iklan' . ($quantity > 1 ? ' (x' . $quantity . ')' : '') . ' - ' . $clientInfo . ' (' . $invoice->number . ')';
         
@@ -217,22 +206,21 @@ class PassThroughInvoiceCreator
     {
         $date = now()->format('Ymd');
         
-        // Gunakan lock untuk mencegah race condition
-        // Karena method ini dipanggil dari dalam DB::transaction, lockForUpdate akan bekerja dengan baik
         $count = Invoice::whereDate('created_at', today())
             ->lockForUpdate()
             ->count();
         
         $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-        $invoiceNumber = "{$date}-{$sequence}";
+        $random = str_pad(rand(0, 999), 3, '0', STR_PAD_LEFT);
+        $invoiceNumber = "{$date}-{$sequence}{$random}";
 
-        // Double check untuk memastikan nomor belum digunakan (fallback jika masih terjadi race condition)
         $maxRetries = 10;
         $retry = 0;
         while (Invoice::where('number', $invoiceNumber)->exists() && $retry < $maxRetries) {
             $count++;
             $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-            $invoiceNumber = "{$date}-{$sequence}";
+            $random = str_pad(rand(0, 999), 3, '0', STR_PAD_LEFT);
+            $invoiceNumber = "{$date}-{$sequence}{$random}";
             $retry++;
         }
 
@@ -283,9 +271,6 @@ class PassThroughInvoiceCreator
         return trim('Invoices Iklan ' . ($label !== '' ? $label : '')) . $quantityLabel;
     }
 
-    /**
-     * Mendapatkan ID user admin sebagai fallback jika user_id tidak tersedia.
-     */
     protected function getDefaultAdminUserId(): ?int
     {
         return User::where('role', Role::ADMIN)

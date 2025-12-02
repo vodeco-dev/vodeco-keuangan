@@ -9,7 +9,6 @@ $tabLabels = [
 ];
 
 $allowedTransactions = $allowedTransactions ?? array_keys($tabLabels);
-// Preserve order from input, only filter out invalid transaction types
 $allowedTransactions = array_values(
   array_filter($allowedTransactions, fn($type) => array_key_exists($type, $tabLabels))
 );
@@ -41,7 +40,6 @@ $settlementPaidAmount = $settlementPaidAmount ?? "";
 $settlementPaymentStatus = $settlementPaymentStatus ?? null;
 $currencyPlaceholder = $currencyPlaceholder ?? "Contoh: 1.500.000";
 
-// New props for pass-through content
 $passThroughPackages = $passThroughPackages ?? collect();
 $passThroughConfig = $passThroughConfig ?? [];
 

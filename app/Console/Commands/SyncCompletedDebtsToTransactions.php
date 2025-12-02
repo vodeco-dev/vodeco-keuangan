@@ -7,18 +7,8 @@ use Illuminate\Console\Command;
 
 class SyncCompletedDebtsToTransactions extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'debts:sync-completed-to-transactions';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Sync completed debts (100% progress) to transactions';
 
     protected DebtService $debtService;
@@ -29,9 +19,6 @@ class SyncCompletedDebtsToTransactions extends Command
         $this->debtService = $debtService;
     }
 
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
         $this->info('Syncing completed debts to transactions...');

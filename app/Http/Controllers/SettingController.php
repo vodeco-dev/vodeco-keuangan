@@ -18,9 +18,6 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class SettingController extends Controller
 {
-    /**
-     * Menampilkan halaman utama pengaturan.
-     */
     public function index()
     {
         return view('settings.index', [
@@ -53,18 +50,13 @@ class SettingController extends Controller
         ]);
     }
 
-    /**
-     * Memperbarui pengaturan aplikasi.
-     */
     public function update(Request $request): RedirectResponse
     {
-        // Logika inti untuk menyimpan pengaturan
         foreach ($request->except('_token') as $key => $value) {
             Setting::updateOrCreate(['key' => $key], ['value' => $value]);
             Cache::forget('setting:'.$key);
         }
 
-        // Redirect kembali dengan pesan sukses
         return redirect()->route('settings.index')
             ->with('success', 'Pengaturan berhasil diperbarui.');
     }
@@ -114,7 +106,6 @@ class SettingController extends Controller
         );
         Cache::forget('setting:transaction_proof_server_directory');
 
-        // Since storage is forced to server, we can optionally clean up the old setting
         if (Setting::get('transaction_proof_storage') === 'drive') {
             Setting::updateOrCreate(['key' => 'transaction_proof_storage'], ['value' => 'server']);
             Cache::forget('setting:transaction_proof_storage');

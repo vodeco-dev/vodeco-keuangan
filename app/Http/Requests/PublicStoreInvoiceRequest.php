@@ -10,11 +10,6 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
 {
     protected ?InvoicePortalPassphrase $passphrase = null;
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array|string>
-     */
     public function rules(): array
     {
         return array_merge(parent::rules(), [
@@ -22,11 +17,6 @@ class PublicStoreInvoiceRequest extends StoreInvoiceRequest
         ]);
     }
 
-    /**
-     * Get the error messages for the defined validation rules.
-     *
-     * @return array<string, string>
-     */
     public function messages(): array
     {
         return array_merge(parent::messages(), [

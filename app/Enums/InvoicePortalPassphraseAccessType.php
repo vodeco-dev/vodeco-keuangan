@@ -17,9 +17,6 @@ enum InvoicePortalPassphraseAccessType: string
         };
     }
 
-    /**
-     * @return array<int, string>
-     */
     public function allowedTransactionTypes(): array
     {
         return match ($this) {

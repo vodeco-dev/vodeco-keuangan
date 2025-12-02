@@ -17,7 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB; // Diambil dari branch 'main'
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -28,10 +28,6 @@ class DebtController extends Controller
     protected TransactionService $transactionService;
     protected PassThroughPackageManager $passThroughPackageManager;
 
-    /**
-     * Terapkan authorization policy ke semua method resource controller.
-     * Diambil dari branch 'codex/...'
-     */
     public function __construct(
         DebtService $debtService,
         TransactionService $transactionService,
@@ -44,15 +40,10 @@ class DebtController extends Controller
         $this->authorizeResource(Debt::class, 'debt');
     }
 
-    /**
-     * Menampilkan daftar hutang & piutang milik pengguna yang sedang login.
-     * Menggabungkan logika query dari 'codex/...'
-     */
     public function index(Request $request): View|JsonResponse
     {
         $user = $request->user();
 
-        // Check if user can view all debts (admin or accountant)
         $canViewAllDebts = in_array($user->role->value, ['admin', 'accountant']);
 
         $this->autoFailOverdueDebts($user);
@@ -113,9 +104,6 @@ class DebtController extends Controller
         ], $summary));
     }
 
-    /**
-     * Menyimpan catatan hutang/piutang baru.
-     */
     public function store(StoreDebtRequest $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validated();
@@ -128,7 +116,7 @@ class DebtController extends Controller
 
         $debt = Debt::create(array_merge($validated, [
             'status' => Debt::STATUS_BELUM_LUNAS,
-            'user_id' => $request->user()->id, // Keamanan: Pastikan data baru memiliki pemilik
+            'user_id' => $request->user()->id,
         ]));
 
         if ($this->isApiRequest($request)) {
@@ -138,13 +126,8 @@ class DebtController extends Controller
         return redirect()->route('debts.index')->with('success', 'Catatan berhasil ditambahkan.');
     }
 
-    /**
-     * Menyimpan pembayaran/cicilan baru.
-     * Menggabungkan authorize, DB::transaction, dan try-catch dari kedua branch.
-     */
     public function storePayment(StoreDebtPaymentRequest $request, Debt $debt): RedirectResponse|JsonResponse
     {
-        // Keamanan: Pastikan user boleh mengupdate data ini
         $this->authorize('update', $debt);
 
         $validated = $request->validated();
@@ -155,7 +138,6 @@ class DebtController extends Controller
         }
 
         try {
-            // Keandalan: Pastikan semua operasi database berhasil atau tidak sama sekali
             DB::transaction(function () use ($validated, $request, $debt, $categoryId) {
                 $debt->payments()->create([
                     'amount' => $validated['payment_amount'],
@@ -169,7 +151,6 @@ class DebtController extends Controller
                     $debt->save();
                 }
 
-                // Reload relasi untuk mendapatkan paid_amount yang ter-update
                 $debt->load('payments');
 
                 $invoice = $debt->invoice;
@@ -197,7 +178,6 @@ class DebtController extends Controller
                         ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
                 }
 
-                // Cek jika sudah lunas
                 if ($debt->paid_amount >= $debt->amount) {
                     if (!$debt->category_id) {
                         throw ValidationException::withMessages([
@@ -207,28 +187,52 @@ class DebtController extends Controller
 
                     $debt->status = Debt::STATUS_LUNAS;
 
-                    // Tambahkan nomor invoice dalam tanda kurung jika debt terkait dengan invoice
-                    $description = $debt->description;
+                    $canEnterTransaction = true;
+                    $isPassThroughDebt = $debt->type === Debt::TYPE_PASS_THROUGH;
+
                     if ($debt->invoice_id) {
                         $debt->loadMissing('invoice');
                         if ($debt->invoice) {
+                            $canEnterTransaction = $debt->invoice->canEnterTransactionWhenPaid();
+                        }
+                    }
+
+                    if ($isPassThroughDebt || $canEnterTransaction) {
+                        $description = $debt->description;
+                        if ($debt->invoice_id && $debt->invoice) {
                             $invoiceNumber = '(' . $debt->invoice->number . ')';
-                            // Cek apakah sudah ada nomor invoice di deskripsi
                             if (strpos($description, $invoiceNumber) === false) {
                                 $description = $description . ' ' . $invoiceNumber;
                             }
                         }
+
+                        $transactionCategoryId = $debt->category_id;
+                        if ($isPassThroughDebt) {
+                            $expenseCategory = Category::where('type', 'pengeluaran')
+                                ->where('name', 'like', '%iklan%')
+                                ->first();
+
+                            if (!$expenseCategory) {
+                                $expenseCategory = Category::where('type', 'pengeluaran')
+                                    ->where('name', 'like', '%pengeluaran%')
+                                    ->first();
+                            }
+
+                            if ($expenseCategory) {
+                                $transactionCategoryId = $expenseCategory->id;
+                            }
+                        }
+
+                        Transaction::create([
+                            'category_id' => $transactionCategoryId,
+                            'date' => $validated['payment_date'] ?? now(),
+                            'amount' => $debt->amount,
+                            'description' => $description,
+                            'user_id' => $request->user()->id,
+                        ]);
+
+                        $this->transactionService->clearSummaryCacheForUser($request->user());
                     }
-
-                    Transaction::create([
-                        'category_id' => $debt->category_id,
-                        'date' => $validated['payment_date'] ?? now(),
-                        'amount' => $debt->amount,
-                        'description' => $description,
-                        'user_id' => $request->user()->id, // Keamanan: Pastikan transaksi memiliki pemilik
-                    ]);
-
-                    $this->transactionService->clearSummaryCacheForUser($request->user());
                 } else {
                     $debt->status = Debt::STATUS_BELUM_LUNAS;
                 }
@@ -247,7 +251,6 @@ class DebtController extends Controller
             }
             throw $e;
         } catch (\Exception $e) {
-            // Jika terjadi error, tampilkan pesan kesalahan
             if ($this->isApiRequest($request)) {
                 return $this->apiError('Terjadi kesalahan saat menyimpan pembayaran.', 500);
             }
@@ -255,9 +258,6 @@ class DebtController extends Controller
         }
     }
 
-    /**
-     * Menampilkan detail debt.
-     */
     public function show(Request $request, Debt $debt): View|JsonResponse
     {
         if ($this->isApiRequest($request)) {
@@ -359,26 +359,59 @@ class DebtController extends Controller
                 return;
             }
 
-            // Tambahkan nomor invoice dalam tanda kurung jika debt terkait dengan invoice
-            $description = ($auto ? '[Otomatis] ' : '') . 'Gagal Project: ' . $debt->description;
-            if ($debt->invoice_id) {
-                $debt->loadMissing('invoice');
-                if ($debt->invoice) {
-                    $invoiceNumber = '(' . $debt->invoice->number . ')';
-                    // Cek apakah sudah ada nomor invoice di deskripsi
-                    if (strpos($description, $invoiceNumber) === false) {
-                        $description = $description . ' ' . $invoiceNumber;
+            $isPassThroughDebt = $debt->type === Debt::TYPE_PASS_THROUGH;
+
+            if ($isPassThroughDebt) {
+                $description = 'Iklan Gagal: ' . $debt->description;
+                if ($debt->invoice_id) {
+                    $debt->loadMissing('invoice');
+                    if ($debt->invoice) {
+                        $invoiceNumber = '(' . $debt->invoice->number . ')';
+                        if (strpos($description, $invoiceNumber) === false) {
+                            $description = $description . ' ' . $invoiceNumber;
+                        }
                     }
                 }
-            }
 
-            Transaction::create([
-                'category_id' => $debt->category_id,
-                'date' => now(),
-                'amount' => $remainingAmount,
-                'description' => $description,
-                'user_id' => $user->id,
-            ]);
+                $incomeCategory = Category::where('type', 'pemasukan')
+                    ->where('name', 'like', '%iklan%')
+                    ->first();
+
+                if (!$incomeCategory) {
+                    $incomeCategory = Category::where('type', 'pemasukan')
+                        ->where('name', 'like', '%penjualan%')
+                        ->first();
+                }
+
+                $transactionCategoryId = $incomeCategory ? $incomeCategory->id : $debt->category_id;
+
+                Transaction::create([
+                    'category_id' => $transactionCategoryId,
+                    'date' => now(),
+                    'amount' => $remainingAmount,
+                    'description' => $description,
+                    'user_id' => $user->id,
+                ]);
+            } else {
+                $description = ($auto ? '[Otomatis] ' : '') . 'Gagal Project: ' . $debt->description;
+                if ($debt->invoice_id) {
+                    $debt->loadMissing('invoice');
+                    if ($debt->invoice) {
+                        $invoiceNumber = '(' . $debt->invoice->number . ')';
+                        if (strpos($description, $invoiceNumber) === false) {
+                            $description = $description . ' ' . $invoiceNumber;
+                        }
+                    }
+                }
+
+                Transaction::create([
+                    'category_id' => $debt->category_id,
+                    'date' => now(),
+                    'amount' => $remainingAmount,
+                    'description' => $description,
+                    'user_id' => $user->id,
+                ]);
+            }
 
             $this->transactionService->clearSummaryCacheForUser($user);
         });
@@ -407,18 +440,82 @@ class DebtController extends Controller
         return redirect()->route('debts.index')->with('success', 'Pengaturan kategori berhasil diperbarui.');
     }
 
-    /**
-     * Menghapus catatan hutang/piutang.
-     */
+    public function bulkDelete(Request $request): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'debt_ids' => 'required|array',
+            'debt_ids.*' => 'required|integer|exists:debts,id',
+        ]);
+
+        $debtIds = $validated['debt_ids'];
+
+        $debts = Debt::whereIn('id', $debtIds)->get();
+        foreach ($debts as $debt) {
+            $this->authorize('delete', $debt);
+        }
+
+        Debt::whereIn('id', $debtIds)->delete();
+
+        $count = count($debtIds);
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess(['deleted_count' => $count], "{$count} catatan berhasil dihapus.");
+        }
+
+        return redirect()->route('debts.index')->with('success', "{$count} catatan berhasil dihapus.");
+    }
+
+    public function bulkMarkAsFailed(Request $request): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'debt_ids' => 'required|array',
+            'debt_ids.*' => 'required|integer|exists:debts,id',
+        ]);
+
+        $debtIds = $validated['debt_ids'];
+
+        $debts = Debt::whereIn('id', $debtIds)->get();
+        foreach ($debts as $debt) {
+            $this->authorize('update', $debt);
+
+            if ($debt->status !== Debt::STATUS_BELUM_LUNAS) {
+                if ($this->isApiRequest($request)) {
+                    return $this->apiError("Debt {$debt->id} tidak dapat ditandai gagal karena statusnya sudah final.", 422);
+                }
+                return redirect()->route('debts.index')->with('info', "Debt {$debt->id} tidak dapat ditandai gagal karena statusnya sudah final.");
+            }
+
+            if (!$debt->category_id) {
+                if ($this->isApiRequest($request)) {
+                    return $this->apiError("Debt {$debt->id} tidak dapat ditandai gagal karena tidak ada kategori yang terhubung.", 422);
+                }
+                return redirect()->route('debts.index')->withErrors(['error' => "Debt {$debt->id} tidak dapat ditandai gagal karena tidak ada kategori yang terhubung."]);
+            }
+        }
+
+        $processedCount = 0;
+        DB::transaction(function () use ($debts, &$processedCount) {
+            foreach ($debts as $debt) {
+                $this->finalizeFailedDebt($debt, $debt->user);
+                $processedCount++;
+            }
+        });
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess(['processed_count' => $processedCount], "{$processedCount} catatan berhasil ditandai sebagai gagal.");
+        }
+
+        return redirect()->route('debts.index')->with('success', "{$processedCount} catatan berhasil ditandai sebagai gagal.");
+    }
+
     public function destroy(Request $request, Debt $debt): RedirectResponse|JsonResponse
     {
-        // Keamanan: Otorisasi sudah ditangani oleh __construct()
         $debt->delete();
-        
+
         if ($this->isApiRequest($request)) {
             return $this->apiSuccess(null, 'Catatan berhasil dihapus.');
         }
-        
+
         return redirect()->route('debts.index')->with('success', 'Catatan berhasil dihapus.');
     }
 
@@ -511,16 +608,12 @@ class DebtController extends Controller
         return $category;
     }
 
-    /**
-     * Sync completed debts to transactions.
-     */
     public function syncCompletedDebtsToTransactions(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorize('viewAny', Debt::class);
 
         $count = $this->debtService->syncCompletedDebtsToTransactions();
 
-        // Clear cache untuk semua user karena transaksi baru mempengaruhi summary
         $this->transactionService->clearAllSummaryCaches();
 
         if ($this->isApiRequest($request)) {
@@ -533,9 +626,6 @@ class DebtController extends Controller
             ->with('success', "Berhasil membuat {$count} catatan transaksi dari hutang yang sudah lunas.");
     }
 
-    /**
-     * Fix inconsistent debt statuses.
-     */
     public function fixInconsistentDebtStatuses(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorize('viewAny', Debt::class);
@@ -552,9 +642,6 @@ class DebtController extends Controller
             ->with('success', "Berhasil memperbaiki {$count} status hutang yang tidak konsisten.");
     }
 
-    /**
-     * Sync missing debts for invoices that should have debts.
-     */
     public function syncMissingDebts(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorize('viewAny', Debt::class);

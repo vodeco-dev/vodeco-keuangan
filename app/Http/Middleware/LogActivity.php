@@ -8,11 +8,6 @@ use Illuminate\Http\Request;
 
 class LogActivity
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
     public function handle(Request $request, Closure $next)
     {
         $response = $next($request);

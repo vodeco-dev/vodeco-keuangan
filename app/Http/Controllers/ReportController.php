@@ -55,7 +55,6 @@ class ReportController extends Controller
         $debts = $reportData['debts']->sortByDesc('due_date')->values();
         $totals = $reportData['totals'];
 
-        // Siapkan data untuk chart
         $chartData = $this->transactionService->prepareChartData(
             $shouldFilterByUser ? $currentUser : null,
             $startDate,
@@ -109,7 +108,6 @@ class ReportController extends Controller
     }
 
 
-    // Fungsi untuk handle ekspor
     public function export(ReportRequest $request)
     {
         $validated = $request->validated();
@@ -163,5 +161,4 @@ class ReportController extends Controller
             $fileName
         );
     }
-
 }

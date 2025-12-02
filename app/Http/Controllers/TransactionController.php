@@ -23,9 +23,6 @@ use Illuminate\View\View;
 
 class TransactionController extends Controller
 {
-    /**
-     * Menggabungkan Service Layer dan Authorization.
-     */
     public function __construct(
         private TransactionService $transactionService,
         private TransactionProofService $transactionProofService
@@ -36,9 +33,6 @@ class TransactionController extends Controller
         ]);
     }
 
-    /**
-     * Menampilkan daftar semua transaksi.
-     */
     public function index(Request $request): View|JsonResponse
     {
         if ($request->filled('start_date') || $request->filled('end_date')) {
@@ -61,8 +55,6 @@ class TransactionController extends Controller
             }
         }
 
-        // Eager loading for 'category' and 'user' relationships is handled
-        // in the TransactionService::getAllTransactions() method to prevent N+1 queries.
         $transactions = $this->transactionService->getAllTransactions($request);
         $categories = Cache::rememberForever('categories', function () {
             return Category::orderBy('name')->get();
@@ -93,9 +85,6 @@ class TransactionController extends Controller
         );
     }
 
-    /**
-     * Menampilkan form untuk membuat transaksi baru.
-     */
     public function create(Request $request): View
     {
         $incomeCategories = Cache::rememberForever('income_categories', function () {
@@ -108,9 +97,6 @@ class TransactionController extends Controller
         return view('transactions.create', compact('incomeCategories', 'expenseCategories'));
     }
 
-    /**
-     * Menampilkan detail transaksi.
-     */
     public function show(Request $request, Transaction $transaction): View|JsonResponse
     {
         if ($this->isApiRequest($request)) {
@@ -120,9 +106,6 @@ class TransactionController extends Controller
         return view('transactions.show', compact('transaction'));
     }
 
-    /**
-     * Menampilkan form untuk mengubah transaksi.
-     */
     public function edit(Transaction $transaction): View
     {
         $incomeCategories = Cache::rememberForever('income_categories', function () {
@@ -139,9 +122,6 @@ class TransactionController extends Controller
         ]);
     }
 
-    /**
-     * Menyimpan transaksi baru.
-     */
     public function store(StoreTransactionRequest $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validated();
@@ -173,9 +153,6 @@ class TransactionController extends Controller
             ->with('success', 'Transaksi berhasil ditambahkan.');
     }
 
-    /**
-     * Memperbarui data transaksi.
-     */
     public function update(UpdateTransactionRequest $request, Transaction $transaction): RedirectResponse|JsonResponse
     {
         $validated = $request->validated();
@@ -244,9 +221,6 @@ class TransactionController extends Controller
         return response()->file(Storage::disk($disk)->path($relativePath));
     }
 
-    /**
-     * Menghapus transaksi.
-     */
     public function destroy(Request $request, Transaction $transaction): RedirectResponse|JsonResponse
     {
         if ($request->user()->role !== Role::ADMIN) {
@@ -287,9 +261,6 @@ class TransactionController extends Controller
             ->with('success', 'Transaksi berhasil dihapus.');
     }
 
-    /**
-     * Menangani aksi bulk untuk multiple transactions.
-     */
     public function bulkAction(Request $request): RedirectResponse
     {
         $request->validate([
@@ -329,7 +300,6 @@ class TransactionController extends Controller
         }
 
         if ($action === 'export') {
-            // Export functionality bisa ditambahkan di sini
             return redirect()->route('transactions.index')
                 ->with('info', 'Fitur ekspor sedang dalam pengembangan.');
         }

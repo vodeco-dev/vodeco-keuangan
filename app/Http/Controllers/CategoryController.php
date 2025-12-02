@@ -14,25 +14,17 @@ use Illuminate\View\View;
 
 class CategoryController extends Controller
 {
-    /**
-     * Terapkan authorization policy
-     */
     public function __construct(protected CategoryService $categoryService)
     {
         $this->authorizeResource(Category::class, 'category');
     }
 
-    /**
-     * Menampilkan halaman daftar kategori, dipisahkan berdasarkan tipe.
-     */
     public function index(Request $request): View|JsonResponse
     {
-        // Mengambil semua kategori dan mengelompokkannya berdasarkan 'type'
         $categories = Cache::rememberForever('categories.grouped', function () {
             return Category::orderBy('name')->get()->groupBy('type');
         });
 
-        // Memisahkan koleksi menjadi pemasukan dan pengeluaran
         $pemasukan = $categories->get('pemasukan', collect());
         $pengeluaran = $categories->get('pengeluaran', collect());
 
@@ -46,9 +38,6 @@ class CategoryController extends Controller
         return view('categories.index', compact('pemasukan', 'pengeluaran'));
     }
 
-    /**
-     * Menyimpan kategori baru ke database.
-     */
     public function store(StoreCategoryRequest $request): RedirectResponse|JsonResponse
     {
         $category = Category::create($request->validated());
@@ -65,9 +54,6 @@ class CategoryController extends Controller
         return redirect()->route('categories.index')->with('success', 'Kategori baru berhasil ditambahkan.');
     }
 
-    /**
-     * Memperbarui kategori yang sudah ada.
-     */
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse|JsonResponse
     {
         $category->update($request->validated());
@@ -84,9 +70,6 @@ class CategoryController extends Controller
         return redirect()->route('categories.index')->with('success', 'Kategori berhasil diperbarui.');
     }
 
-    /**
-     * Menghapus kategori dari database.
-     */
     public function destroy(Request $request, Category $category): RedirectResponse|JsonResponse
     {
         $success = $this->categoryService->delete($category);

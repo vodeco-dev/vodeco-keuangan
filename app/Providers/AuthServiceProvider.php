@@ -16,36 +16,24 @@ use App\Policies\UserPolicy;
 use App\Models\User;
 
 class AuthServiceProvider extends ServiceProvider
-{
-    /**
-     * The policy mappings for the application.
-     *
-     * @var array<class-string, class-string>
-     */
+{   
     protected $policies = [
         Transaction::class => TransactionPolicy::class,
         Debt::class => DebtPolicy::class,
-        Category::class => CategoryPolicy::class, // Tambahkan baris ini
+        Category::class => CategoryPolicy::class,
         Invoice::class => InvoicePolicy::class,
         User::class => UserPolicy::class,
     ];
 
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         Gate::policy(Transaction::class, TransactionPolicy::class);
         Gate::policy(Debt::class, DebtPolicy::class);
-        Gate::policy(Category::class, CategoryPolicy::class); // Tambahkan baris ini
+        Gate::policy(Category::class, CategoryPolicy::class);
         Gate::policy(Invoice::class, InvoicePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
     }
