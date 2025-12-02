@@ -38,6 +38,8 @@
         activeTab: @js(request('type_filter') === \App\Models\Debt::TYPE_PASS_THROUGH
             ? \App\Models\Debt::TYPE_PASS_THROUGH
             : \App\Models\Debt::TYPE_DOWN_PAYMENT),
+        selectedDownPaymentDebts: [],
+        selectedPassThroughDebts: [],
         openPaymentModal(debt) {
             this.selectedDebt = debt;
             const categories = debt.type === '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}'
@@ -84,7 +86,125 @@
             if (this.rawAmount || this.formattedAmount) {
                 this.formatCurrencyInput(this.rawAmount || this.formattedAmount);
             }
-        }
+            this.initBulkSelection();
+        },
+        initBulkSelection() {
+            // Initialize select all functionality when component is ready
+            this.$nextTick(() => {
+                // Use setTimeout to ensure DOM is fully rendered
+                setTimeout(() => {
+                    this.setupSelectAllForTab(this.activeTab);
+                }, 100);
+            });
+
+            // Handle tab changes
+            this.$watch('activeTab', (newTab) => {
+                // Small delay to ensure tab content is rendered
+                setTimeout(() => {
+                    this.setupSelectAllForTab(newTab);
+                }, 50);
+            });
+        },
+        setupSelectAllForTab(tab) {
+            // Convert tab value to table ID
+            const tableId = tab === 'down_payment' ? 'down-payment-table' : 'pass-through-table';
+            const selectAllCheckbox = document.querySelector(`#${tableId} #select-all`);
+            const checkboxes = document.querySelectorAll(`#${tableId} .debt-checkbox`);
+            const selectedArray = tab === 'down_payment' ? this.selectedDownPaymentDebts : this.selectedPassThroughDebts;
+
+            if (selectAllCheckbox && checkboxes.length > 0) {
+                // Remove existing event listeners
+                if (selectAllCheckbox._selectAllHandler) {
+                    selectAllCheckbox.removeEventListener('change', selectAllCheckbox._selectAllHandler);
+                }
+                checkboxes.forEach(checkbox => {
+                    if (checkbox._individualHandler) {
+                        checkbox.removeEventListener('change', checkbox._individualHandler);
+                    }
+                });
+
+                // Create select all handler
+                const selectAllHandler = (e) => {
+                    const isChecked = e.target.checked;
+                    checkboxes.forEach(checkbox => {
+                        const debtId = checkbox.value;
+                        checkbox.checked = isChecked;
+
+                        if (isChecked) {
+                            if (!selectedArray.includes(debtId)) {
+                                selectedArray.push(debtId);
+                            }
+                        } else {
+                            const index = selectedArray.indexOf(debtId);
+                            if (index > -1) {
+                                selectedArray.splice(index, 1);
+                            }
+                        }
+                    });
+                };
+
+                // Create individual checkbox handler
+                const individualHandler = (e) => {
+                    const checkbox = e.target;
+                    const debtId = checkbox.value;
+
+                    if (checkbox.checked) {
+                        if (!selectedArray.includes(debtId)) {
+                            selectedArray.push(debtId);
+                        }
+                    } else {
+                        const index = selectedArray.indexOf(debtId);
+                        if (index > -1) {
+                            selectedArray.splice(index, 1);
+                        }
+                    }
+
+                    // Update select all state
+                    const checkedCount = checkboxes.length;
+                    const selectedCount = selectedArray.length;
+                    selectAllCheckbox.checked = selectedCount === checkedCount && checkedCount > 0;
+                    selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < checkedCount;
+                };
+
+                // Set initial state
+                const checkedCount = checkboxes.length;
+                const selectedCount = selectedArray.length;
+                selectAllCheckbox.checked = selectedCount === checkedCount && checkedCount > 0;
+                selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < checkedCount;
+
+                // Store handlers on elements to allow removal later
+                selectAllCheckbox._selectAllHandler = selectAllHandler;
+                checkboxes.forEach(checkbox => {
+                    checkbox._individualHandler = individualHandler;
+                });
+
+                // Add event listeners
+                selectAllCheckbox.addEventListener('change', selectAllHandler);
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', individualHandler);
+                });
+            }
+        },
+        clearSelection(tab) {
+            const selectedArray = tab === 'down_payment' ? this.selectedDownPaymentDebts : this.selectedPassThroughDebts;
+            selectedArray.splice(0);
+
+            // Uncheck all checkboxes in the current tab
+            const tableId = tab === 'down_payment' ? 'down-payment-table' : 'pass-through-table';
+            const checkboxes = document.querySelectorAll(`#${tableId} .debt-checkbox`);
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+
+            const selectAllCheckbox = document.querySelector(`#${tableId} #select-all`);
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+
+            // Re-setup select all functionality after clearing
+            setTimeout(() => {
+                this.setupSelectAllForTab(tab);
+            }, 10);
+        },
     }" x-init="init()">
 
     {{-- Header --}}
@@ -220,22 +340,157 @@
         </div>
 
         <div x-cloak x-show="activeTab === '{{ \App\Models\Debt::TYPE_DOWN_PAYMENT }}'">
-            @include('debts.partials.debt-table', [
-                'debts' => $downPaymentDebts,
-                'emptyMessage' => 'Belum ada catatan down payment pada halaman ini.',
-            ])
+            {{-- Bulk Actions Bar --}}
+            <div
+                class="mb-4 flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg border border-gray-200"
+                x-show="selectedDownPaymentDebts.length > 0"
+                x-cloak
+            >
+                <div class="flex items-center gap-4">
+                    <span class="text-sm font-medium text-gray-700">
+                        <span x-text="selectedDownPaymentDebts.length"></span> item dipilih
+                    </span>
+
+                    <div class="relative" x-data="{ open: false }">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <span>Aksi Bulk</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10"
+                        >
+                            <div class="py-1">
+                                <button
+                                    type="button"
+                                    @click="window.bulkDelete('down_payment', selectedDownPaymentDebts, selectedPassThroughDebts); open = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                >
+                                    Hapus Terpilih
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="window.bulkMarkAsFailed('down_payment', selectedDownPaymentDebts, selectedPassThroughDebts); open = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                                >
+                                    Tandai Gagal
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    @click="window.clearSelection('down_payment', selectedDownPaymentDebts, selectedPassThroughDebts)"
+                    class="text-sm text-gray-600 hover:text-gray-900"
+                >
+                    Batal
+                </button>
+            </div>
+
+            <div id="down-payment-table">
+                @include('debts.partials.debt-table', [
+                    'debts' => $downPaymentDebts,
+                    'emptyMessage' => 'Belum ada catatan down payment pada halaman ini.',
+                ])
+            </div>
         </div>
 
         <div x-cloak x-show="activeTab === '{{ \App\Models\Debt::TYPE_PASS_THROUGH }}'">
-            @include('debts.partials.debt-table', [
-                'debts' => $passThroughDebts,
-                'emptyMessage' => 'Belum ada catatan Invoices Iklan pada halaman ini.',
-            ])
+            {{-- Bulk Actions Bar --}}
+            <div
+                class="mb-4 flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg border border-gray-200"
+                x-show="selectedPassThroughDebts.length > 0"
+                x-cloak
+            >
+                <div class="flex items-center gap-4">
+                    <span class="text-sm font-medium text-gray-700">
+                        <span x-text="selectedPassThroughDebts.length"></span> item dipilih
+                    </span>
+
+                    <div class="relative" x-data="{ open: false }">
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <span>Aksi Bulk</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            @click.away="open = false"
+                            x-cloak
+                            class="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10"
+                        >
+                            <div class="py-1">
+                                <button
+                                    type="button"
+                                    @click="window.bulkDelete('pass_through', selectedDownPaymentDebts, selectedPassThroughDebts); open = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                >
+                                    Hapus Terpilih
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="window.bulkMarkAsFailed('pass_through', selectedDownPaymentDebts, selectedPassThroughDebts); open = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                                >
+                                    Tandai Gagal
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    @click="window.clearSelection('pass_through', selectedDownPaymentDebts, selectedPassThroughDebts)"
+                    class="text-sm text-gray-600 hover:text-gray-900"
+                >
+                    Batal
+                </button>
+            </div>
+
+            <div id="pass-through-table">
+                @include('debts.partials.debt-table', [
+                    'debts' => $passThroughDebts,
+                    'emptyMessage' => 'Belum ada catatan Invoices Iklan pada halaman ini.',
+                ])
+            </div>
         </div>
 
         <div class="mt-4">
             {{ $debts->links() }}
         </div>
+
+        {{-- Hidden form for bulk actions --}}
+        <form id="bulk-delete-form" action="{{ route('debts.bulk-delete') }}" method="POST" style="display: none;">
+            @csrf
+            <template x-for="debtId in selectedDownPaymentDebts.concat(selectedPassThroughDebts)" :key="debtId">
+                <input type="hidden" name="debt_ids[]" :value="debtId">
+            </template>
+        </form>
+
+        <form id="bulk-mark-failed-form" action="{{ route('debts.bulk-mark-failed') }}" method="POST" style="display: none;">
+            @csrf
+            <template x-for="debtId in selectedDownPaymentDebts.concat(selectedPassThroughDebts)" :key="debtId">
+                <input type="hidden" name="debt_ids[]" :value="debtId">
+            </template>
+        </form>
     </div>
 
     {{-- Modal Pengaturan Kategori --}}
@@ -614,6 +869,45 @@
                 <button type="button" @click="detailModal = false" class="px-4 py-2 bg-gray-200 rounded-lg">Tutup</button>
             </div>
         </div>
+        </div>
     </div>
-</div>
+
+    <script>
+        // Global functions for bulk actions - will be called from Alpine component
+        window.bulkDelete = function(tab, selectedDownPaymentDebts, selectedPassThroughDebts) {
+            const selectedArray = tab === 'down_payment' ? selectedDownPaymentDebts : selectedPassThroughDebts;
+            if (selectedArray.length === 0) return;
+
+            if (confirm('Apakah Anda yakin ingin menghapus ' + selectedArray.length + ' catatan terpilih?')) {
+                const form = document.getElementById('bulk-delete-form');
+                if (form) {
+                    form.submit();
+                }
+            }
+        };
+
+        window.bulkMarkAsFailed = function(tab, selectedDownPaymentDebts, selectedPassThroughDebts) {
+            const selectedArray = tab === 'down_payment' ? selectedDownPaymentDebts : selectedPassThroughDebts;
+            if (selectedArray.length === 0) return;
+
+            if (confirm('Apakah Anda yakin ingin menandai ' + selectedArray.length + ' catatan terpilih sebagai gagal?')) {
+                const form = document.getElementById('bulk-mark-failed-form');
+                if (form) {
+                    form.submit();
+                }
+            }
+        };
+
+        window.clearSelection = function(tab, selectedDownPaymentDebts, selectedPassThroughDebts) {
+            // Call the Alpine component method
+            const alpineComponent = document.querySelector('[x-data]');
+            if (alpineComponent && alpineComponent._x_dataStack) {
+                const component = alpineComponent._x_dataStack[alpineComponent._x_dataStack.length - 1];
+                if (component && component.clearSelection) {
+                    component.clearSelection(tab);
+                    return;
+                }
+            }
+        };
+    </script>
 @endsection

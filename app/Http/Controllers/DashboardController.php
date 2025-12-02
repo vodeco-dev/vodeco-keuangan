@@ -10,7 +10,6 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    // Inject TransactionService
     public function __construct(private TransactionService $transactionService)
     {
     }
@@ -20,19 +19,15 @@ class DashboardController extends Controller
         $user = $request->user();
         $isAdminOrAccountant = in_array($user->role, [Role::ADMIN, Role::ACCOUNTANT]);
 
-        // Filter dan ringkasan keadaan keuangan per bulan
         $selectedMonth = $request->input('month');
         if ($selectedMonth) {
-            // Validasi format input (YYYY-MM)
             if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
                 $selectedMonth = now()->format('Y-m');
             }
-            // Format input dari <input type="month"> adalah YYYY-MM
             [$year, $month] = explode('-', $selectedMonth);
             $year = (int) $year;
             $month = (int) $month;
             
-            // Validasi range tahun dan bulan
             if ($year < 1900 || $year > 2100 || $month < 1 || $month > 12) {
                 $year = now()->year;
                 $month = now()->month;
@@ -44,7 +39,6 @@ class DashboardController extends Controller
             $selectedMonth = now()->format('Y-m');
         }
 
-        // Untuk summary, gunakan getAllSummary jika admin/accountant, atau buat query khusus untuk user biasa
         if ($isAdminOrAccountant) {
             $summaryRequest = new Request([
                 'month' => $month,
@@ -52,7 +46,6 @@ class DashboardController extends Controller
             ]);
             $summary = $this->transactionService->getAllSummary($summaryRequest);
         } else {
-            // Untuk user biasa, hitung summary berdasarkan transaksi mereka di bulan yang dipilih
             $userSummaryQuery = Transaction::query()
                 ->join('categories', 'transactions.category_id', '=', 'categories.id')
                 ->where('transactions.user_id', $user->id)
@@ -74,13 +67,11 @@ class DashboardController extends Controller
             ];
         }
 
-        // Total pemasukan & pengeluaran bulan terpilih
         $currentTotalsQuery = Transaction::query()
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->whereYear('transactions.date', $year)
             ->whereMonth('transactions.date', $month);
 
-        // Filter berdasarkan user jika bukan admin/accountant
         if (!$isAdminOrAccountant) {
             $currentTotalsQuery->where('transactions.user_id', $user->id);
         }
@@ -92,14 +83,12 @@ class DashboardController extends Controller
 
         $currentNet = ($currentTotals->pemasukan ?? 0) - ($currentTotals->pengeluaran ?? 0);
 
-        // Hitung data bulan sebelumnya untuk perbandingan
         $previous = Carbon::create($year, $month)->subMonth();
         $previousTotalsQuery = Transaction::query()
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->whereYear('transactions.date', $previous->year)
             ->whereMonth('transactions.date', $previous->month);
 
-        // Filter berdasarkan user jika bukan admin/accountant
         if (!$isAdminOrAccountant) {
             $previousTotalsQuery->where('transactions.user_id', $user->id);
         }
@@ -123,21 +112,18 @@ class DashboardController extends Controller
             'percent_change' => $percentChange,
         ];
 
-        // Transaksi terbaru dengan filter bulan yang dipilih
         $recentTransactionsQuery = Transaction::with(['category', 'user'])
             ->whereYear('date', $year)
             ->whereMonth('date', $month)
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc');
 
-        // Filter berdasarkan user jika bukan admin/accountant
         if (!$isAdminOrAccountant) {
             $recentTransactionsQuery->where('user_id', $user->id);
         }
 
         $recent_transactions = $recentTransactionsQuery->take(5)->get();
 
-        // Siapkan data chart untuk bulan yang dipilih
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
         

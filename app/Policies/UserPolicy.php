@@ -29,7 +29,6 @@ class UserPolicy
 
     public function delete(User $user, User $model): bool
     {
-        // Hanya admin yang bisa menghapus user, dan tidak bisa menghapus diri sendiri
         return $user->role === Role::ADMIN && $user->id !== $model->id;
     }
 }

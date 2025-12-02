@@ -2,7 +2,6 @@ import './bootstrap';
 
 import Alpine from 'alpinejs';
 
-// Initialize theme based on saved preference or system setting
 const defaultTheme = document.querySelector('meta[name="default-theme"]')?.getAttribute('content');
 if (
     localStorage.theme === 'dark' ||
@@ -14,7 +13,6 @@ if (
     document.documentElement.classList.remove('dark');
 }
 
-// Toggle theme and persist preference
 window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('theme-toggle')?.addEventListener('click', () => {
         const isDark = document.documentElement.classList.toggle('dark');
@@ -77,8 +75,6 @@ window.passThroughForm = function passThroughForm(config = {}) {
     const defaultTotals = defaults.totals || {};
     const defaultDuration = defaults.durationDays;
 
-    // If custom package is selected by default and there are no explicit custom values from old form,
-    // initialize fields to empty/zero instead of using values from defaultUnits (which might come from other packages)
     const isCustomDefault = normalizedPackageId === 'custom';
     const hasExplicitCustomValues = defaultCustom.dailyBalance !== undefined 
         || defaultCustom.durationDays !== undefined 
@@ -86,8 +82,6 @@ window.passThroughForm = function passThroughForm(config = {}) {
         || defaultCustom.accountCreationFee !== undefined;
 
     const initialCustomerType = sanitizeCustomerType(defaultCustom.customerType);
-    // Only use defaultUnits if we're NOT on custom default OR if there are explicit custom values
-    // This prevents custom fields from being pre-filled with values from other packages
     const initialDailyBalance = (isCustomDefault && !hasExplicitCustomValues)
         ? 0 
         : sanitizeCurrency(firstDefined(defaultCustom.dailyBalance, isCustomDefault ? undefined : defaultUnits.dailyBalance));
@@ -135,8 +129,6 @@ window.passThroughForm = function passThroughForm(config = {}) {
                     }
                 }
 
-                // Only infer values from totals if we're NOT on custom default OR if there are explicit custom values
-                // This prevents custom fields from being auto-filled when custom is selected by default
                 const shouldInferValues = !isCustomDefault || hasExplicitCustomValues;
                 
                 if (shouldInferValues) {
@@ -286,7 +278,6 @@ window.passThroughForm = function passThroughForm(config = {}) {
 
             const numeric = Number(value);
             const sanitized = Number.isFinite(numeric) ? Math.max(Math.round(numeric), 0) : 0;
-            // Show empty string for zero values instead of "0"
             input.value = sanitized > 0 ? this.formatNumber(sanitized) : '';
         },
         summaryPackageName() {
@@ -722,7 +713,6 @@ window.invoiceTabsComponent = function (config) {
                                 message = payload.message;
                             }
                         } catch (error) {
-                            // ignore parsing error
                         }
 
                         this.showSettlementError(message);
@@ -869,11 +859,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (togglePassword) {
         togglePassword.addEventListener('click', function (e) {
-            // toggle the type attribute
             const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
             password.setAttribute('type', type);
 
-            // toggle the eye icon
             this.querySelectorAll('.eye-open').forEach(icon => icon.classList.toggle('hidden'));
             this.querySelectorAll('.eye-closed').forEach(icon => icon.classList.toggle('hidden'));
         });

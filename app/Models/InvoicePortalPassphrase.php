@@ -81,9 +81,6 @@ class InvoicePortalPassphrase extends Model
         return $this->is_active && ! $this->isExpired();
     }
 
-    /**
-     * @return array<int, string>
-     */
     public function allowedTransactionTypes(): array
     {
         $raw = $this->access_type?->allowedTransactionTypes() ?? [];
@@ -174,9 +171,6 @@ class InvoicePortalPassphrase extends Model
         return in_array($fingerprint, $this->knownLabelFingerprints(), true);
     }
 
-    /**
-     * @return array<int, string>
-     */
     protected function knownLabelFingerprints(): array
     {
         $labels = [

@@ -10,11 +10,6 @@ class TransactionDeletionRequest extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'transaction_id',
         'requested_by',
@@ -25,11 +20,6 @@ class TransactionDeletionRequest extends Model
         'approved_at',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'approved_at' => 'datetime',
     ];

@@ -3,6 +3,7 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DebtController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoicePortalPassphraseVerificationController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ReportController;
@@ -69,6 +70,12 @@ Route::post('/logout', function (Request $request) {
         'message' => 'Logout successful',
     ]);
 })->middleware('auth')->name('api.logout');
+
+// Invoice API for customer-service integration (no auth required)
+Route::get('/invoice/categories', [InvoiceController::class, 'apiCategories'])->name('api.invoice.categories');
+Route::get('/invoice/pass-through-packages', [InvoiceController::class, 'apiPassThroughPackages'])->name('api.invoice.pass-through-packages');
+Route::post('/invoice/passphrase/verify', [InvoicePortalPassphraseVerificationController::class, 'apiVerify'])->name('api.invoice.passphrase.verify');
+Route::post('/invoice/create', [InvoiceController::class, 'apiStore'])->name('api.invoice.create');
 
 // Protected routes (require authentication)
 Route::middleware(['auth'])->group(function () {

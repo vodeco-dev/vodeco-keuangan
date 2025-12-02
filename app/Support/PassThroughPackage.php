@@ -25,9 +25,6 @@ class PassThroughPackage implements Arrayable
     public ?Carbon $createdAt;
     public ?Carbon $updatedAt;
 
-    /**
-     * @param  array<string, mixed>  $attributes
-     */
     public function __construct(array $attributes = [])
     {
         $this->modelId = isset($attributes['model_id']) ? (int) $attributes['model_id'] : ($attributes['modelId'] ?? null);

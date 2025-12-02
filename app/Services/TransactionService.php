@@ -11,25 +11,19 @@ use Carbon\Carbon;
 
 class TransactionService
 {
-    /**
-     * Ambil transaksi dengan filter dan paginasi untuk pengguna tertentu.
-     */
     public function getTransactionsForUser(User $user, Request $request)
     {
         $query = Transaction::with('category')
-            ->where('user_id', $user->id); // KEAMANAN: Filter berdasarkan user
+            ->where('user_id', $user->id);
         
-        // Sorting: default terbaru ke terlama berdasarkan created_at
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
         
-        // Validasi sort_by untuk keamanan
         $allowedSortColumns = ['created_at', 'updated_at', 'date', 'amount'];
         if (!in_array($sortBy, $allowedSortColumns)) {
             $sortBy = 'created_at';
         }
         
-        // Validasi sort_order
         $sortOrder = strtolower($sortOrder) === 'asc' ? 'asc' : 'desc';
         
         $query->orderBy($sortBy, $sortOrder);
@@ -70,27 +64,19 @@ class TransactionService
             ->appends($request->except('page'));
     }
 
-    /**
-     * Hapus cache ringkasan transaksi untuk pengguna tertentu.
-     */
     public function clearSummaryCacheForUser(User $user): void
     {
         Cache::forget('transaction_summary_for_user_' . $user->id);
     }
 
-    /**
-     * Ambil ringkasan keuangan untuk pengguna tertentu menggunakan satu query yang efisien dan caching.
-     * INI ADALAH VERSI GABUNGAN YANG SUDAH DISEMPURNAKAN.
-     */
     public function getSummaryForUser(User $user): array
     {
-        // Cache key dibuat unik untuk setiap pengguna
         $cacheKey = 'transaction_summary_for_user_' . $user->id;
 
         return Cache::remember($cacheKey, 300, function () use ($user) {
             $summary = Transaction::query()
                 ->join('categories', 'transactions.category_id', '=', 'categories.id')
-                ->where('transactions.user_id', $user->id) // KEAMANAN: Filter data milik user
+                ->where('transactions.user_id', $user->id)
                 ->selectRaw('
                     SUM(CASE WHEN categories.type = "pemasukan" THEN transactions.amount ELSE 0 END) AS totalPemasukan,
                     SUM(CASE WHEN categories.type = "pengeluaran" THEN transactions.amount ELSE 0 END) AS totalPengeluaran
@@ -108,9 +94,6 @@ class TransactionService
         });
     }
 
-    /**
-     * Ambil semua transaksi dengan filter dan paginasi.
-     */
     public function getAllTransactions(Request $request)
     {
         $query = Transaction::with(['category', 'user'])->latest('date');
@@ -151,17 +134,11 @@ class TransactionService
             ->appends($request->except('page'));
     }
 
-    /**
-     * Hapus cache ringkasan semua transaksi.
-     */
     public function clearAllSummaryCache(): void
     {
         Cache::forget('transaction_summary_for_all');
     }
 
-    /**
-     * Ambil ringkasan keuangan untuk semua transaksi.
-     */
     public function getAllSummary(?Request $request = null): array
     {
         $request = $request ?? new Request();
@@ -221,9 +198,6 @@ class TransactionService
         return Cache::remember($cacheKey, 300, $calculateSummary);
     }
 
-    /**
-     * Ambil daftar bulan yang memiliki transaksi.
-     */
     public function getAvailableMonths(int $limit = 12)
     {
         $connection = Transaction::query()->getConnection()->getDriverName();
@@ -255,9 +229,6 @@ class TransactionService
             });
     }
 
-    /**
-     * Siapkan data untuk chart pemasukan dan pengeluaran.
-     */
     public function prepareChartData(?User $user, $startDate, $endDate, ?int $categoryId = null, ?string $type = null): array
     {
         $start = Carbon::parse($startDate)->startOfDay();

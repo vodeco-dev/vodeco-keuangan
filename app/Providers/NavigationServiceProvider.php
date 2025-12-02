@@ -7,17 +7,10 @@ use Illuminate\Support\ServiceProvider;
 
 class NavigationServiceProvider extends ServiceProvider
 {
-    /**
-     * Register services.
-     */
     public function register(): void
     {
-        //
     }
 
-    /**
-     * Bootstrap services.
-     */
     public function boot(): void
     {
         View::share('navigation', [
@@ -62,7 +55,6 @@ class NavigationServiceProvider extends ServiceProvider
                 'route' => 'reports.index',
                 'icon' => view('components.icons.reports')->render(),
             ],
-            // Dropdown for Admins
             [
                 'name' => 'Riwayat & Log',
                 'icon' => view('components.icons.activity_logs')->render(),
@@ -85,7 +77,6 @@ class NavigationServiceProvider extends ServiceProvider
                     ],
                 ]
             ],
-            // Standalone link for non-admins
             [
                 'name' => 'Riwayat Permintaan',
                 'route' => 'user-deletion-requests.index',

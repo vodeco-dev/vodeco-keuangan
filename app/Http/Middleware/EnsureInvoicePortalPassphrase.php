@@ -9,11 +9,6 @@ use Illuminate\Support\Carbon;
 
 class EnsureInvoicePortalPassphrase
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
     public function handle(Request $request, Closure $next, string $mode = 'optional')
     {
         $session = (array) $request->session()->get('invoice_portal_passphrase', []);

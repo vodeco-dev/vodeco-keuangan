@@ -8,25 +8,12 @@ use Illuminate\Support\Facades\Storage;
 
 class CleanupPdfCache extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'pdf:cleanup-cache
-                          {--force : Force cleanup all cached PDFs regardless of TTL}
-                          {--dry-run : Show what would be deleted without actually deleting}';
+                        {--force : Force cleanup all cached PDFs regardless of TTL}
+                        {--dry-run : Show what would be deleted without actually deleting}';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Cleanup expired PDF cache files';
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
         if (! config('pdf.cache.enabled')) {
@@ -39,7 +26,7 @@ class CleanupPdfCache extends Command
 
         $diskName = config('pdf.cache.disk', 'public');
         $cachePath = config('pdf.cache.path', 'invoices/cache');
-        $ttl = config('pdf.cache.ttl', 1440) * 60; // Convert to seconds
+        $ttl = config('pdf.cache.ttl', 1440) * 60;
 
         $this->info("Starting PDF cache cleanup...");
         $this->info("Disk: {$diskName}");
@@ -84,7 +71,6 @@ class CleanupPdfCache extends Command
         foreach ($files as $file) {
             $fileName = basename($file);
 
-            // Skip non-PDF files
             if (! str_ends_with($fileName, '.pdf')) {
                 $this->line("Skipping non-PDF file: {$fileName}");
                 $skippedCount++;
@@ -113,7 +99,6 @@ class CleanupPdfCache extends Command
                         $disk->delete($file);
                         $this->line("Deleted: {$fileName} - {$reason}");
 
-                        // Clean up cache metadata
                         $metadataKey = 'pdf_cache_metadata:' . md5($file);
                         Cache::forget($metadataKey);
                     }

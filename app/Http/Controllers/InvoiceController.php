@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use App\Models\Category;
 use App\Models\Debt;
 use App\Models\CustomerService;
+use App\Models\InvoicePortalPassphrase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -25,8 +26,10 @@ use App\Models\User;
 use App\Services\CategoryService;
 use App\Services\InvoicePdfService;
 use App\Services\InvoiceSettlementService;
+use App\Services\InvoiceViewService;
 use App\Services\PassThroughInvoiceCreator;
 use App\Services\PassThroughPackageManager;
+use App\Services\VodecoWebsiteService;
 use App\Support\PassThroughPackage;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -36,7 +39,9 @@ class InvoiceController extends Controller
     public function __construct(
         private PassThroughInvoiceCreator $passThroughInvoiceCreator,
         private PassThroughPackageManager $passThroughPackageManager,
-        private InvoicePdfService $invoicePdfService
+        private InvoicePdfService $invoicePdfService,
+        private VodecoWebsiteService $vodecoWebsiteService,
+        private InvoiceViewService $invoiceViewService
     )
     {
         $this->authorizeResource(Invoice::class, 'invoice');
@@ -593,8 +598,6 @@ class InvoiceController extends Controller
 
         Storage::disk($disk)->putFileAs($directory, $proofFile, $filename);
 
-        // Setelah upload bukti pembayaran, invoice masuk ke status "Menunggu Konfirmasi"
-        // untuk semua jenis passphrase (termasuk Admin Perpanjangan dan Admin Pelunasan)
         $invoice->forceFill(array_merge($metadataUpdates, [
             'payment_proof_disk' => $disk,
             'payment_proof_path' => $path,
@@ -693,7 +696,6 @@ class InvoiceController extends Controller
         $this->authorize('send', $invoice);
 
         $invoice->update(['status' => 'belum bayar']);
-        // Logic pengiriman email dapat ditambahkan di sini
         return redirect()->route('invoices.index');
     }
 
@@ -707,13 +709,10 @@ class InvoiceController extends Controller
         $currentDownPayment = round((float) $invoice->down_payment, 2);
         $remainingBalance = max($invoiceTotal - $currentDownPayment, 0);
         
-        // If invoice is already fully paid (lunas) or has no remaining balance,
-        // just confirm it without requiring payment amount
         if ($invoice->status === 'lunas' || $remainingBalance <= 0) {
             DB::transaction(function () use ($invoice) {
                 $invoice->loadMissing('items', 'debt');
                 
-                // Pastikan debt dibuat jika belum ada
                 if (!$invoice->debt) {
                     $isPassThrough = in_array($invoice->type, [
                         Invoice::TYPE_PASS_THROUGH_NEW,
@@ -724,7 +723,6 @@ class InvoiceController extends Controller
                         ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
                     
                     if ($isPassThrough) {
-                        // Untuk pass-through invoice, cari item "Dana Invoices Iklan"
                         $adBudgetItem = $invoice->items->first(function ($item) {
                             return strpos($item->description, 'Dana Invoices Iklan') !== false;
                         });
@@ -755,7 +753,6 @@ class InvoiceController extends Controller
                             'daily_deduction' => $dailyBalanceTotal,
                         ]);
                     } else {
-                        // Untuk invoice biasa (down payment)
                         $firstItem = $invoice->items()->first();
                         $categoryId = $firstItem?->category_id;
                         
@@ -771,7 +768,6 @@ class InvoiceController extends Controller
                             'category_id' => $categoryId,
                         ]);
                         
-                        // Jika invoice sudah punya down_payment, buat payment untuk debt
                         if ($invoice->down_payment > 0) {
                             $debt->payments()->create([
                                 'amount' => $invoice->down_payment,
@@ -781,7 +777,6 @@ class InvoiceController extends Controller
                         }
                     }
                 } else {
-                    // Update debt status jika sudah ada
                     if ($invoice->status === 'lunas') {
                         $invoice->debt->forceFill([
                             'status' => Debt::STATUS_LUNAS,
@@ -806,11 +801,8 @@ class InvoiceController extends Controller
         $paymentDate = $request->input('payment_date');
         $categoryId = $request->input('category_id');
         
-        // Cek apakah ini konfirmasi down_payment yang sudah ada (paymentAmount sama dengan currentDownPayment)
-        // Jika ya, ini adalah konfirmasi, bukan pembayaran baru
         $isConfirmingExistingDownPayment = $currentDownPayment > 0 && abs($paymentAmount - $currentDownPayment) < 0.01;
         
-        // Jika ini konfirmasi down_payment yang sudah ada dan down_payment >= total, langsung lunas
         if ($isConfirmingExistingDownPayment && $currentDownPayment >= $invoiceTotal && $invoiceTotal > 0) {
             DB::transaction(function () use ($invoice, $paymentDate) {
                 $invoice->loadMissing('items', 'debt');
@@ -818,7 +810,6 @@ class InvoiceController extends Controller
                 $relatedParty = $invoice->client_name
                     ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
                 
-                // Pastikan debt dibuat jika belum ada
                 if (!$invoice->debt) {
                     $firstItem = $invoice->items()->first();
                     $categoryId = $firstItem?->category_id;
@@ -835,7 +826,6 @@ class InvoiceController extends Controller
                         'category_id' => $categoryId,
                     ]);
                     
-                    // Buat payment untuk down_payment yang sudah ada
                     if ($invoice->down_payment > 0) {
                         $debt->payments()->create([
                             'amount' => $invoice->down_payment,
@@ -844,12 +834,10 @@ class InvoiceController extends Controller
                         ]);
                     }
                 } else {
-                    // Update debt status jika sudah ada
                     $invoice->debt->forceFill([
                         'status' => Debt::STATUS_LUNAS,
                     ])->save();
                     
-                    // Pastikan payment sudah ada untuk down_payment
                     $invoice->debt->load('payments');
                     $existingPaymentsTotal = $invoice->debt->payments->sum('amount');
                     if ($existingPaymentsTotal < $invoice->down_payment) {
@@ -861,14 +849,12 @@ class InvoiceController extends Controller
                     }
                 }
                 
-                // Update invoice status menjadi lunas
                 $invoice->forceFill([
                     'status' => 'lunas',
                     'needs_confirmation' => false,
                     'payment_date' => $paymentDate,
                 ])->save();
                 
-                // Catat transaksi pemasukan saat invoice dilunasi
                 $invoice->load('debt');
                 $categoryId = $invoice->debt->category_id;
                 if (!$categoryId) {
@@ -917,7 +903,6 @@ class InvoiceController extends Controller
         DB::transaction(function () use ($invoice, $paymentAmount, $paymentDate, $categoryId, $willBePaidOff, $isConfirmingExistingDownPayment) {
             $invoice->loadMissing('items', 'debt.payments');
 
-            // Simpan status needs_confirmation sebelum diubah
             $wasNeedingConfirmation = $invoice->needs_confirmation;
 
             $relatedParty = $invoice->client_name
@@ -926,7 +911,6 @@ class InvoiceController extends Controller
                 ? 'Pelunasan invoice #' . $invoice->number
                 : 'Pembayaran down payment invoice #' . $invoice->number;
 
-            // Cek apakah invoice adalah pass-through type
             $isPassThrough = in_array($invoice->type, [
                 Invoice::TYPE_PASS_THROUGH_NEW,
                 Invoice::TYPE_PASS_THROUGH_EXISTING
@@ -936,75 +920,54 @@ class InvoiceController extends Controller
             $dailyBalanceTotal = null;
 
             if ($isPassThrough) {
-                // Untuk pass-through invoice, cari item "Dana Invoices Iklan" untuk mendapatkan adBudgetTotal
                 $adBudgetItem = $invoice->items->first(function ($item) {
                     return strpos($item->description, 'Dana Invoices Iklan') !== false;
                 });
 
                 if (!$adBudgetItem) {
-                    // Fallback: gunakan total invoice jika item tidak ditemukan
                     $adBudgetTotal = $invoice->total;
                     $dailyBalanceTotal = 0;
                 } else {
-                    // adBudgetTotal = price * quantity dari item "Dana Invoices Iklan"
                     $adBudgetTotal = round($adBudgetItem->price * $adBudgetItem->quantity, 2);
                     
-                    // Parse durationDays dari description untuk menghitung dailyBalanceTotal
-                    // Format: "Dana Invoices Iklan (X x Y hari)" atau serupa
-                    // adBudgetUnit = dailyBalanceUnit * durationDays
-                    // adBudgetTotal = adBudgetUnit * quantity = (dailyBalanceUnit * durationDays) * quantity
-                    // dailyBalanceTotal = dailyBalanceUnit * quantity = adBudgetTotal / durationDays
                     $description = $adBudgetItem->description;
                     $durationDays = 1;
                     if (preg_match('/(\d+)\s*hari/i', $description, $matches)) {
                         $durationDays = max(1, (int) $matches[1]);
                     }
                     
-                    // dailyBalanceTotal = adBudgetTotal / durationDays
-                    // Ini setara dengan dailyBalanceUnit * quantity
                     $dailyBalanceTotal = $durationDays > 0 
                         ? round($adBudgetTotal / $durationDays, 2) 
                         : 0;
                 }
-
-                // Buat Debt untuk pass-through invoice setelah konfirmasi pembayaran
-                // Catatan: Debt untuk pass-through invoice mencatat Saldo Harian × Durasi (adBudgetTotal)
-                // Debt ini akan dicatat sebagai pengeluaran nanti ketika dana iklan digunakan
-                // Debt status = BELUM_LUNAS karena paid_amount masih 0 (belum ada penggunaan dana iklan)
-                // Debt tidak menggunakan kategori dari invoice items karena invoice items menggunakan kategori pemasukan
-                // Kategori akan di-set saat pembayaran/penggunaan debt dilakukan (kategori pengeluaran)
+                
                 $debt = Debt::updateOrCreate(
                     ['invoice_id' => $invoice->id],
                     [
                         'description' => $invoice->transactionDescription(),
                         'related_party' => $relatedParty,
                         'type' => Debt::TYPE_PASS_THROUGH,
-                        'amount' => $adBudgetTotal, // Amount = Saldo Harian × Durasi (hanya dana iklan)
+                        'amount' => $adBudgetTotal,
                         'due_date' => $invoice->due_date,
-                        'status' => Debt::STATUS_BELUM_LUNAS, // Status belum lunas karena paid_amount masih 0
+                        'status' => Debt::STATUS_BELUM_LUNAS,
                         'user_id' => $invoice->user_id,
                         'daily_deduction' => $dailyBalanceTotal,
-                        // Jangan set category_id dari invoice items karena invoice items menggunakan kategori pemasukan
-                        // Debt untuk pass-through invoice harus menggunakan kategori pengeluaran
                     ]
                 );
             } else {
-                // Untuk invoice biasa (down payment), gunakan logika yang sudah ada
-                // Status debt akan di-update setelah payment dibuat dan dihitung
                 $debt = Debt::updateOrCreate(
                     ['invoice_id' => $invoice->id],
                     [
                         'description' => $invoice->transactionDescription(),
                         'related_party' => $relatedParty,
                         'type' => Debt::TYPE_DOWN_PAYMENT,
-                        'amount' => $invoice->total, // Total hutang = invoice total
+                        'amount' => $invoice->total,
                         'due_date' => $invoice->due_date,
-                        'status' => Debt::STATUS_BELUM_LUNAS, // Status awal belum lunas, akan di-update setelah payment
+                        'status' => Debt::STATUS_BELUM_LUNAS,
                         'user_id' => $invoice->user_id,
                     ]
                 );
 
-                // Untuk invoice biasa, set kategori dari invoice items jika debt baru dibuat
                 if ($debt->wasRecentlyCreated && !$debt->category_id) {
                     $firstItem = $invoice->items()->first();
                     if ($firstItem && $firstItem->category_id) {
@@ -1014,11 +977,6 @@ class InvoiceController extends Controller
                 }
             }
 
-            // Untuk pass-through invoice, tidak perlu membuat payment ke debt saat konfirmasi
-            // karena debt mencatat dana iklan yang akan digunakan nanti (belum digunakan, paid_amount = 0)
-            // Payment ke debt akan dibuat nanti ketika dana iklan digunakan (dicatat sebagai pengeluaran)
-            // Untuk invoice biasa, buat payment ke debt seperti biasa
-            // Kecuali jika ini adalah konfirmasi down_payment yang sudah ada (tidak perlu membuat payment baru)
             if ($debt && !$isPassThrough && !$isConfirmingExistingDownPayment) {
                 $debt->payments()->create([
                     'amount' => $paymentAmount,
@@ -1028,12 +986,9 @@ class InvoiceController extends Controller
 
                 $debt->load('payments');
             } elseif ($debt && !$isPassThrough && $isConfirmingExistingDownPayment) {
-                // Jika ini konfirmasi down_payment yang sudah ada, pastikan debt sudah memiliki payment yang sesuai
-                // Jika belum ada payment di debt, buat payment dengan jumlah down_payment
                 $debt->load('payments');
                 $existingPaymentsTotal = $debt->payments->sum('amount');
                 if ($existingPaymentsTotal < $paymentAmount) {
-                    // Buat payment untuk selisihnya
                     $debt->payments()->create([
                         'amount' => $paymentAmount - $existingPaymentsTotal,
                         'payment_date' => $paymentDate,
@@ -1043,8 +998,6 @@ class InvoiceController extends Controller
                 }
             }
 
-            // Untuk pass-through invoice, langsung set invoice sebagai lunas karena dana sudah masuk
-            // Untuk invoice biasa, hitung down_payment dari payments
             if ($isPassThrough) {
                 $invoice->down_payment = $invoice->total;
                 $invoice->payment_date = $paymentDate;
@@ -1067,12 +1020,9 @@ class InvoiceController extends Controller
 
             $invoice->save();
 
-            // Untuk pass-through invoice, catat transaksi pemasukan saat invoice dikonfirmasi pertama kali
-            // (saat needs_confirmation berubah dari true ke false)
             if ($isPassThrough && $wasNeedingConfirmation) {
                 $incomeCategoryId = $invoice->items->first()?->category_id;
                 if ($incomeCategoryId) {
-                    // Ambil quantity dari item pertama (semua items menggunakan quantity yang sama)
                     $firstItem = $invoice->items->first();
                     $quantity = $firstItem ? max(1, (int) $firstItem->quantity) : 1;
                     
@@ -1090,17 +1040,12 @@ class InvoiceController extends Controller
             }
 
             if ($debt) {
-                // Untuk pass-through invoice, amount = adBudgetTotal (Saldo Harian × Durasi)
-                // Status tetap BELUM_LUNAS karena paid_amount masih 0 (belum ada penggunaan dana iklan)
-                // Untuk invoice biasa, update status dan amount sesuai invoice
                 if ($isPassThrough) {
-                    // Pass-through invoice: amount = adBudgetTotal, status tetap BELUM_LUNAS
                     $debt->status = Debt::STATUS_BELUM_LUNAS;
                     if (isset($adBudgetTotal)) {
                         $debt->amount = $adBudgetTotal;
                     }
                 } else {
-                    // Invoice biasa: update status dan amount sesuai invoice
                     $debt->status = $invoice->status === 'lunas'
                         ? Debt::STATUS_LUNAS
                         : Debt::STATUS_BELUM_LUNAS;
@@ -1112,8 +1057,6 @@ class InvoiceController extends Controller
                 $debt->save();
             }
 
-            // Untuk invoice biasa (down payment), catat transaksi saat dibayar lunas
-            // Untuk pass-through invoice, transaksi sudah dicatat saat dikonfirmasi (di atas)
             if ($willBePaidOff && !$isPassThrough) {
                 Transaction::create([
                     'category_id' => $categoryId,
@@ -1150,111 +1093,32 @@ class InvoiceController extends Controller
         return back()->with('status', 'Token pelunasan berhasil dicabut.');
     }
 
-    public function pdfHosted(Invoice $invoice): Response
+    public function pdfHosted(Invoice $invoice): View
     {
         $this->authorize('view', $invoice);
 
-        try {
-            $path = $this->invoicePdfService->ensureStoredPdfPath($invoice);
-        } catch (Throwable $exception) {
-            \Log::error('Failed to generate PDF for invoice', [
-                'invoice_id' => $invoice->id,
-                'invoice_number' => $invoice->number,
-                'error' => $exception->getMessage(),
-                'trace' => $exception->getTraceAsString(),
-            ]);
+        $invoice->loadMissing('items', 'customerService');
+        
+        $companyInfo = $this->vodecoWebsiteService->getCompanyInfo();
+        $paymentMethods = $this->vodecoWebsiteService->getPaymentMethods();
 
-            abort(404, 'PDF invoice tidak tersedia: ' . $exception->getMessage());
-        }
+        $data = $this->invoiceViewService->prepareInvoiceData($invoice, $companyInfo, $paymentMethods);
 
-        $diskName = config('pdf.cache.enabled') && config('pdf.generation.strategy') === 'on_demand'
-            ? config('pdf.cache.disk', 'public')
-            : 'public';
-
-        $disk = Storage::disk($diskName);
-
-        if (! $disk->exists($path)) {
-            \Log::error('PDF file not found in storage', [
-                'invoice_id' => $invoice->id,
-                'invoice_number' => $invoice->number,
-                'path' => $path,
-                'disk' => $diskName,
-            ]);
-
-            abort(404, 'File PDF tidak ditemukan di storage.');
-        }
-
-        try {
-            return $disk->response(
-                $path,
-                $invoice->number . '.pdf',
-                ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
-            );
-        } catch (Throwable $exception) {
-            \Log::error('Failed to serve PDF file', [
-                'invoice_id' => $invoice->id,
-                'invoice_number' => $invoice->number,
-                'path' => $path,
-                'error' => $exception->getMessage(),
-            ]);
-
-            abort(500, 'Gagal mengakses file PDF.');
-        }
+        return view('invoices.page', $data);
     }
 
-    public function showPublicHosted(string $token): Response
+    public function showPublicHosted(string $token): View
     {
-        $invoice = Invoice::where('public_token', $token)->firstOrFail();
+        $invoice = Invoice::where('public_token', $token)
+            ->with('items', 'customerService')
+            ->firstOrFail();
+        
+        $companyInfo = $this->vodecoWebsiteService->getCompanyInfo();
+        $paymentMethods = $this->vodecoWebsiteService->getPaymentMethods();
 
-        try {
-            $path = $this->invoicePdfService->ensureStoredPdfPath($invoice);
-        } catch (Throwable $exception) {
-            \Log::error('Failed to generate PDF for public invoice', [
-                'invoice_id' => $invoice->id,
-                'invoice_number' => $invoice->number,
-                'token' => $token,
-                'error' => $exception->getMessage(),
-                'trace' => $exception->getTraceAsString(),
-            ]);
+        $data = $this->invoiceViewService->prepareInvoiceData($invoice, $companyInfo, $paymentMethods);
 
-            abort(404, 'PDF invoice tidak tersedia: ' . $exception->getMessage());
-        }
-
-        $diskName = config('pdf.cache.enabled') && config('pdf.generation.strategy') === 'on_demand'
-            ? config('pdf.cache.disk', 'public')
-            : 'public';
-
-        $disk = Storage::disk($diskName);
-
-        if (! $disk->exists($path)) {
-            \Log::error('PDF file not found in storage (public)', [
-                'invoice_id' => $invoice->id,
-                'invoice_number' => $invoice->number,
-                'token' => $token,
-                'path' => $path,
-                'disk' => $diskName,
-            ]);
-
-            abort(404, 'File PDF tidak ditemukan di storage.');
-        }
-
-        try {
-            return $disk->response(
-                $path,
-                $invoice->number . '.pdf',
-                ['Content-Disposition' => 'inline; filename="' . $invoice->number . '.pdf"']
-            );
-        } catch (Throwable $exception) {
-            \Log::error('Failed to serve PDF file (public)', [
-                'invoice_id' => $invoice->id,
-                'invoice_number' => $invoice->number,
-                'token' => $token,
-                'path' => $path,
-                'error' => $exception->getMessage(),
-            ]);
-
-            abort(500, 'Gagal mengakses file PDF.');
-        }
+        return view('invoices.page', $data);
     }
 
     public function show(Invoice $invoice)
@@ -1341,10 +1205,6 @@ class InvoiceController extends Controller
             ->with('success', "Invoice #{$invoiceNumber} berhasil dihapus.");
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     * @return array{package: PassThroughPackage, description: string, duration_days: int, daily_balance_unit: float, maintenance_unit: float, account_creation_unit: float}
-     */
     private function resolvePassThroughPackageContext(array $data): array
     {
         $packageId = $data['pass_through_package_id'] ?? null;
@@ -1421,13 +1281,11 @@ class InvoiceController extends Controller
     {
         $strategy = config('pdf.generation.strategy', 'on_demand');
 
-        // For on_demand strategy, just invalidate cache
         if ($strategy === 'on_demand') {
             $this->invoicePdfService->invalidateCache($invoice);
             return;
         }
 
-        // For persistent strategy, regenerate and store
         $disk = Storage::disk('public');
 
         $pathToDelete = $previousPath ?? $invoice->pdf_path;
@@ -1593,8 +1451,9 @@ class InvoiceController extends Controller
         $date = now()->format('Ymd');
         $count = Invoice::whereDate('created_at', today())->count();
         $sequence = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+        $random = str_pad(rand(0, 999), 3, '0', STR_PAD_LEFT);
 
-        return "{$date}-{$sequence}";
+        return "{$date}-{$sequence}{$random}";
     }
 
     private function mapInvoiceItems(array $items): array
@@ -1667,12 +1526,16 @@ class InvoiceController extends Controller
             // Set needs_confirmation = false untuk invoice yang dipilih
             $accessibleInvoices->each(function ($invoice) {
                 $this->authorize('storePayment', $invoice);
+
+                // Untuk invoice pass through (iklan), buat transaksi untuk maintenance & account creation
+                $this->createPassThroughTransactionsIfNeeded($invoice);
+
                 $invoice->needs_confirmation = false;
                 $invoice->save();
             });
 
             $message = count($accessibleInvoices) . ' invoice berhasil disetujui dan tidak lagi memerlukan konfirmasi.';
-            
+
             return redirect()->route('invoices.index', ['tab' => $tab])
                 ->with('success', $message);
         }
@@ -1721,17 +1584,11 @@ class InvoiceController extends Controller
             ->with('error', 'Aksi tidak valid.');
     }
 
-    /**
-     * Menampilkan form untuk cek konfirmasi invoice
-     */
     public function checkConfirmation(): View
     {
         return view('invoices.check-confirmation');
     }
 
-    /**
-     * Mencari invoice berdasarkan nomor dan menampilkan status konfirmasi
-     */
     public function searchConfirmation(Request $request): View|RedirectResponse
     {
         $request->validate([
@@ -1742,7 +1599,6 @@ class InvoiceController extends Controller
 
         $invoiceNumber = $request->input('invoice_number');
         
-        // Cari invoice berdasarkan nomor
         $invoice = Invoice::where('number', $invoiceNumber)
             ->with(['customerService', 'items', 'owner', 'creator'])
             ->first();
@@ -1763,9 +1619,60 @@ class InvoiceController extends Controller
         ]);
     }
 
-    /**
-     * Helper untuk mendapatkan status konfirmasi invoice
-     */
+    private function createPassThroughTransactionsIfNeeded(Invoice $invoice): void
+    {
+        $isPassThrough = in_array($invoice->type, [
+            Invoice::TYPE_PASS_THROUGH_NEW,
+            Invoice::TYPE_PASS_THROUGH_EXISTING
+        ]);
+
+        if (!$isPassThrough) {
+            return;
+        }
+
+        $incomeCategory = \App\Models\Category::where('type', 'pemasukan')
+            ->where('name', 'like', '%iklan%')
+            ->first();
+
+        if (!$incomeCategory) {
+            $incomeCategory = \App\Models\Category::where('type', 'pemasukan')
+                ->where('name', 'like', '%penjualan%')
+                ->first();
+        }
+
+        if (!$incomeCategory) {
+            return;
+        }
+
+        $invoice->loadMissing('items');
+        $clientInfo = $invoice->client_name ?: $invoice->client_whatsapp ?: 'Klien';
+
+        foreach ($invoice->items as $item) {
+            if (!str_contains($item->description, 'Dana Invoices Iklan')) {
+                $description = $item->description . ' - ' . $clientInfo . ' (' . $invoice->number . ')';
+
+                $existingTransaction = \App\Models\Transaction::where('description', $description)
+                    ->where('amount', $item->price * $item->quantity)
+                    ->where('user_id', $invoice->user_id)
+                    ->first();
+
+                if (!$existingTransaction) {
+                    \App\Models\Transaction::create([
+                        'category_id' => $incomeCategory->id,
+                        'date' => $invoice->issue_date ?? now(),
+                        'amount' => $item->price * $item->quantity,
+                        'description' => $description,
+                        'user_id' => $invoice->user_id,
+                    ]);
+                }
+            }
+        }
+
+        if (isset($this->transactionService)) {
+            $this->transactionService->clearSummaryCacheForUser(\App\Models\User::find($invoice->user_id));
+        }
+    }
+
     private function getConfirmationStatus(Invoice $invoice): array
     {
         $status = [
@@ -1824,9 +1731,6 @@ class InvoiceController extends Controller
         return $status;
     }
 
-    /**
-     * Menampilkan form untuk cek konfirmasi invoice (public)
-     */
     public function publicCheckConfirmation(Request $request): View
     {
         /** @var \App\Models\InvoicePortalPassphrase|null $passphrase */
@@ -1859,9 +1763,6 @@ class InvoiceController extends Controller
         ]);
     }
 
-    /**
-     * Mencari invoice berdasarkan nomor dan menampilkan status konfirmasi (public)
-     */
     public function publicSearchConfirmation(Request $request): View|RedirectResponse
     {
         $request->validate([
@@ -1919,9 +1820,6 @@ class InvoiceController extends Controller
         ]);
     }
 
-    /**
-     * Search invoice for settlement by Admin Pelunasan (JSON response for AJAX)
-     */
     public function publicSearchSettlement(Request $request)
     {
         $request->validate([
@@ -1932,7 +1830,6 @@ class InvoiceController extends Controller
 
         $invoiceNumber = $request->input('invoice_number');
         
-        // Cari invoice berdasarkan nomor
         $invoice = Invoice::where('number', $invoiceNumber)
             ->with(['customerService', 'items'])
             ->first();
@@ -1944,7 +1841,6 @@ class InvoiceController extends Controller
             ], 404);
         }
 
-        // Generate PDF URL menggunakan public token
         $pdfUrl = route('invoices.public.show', ['token' => $invoice->public_token]);
 
         return response()->json([
@@ -1962,9 +1858,120 @@ class InvoiceController extends Controller
         ]);
     }
 
-    /**
-     * Generate and return PDF response for invoice
-     */
+    public function publicSearch(Request $request): View|JsonResponse
+    {
+        $invoices = collect();
+        
+        if ($request->has('search') && $request->search) {
+            $request->validate([
+                'search' => 'nullable|string|max:255'
+            ], [
+                'search.max' => 'Nomor invoice tidak boleh lebih dari 255 karakter.'
+            ]);
+            
+            $searchTerm = trim($request->search);
+            
+            if (!empty($searchTerm)) {
+                $query = Invoice::with('items')
+                    ->where('number', 'like', '%' . $searchTerm . '%');
+                
+                $invoices = $query->latest()->paginate(10);
+                
+                $invoices->appends(['search' => $searchTerm]);
+            }
+        }
+        
+        if ($request->expectsJson() || $request->ajax()) {
+            $invoicesData = $invoices->map(function ($invoice) {
+                $subtotal = $invoice->items->sum(fn($item) => $item->price * $item->quantity);
+                
+                $statusClass = 'border-gray-500';
+                $statusText = strtoupper($invoice->status);
+                $statusColor = 'text-gray-400';
+                if ($invoice->status == 'lunas') {
+                    $statusClass = 'border-green-500';
+                    $statusColor = 'text-green-400';
+                } elseif ($invoice->status == 'belum lunas') {
+                    $statusClass = 'border-yellow-500';
+                    $statusColor = 'text-yellow-400';
+                } elseif ($invoice->status == 'belum bayar') {
+                    $statusClass = 'border-red-500';
+                    $statusColor = 'text-red-400';
+                }
+                
+                return [
+                    'id' => $invoice->id,
+                    'number' => $invoice->number,
+                    'public_token' => $invoice->public_token,
+                    'client_name' => $invoice->client_name ?? 'N/A',
+                    'client_whatsapp' => $invoice->client_whatsapp,
+                    'client_address' => $invoice->client_address,
+                    'issue_date' => $invoice->issue_date ? $invoice->issue_date->format('d M Y') : $invoice->created_at->format('d M Y'),
+                    'due_date' => $invoice->due_date ? $invoice->due_date->format('d M Y') : null,
+                    'subtotal' => $subtotal,
+                    'total' => $invoice->total,
+                    'status' => $invoice->status,
+                    'status_text' => $statusText,
+                    'status_class' => $statusClass,
+                    'status_color' => $statusColor,
+                    'detail_url' => route('invoices.public.detail', $invoice->public_token),
+                    'print_url' => route('invoices.public.print', $invoice->public_token),
+                ];
+            });
+            
+            return response()->json([
+                'success' => true,
+                'invoices' => $invoicesData,
+                'has_pages' => $invoices->hasPages(),
+                'current_page' => $invoices->currentPage(),
+                'last_page' => $invoices->lastPage(),
+                'pagination_html' => $invoices->hasPages() ? $invoices->links()->toHtml() : '',
+                'search_term' => $request->search ?? '',
+            ]);
+        }
+        
+        return view('invoices.public-search', compact('invoices'));
+    }
+
+    public function publicShow(string $token): View
+    {
+        $invoice = Invoice::where('public_token', $token)
+            ->with('items', 'customerService')
+            ->firstOrFail();
+        
+        $companyInfo = $this->vodecoWebsiteService->getCompanyInfo();
+        $paymentMethods = $this->vodecoWebsiteService->getPaymentMethods();
+        
+        $data = $this->invoiceViewService->prepareInvoiceData($invoice, $companyInfo, $paymentMethods);
+        
+        return view('invoices.page', $data);
+    }
+
+    public function publicPrint(string $token): View
+    {
+        $invoice = Invoice::where('public_token', $token)
+            ->with('items', 'customerService')
+            ->firstOrFail();
+        
+        $companyInfo = $this->vodecoWebsiteService->getCompanyInfo();
+        $paymentMethods = $this->vodecoWebsiteService->getPaymentMethods();
+        
+        $data = $this->invoiceViewService->prepareInvoiceData($invoice, $companyInfo, $paymentMethods);
+        
+        return view('invoices.page', $data);
+    }
+
+    public function publicPaymentStatus(string $token): View
+    {
+        $invoice = Invoice::where('public_token', $token)
+            ->with('items', 'customerService')
+            ->firstOrFail();
+        
+        $statusInfo = $this->getConfirmationStatus($invoice);
+        
+        return view('invoices.payment-status', compact('invoice', 'statusInfo'));
+    }
+
     private function generateInvoicePdfResponse(Invoice $invoice)
     {
         $invoice->loadMissing('items', 'customerService');
@@ -1982,5 +1989,236 @@ class InvoiceController extends Controller
         ]);
 
         return $pdf->setPaper('a4')->download($invoice->number . '.pdf');
+    }
+
+    /**
+     * API endpoint untuk mendapatkan income categories (untuk customer-service)
+     */
+    public function apiCategories(): JsonResponse
+    {
+        $categories = Category::where('type', 'pemasukan')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $categories->values(),
+        ]);
+    }
+
+    /**
+     * API endpoint untuk mendapatkan pass through packages (untuk customer-service)
+     */
+    public function apiPassThroughPackages(): JsonResponse
+    {
+        $packages = $this->passThroughPackageManager->all();
+
+        $packagesCollection = collect($packages)->map(function ($package) {
+            return [
+                'id' => $package->id,
+                'name' => $package->name,
+                'customer_type' => $package->customerType,
+                'customer_label' => $package->customerLabel(),
+                'daily_balance' => $package->dailyBalance,
+                'duration_days' => $package->durationDays,
+                'maintenance_fee' => $package->maintenanceFee,
+                'account_creation_fee' => $package->accountCreationFee,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $packagesCollection->values(),
+        ]);
+    }
+
+    /**
+     * API endpoint untuk membuat invoice dari customer-service
+     */
+    public function apiStore(Request $request): JsonResponse
+    {
+        // Validate passphrase token if provided
+        $passphraseToken = $request->input('passphrase_token');
+        $passphrase = null;
+        
+        if ($passphraseToken) {
+            try {
+                $passphraseId = Crypt::decryptString($passphraseToken);
+                $passphrase = InvoicePortalPassphrase::find($passphraseId);
+                
+                if (!$passphrase || !$passphrase->isUsable()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Passphrase tidak valid atau sudah kedaluwarsa.',
+                    ], 403);
+                }
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Passphrase token tidak valid.',
+                ], 403);
+            }
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Passphrase token wajib diisi.',
+            ], 422);
+        }
+
+        $request->merge(['customer_service_name' => $request->input('customer_service_name', 'Customer Service')]);
+        $request->merge(['created_by' => $request->input('created_by', auth()->id() ?? 1)]);
+        
+        // Add passphrase information to data
+        if ($passphrase) {
+            $request->merge(['passphrase_access_type' => $passphrase->access_type->value]);
+            $request->merge(['created_by' => $passphrase->created_by]);
+        }
+
+        $storeRequest = new StoreInvoiceRequest();
+        $storeRequest->setContainer(app());
+        $storeRequest->initialize(
+            $request->all(),
+            $request->all(),
+            $request->attributes->all(),
+            $request->cookies->all(),
+            $request->files->all(),
+            $request->server->all(),
+            $request->getContent()
+        );
+
+        if (!$storeRequest->authorize()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $validator = \Illuminate\Support\Facades\Validator::make(
+            $request->all(),
+            $storeRequest->rules(),
+            $storeRequest->messages()
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $data = $validator->validated();
+            $transactionType = $data['transaction_type'] ?? 'down_payment';
+            $ownerId = $request->input('created_by', auth()->id() ?? 1);
+
+            $invoice = null;
+
+            if ($transactionType === 'pass_through') {
+                try {
+                    $context = $this->resolvePassThroughPackageContext($data);
+                } catch (\RuntimeException $exception) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $exception->getMessage(),
+                        'errors' => ['pass_through_package_id' => [$exception->getMessage()]],
+                    ], 422);
+                }
+
+                /** @var PassThroughPackage $package */
+                $package = $context['package'];
+                $quantity = max((int) ($data['pass_through_quantity'] ?? 1), 1);
+
+                $description = trim((string) ($data['pass_through_description'] ?? ''));
+                if ($description === '') {
+                    $description = $context['description'];
+                }
+
+                $durationDays = (int) ($context['duration_days'] ?? 0);
+                if ($durationDays <= 0) {
+                    $durationDays = $package->durationDays;
+                }
+
+                $dailyBalanceUnit = max((float) ($context['daily_balance_unit'] ?? $package->dailyBalance ?? 0), 0.0);
+                $maintenanceUnit = max((float) ($context['maintenance_unit'] ?? $package->maintenanceFee ?? 0), 0.0);
+                $accountCreationUnit = $package->customerType === PassThroughPackage::CUSTOMER_TYPE_NEW
+                    ? max((float) ($context['account_creation_unit'] ?? $package->accountCreationFee ?? 0), 0.0)
+                    : 0.0;
+
+                $dailyBalanceUnit = round($dailyBalanceUnit, 2);
+                $adBudgetUnit = round($dailyBalanceUnit * $durationDays, 2);
+                $maintenanceUnit = round($maintenanceUnit, 2);
+                $accountCreationUnit = round($accountCreationUnit, 2);
+
+                $adBudgetTotal = round($adBudgetUnit * $quantity, 2);
+                $maintenanceTotal = round($maintenanceUnit * $quantity, 2);
+                $accountCreationTotal = round($accountCreationUnit * $quantity, 2);
+                $total = round($adBudgetTotal + $maintenanceTotal + $accountCreationTotal, 2);
+
+                $customerServiceId = \App\Models\CustomerService::query()
+                    ->where('user_id', $ownerId)
+                    ->value('id');
+
+                $invoice = $this->passThroughInvoiceCreator->create(
+                    ownerId: $ownerId,
+                    createdBy: $data['created_by'] ?? $ownerId,
+                    customerServiceId: $customerServiceId,
+                    customerServiceName: $data['customer_service_name'] ?? 'Customer Service',
+                    clientName: $data['client_name'],
+                    clientWhatsapp: $data['client_whatsapp'],
+                    clientAddress: $data['client_address'] ?? null,
+                    package: $package,
+                    quantity: $quantity,
+                    description: $description,
+                    dailyBalanceUnit: $dailyBalanceUnit,
+                    durationDays: $durationDays,
+                    adBudgetUnit: $adBudgetUnit,
+                    maintenanceUnit: $maintenanceUnit,
+                    accountCreationUnit: $accountCreationUnit,
+                );
+            } elseif ($transactionType === 'settlement') {
+                $referenceInvoice = Invoice::where('number', $data['settlement_invoice_number'])->firstOrFail();
+                $invoice = $this->persistSettlementInvoice($data, $referenceInvoice);
+            } else {
+                $invoice = $this->persistInvoice($data, $ownerId);
+            }
+
+            if ($invoice) {
+                try {
+                    $this->regenerateInvoicePdf($invoice);
+                } catch (Throwable $exception) {
+                    \Log::error('Failed to generate PDF for invoice after creation', [
+                        'invoice_id' => $invoice->id,
+                        'invoice_number' => $invoice->number,
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Invoice berhasil dibuat',
+                'data' => [
+                    'id' => $invoice->id,
+                    'number' => $invoice->number,
+                    'total' => $invoice->total,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating invoice via API', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat invoice: ' . $e->getMessage(),
+                'errors' => [],
+            ], 500);
+        }
     }
 }

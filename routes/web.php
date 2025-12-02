@@ -63,6 +63,12 @@ Route::post('/invoices/settlement/{token}', [InvoiceSettlementController::class,
 Route::get('/invoices/view/{token}', [InvoiceController::class, 'showPublicHosted'])->name('invoices.public.show');
 Route::get('/invoices/pdf-hosted/{token}', [InvoiceController::class, 'showPublicHosted'])->name('invoices.public.pdf-hosted');
 
+// Route untuk public invoice search (dari project invoice)
+Route::get('/invoices/public/search', [InvoiceController::class, 'publicSearch'])->name('invoices.public.search');
+Route::get('/invoices/public/{token}', [InvoiceController::class, 'publicShow'])->name('invoices.public.detail');
+Route::get('/invoices/public/{token}/print', [InvoiceController::class, 'publicPrint'])->name('invoices.public.print');
+Route::get('/invoices/public/{token}/payment-status', [InvoiceController::class, 'publicPaymentStatus'])->name('invoices.public.payment-status');
+
 // Menggunakan middleware 'auth' untuk memastikan hanya user yang sudah login
 // yang bisa mengakses halaman-halaman ini.
 Route::post('/access-codes/verify', [AccessCodeController::class, 'verify'])
@@ -129,6 +135,8 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::get('customer-services/create', [CustomerServiceController::class, 'create'])->name('customer-services.create');
     Route::post('customer-services', [CustomerServiceController::class, 'store'])->name('customer-services.store');
     // Debts
+    Route::post('debts/bulk-delete', [DebtController::class, 'bulkDelete'])->name('debts.bulk-delete');
+    Route::post('debts/bulk-mark-failed', [DebtController::class, 'bulkMarkAsFailed'])->name('debts.bulk-mark-failed');
     Route::post('debts/{debt}/pay', [DebtController::class, 'storePayment'])->name('debts.pay');
     Route::post('debts/{debt}/fail', [DebtController::class, 'markAsFailed'])->name('debts.fail');
 

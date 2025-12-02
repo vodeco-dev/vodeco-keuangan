@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvoicePortalPassphrase;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -62,5 +63,55 @@ class InvoicePortalPassphraseVerificationController extends Controller
 
         return Redirect::route('invoices.public.create')
             ->with('status', 'Sesi passphrase telah diakhiri.');
+    }
+
+    /**
+     * API endpoint untuk verifikasi passphrase (untuk customer-service)
+     */
+    public function apiVerify(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'passphrase' => ['required', 'string'],
+        ], [
+            'passphrase.required' => 'Masukkan passphrase akses portal invoice.',
+        ]);
+
+        $passphraseInput = (string) $validated['passphrase'];
+
+        $candidate = InvoicePortalPassphrase::query()
+            ->where('is_active', true)
+            ->get()
+            ->first(function (InvoicePortalPassphrase $candidate) use ($passphraseInput) {
+                if ($candidate->isExpired()) {
+                    return false;
+                }
+
+                return Hash::check($passphraseInput, $candidate->passphrase_hash);
+            });
+
+        if (! $candidate) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Passphrase tidak ditemukan atau sudah tidak berlaku.',
+            ], 422);
+        }
+
+        $sessionData = [
+            'id' => $candidate->id,
+            'token' => Crypt::encryptString((string) $candidate->id),
+            'access_type' => $candidate->access_type->value,
+            'access_label' => $candidate->access_type->label(),
+            'label' => $candidate->label,
+            'display_label' => $candidate->displayLabel(),
+            'verified_at' => now()->toIso8601String(),
+        ];
+
+        $candidate->markAsUsed($request->ip(), $request->userAgent(), 'verified');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Passphrase berhasil diverifikasi untuk ' . $candidate->displayLabel() . '.',
+            'data' => $sessionData,
+        ]);
     }
 }
