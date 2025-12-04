@@ -10,7 +10,7 @@
         @endif
         <div class="summary-row">
             <span class="summary-label">Sisa Pembayaran</span>
-            <span class="summary-value">Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
+            <span class="summary-value">Rp {{ number_format(max($subtotal - $downPaymentDue, 0), 0, ',', '.') }}</span>
         </div>
         @if($tax > 0)
         <div class="summary-row">
