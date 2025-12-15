@@ -263,11 +263,45 @@
             <p class="text-2xl font-semibold text-red-600">Rp{{ number_format($totalPassThrough, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <p class="text-sm text-gray-500">Belum Lunas</p>
+            <div class="flex items-center gap-2 w-full justify-between">
+                <p class="text-sm text-gray-500">Belum Lunas</p>
+                <div class="relative group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 12 12" class="cursor-help">
+                        <path fill="#FF5733" d="M4.283 2.98a1.735 1.735 0 1 1 3.434 0l-.576 4.03a1.153 1.153 0 0 1-2.282 0l-.576-4.03ZM7 10a1 1 0 1 1-2 0a1 1 0 0 1 2 0Z"/>
+                    </svg>
+                    <div class="absolute right-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap z-10 shadow-lg">
+                        <div class="font-semibold mb-1 border-b border-gray-600 pb-1">Rincian Belum Lunas:</div>
+                        <div class="mt-1 text-gray-300">Berdasarkan Tipe:</div>
+                        <div class="pl-2">DP: Rp{{ number_format($belumLunasDownPayment ?? 0, 0, ',', '.') }}</div>
+                        <div class="pl-2">Iklan: Rp{{ number_format($belumLunasPassThrough ?? 0, 0, ',', '.') }}</div>
+                        <div class="mt-1 text-gray-300">Berdasarkan Progress:</div>
+                        <div class="pl-2 text-yellow-300">Sudah Cicilan ({{ $belumLunasSudahCicilanCount ?? 0 }}): Rp{{ number_format($belumLunasSudahCicilanAmount ?? 0, 0, ',', '.') }}</div>
+                        <div class="pl-2 text-red-300">Belum Ada Cicilan ({{ $belumLunasBelumCicilanCount ?? 0 }}): Rp{{ number_format($belumLunasBelumCicilanAmount ?? 0, 0, ',', '.') }}</div>
+                        <div class="absolute right-3 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800"></div>
+                    </div>
+                </div>
+            </div>
             <p class="text-2xl font-semibold text-orange-500">Rp{{ number_format($totalBelumLunas, 0, ',', '.') }}</p>
         </div>
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <p class="text-sm text-gray-500">Sudah Lunas</p>
+            <div class="flex items-center gap-2 w-full justify-between">
+                <p class="text-sm text-gray-500">Sudah Lunas</p>
+                <div class="relative group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 12 12" class="cursor-help">
+                        <path fill="#008000" d="M4.283 2.98a1.735 1.735 0 1 1 3.434 0l-.576 4.03a1.153 1.153 0 0 1-2.282 0l-.576-4.03ZM7 10a1 1 0 1 1-2 0a1 1 0 0 1 2 0Z"/>
+                    </svg>
+                    <div class="absolute right-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap z-10 shadow-lg">
+                        <div class="font-semibold mb-1 border-b border-gray-600 pb-1">Rincian Sudah Lunas:</div>
+                        <div class="mt-1 text-gray-300">Berdasarkan Tipe:</div>
+                        <div class="pl-2">DP: Rp{{ number_format($lunasDownPayment ?? 0, 0, ',', '.') }}</div>
+                        <div class="pl-2">Iklan: Rp{{ number_format($lunasPassThrough ?? 0, 0, ',', '.') }}</div>
+                        <div class="mt-1 text-gray-300">Berdasarkan Pembayaran:</div>
+                        <div class="pl-2 text-green-300">Lunas Full ({{ $lunasFullCount ?? 0 }}): Rp{{ number_format($lunasFullAmount ?? 0, 0, ',', '.') }}</div>
+                        <div class="pl-2 text-yellow-300">Lunas Sebagian ({{ $lunasPartialCount ?? 0 }}): Rp{{ number_format($lunasPartialAmount ?? 0, 0, ',', '.') }}</div>
+                        <div class="absolute right-3 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800"></div>
+                    </div>
+                </div>
+            </div>
             <p class="text-2xl font-semibold text-green-600">Rp{{ number_format($totalLunas, 0, ',', '.') }}</p>
         </div>
     </div>

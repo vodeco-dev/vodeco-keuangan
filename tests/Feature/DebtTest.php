@@ -77,6 +77,18 @@ class DebtTest extends TestCase
             'id' => $debt->id,
             'status' => Debt::STATUS_LUNAS,
         ]);
+        
+        // Verify transaction was created for the payment
+        $this->assertDatabaseHas('transactions', [
+            'amount' => 1000,
+            'user_id' => $user->id,
+        ]);
+        
+        // Verify payment is linked to transaction
+        $this->assertDatabaseHas('payments', [
+            'debt_id' => $debt->id,
+            'amount' => 1000,
+        ]);
     }
 
     public function test_debts_index_is_paginated(): void
@@ -168,5 +180,157 @@ class DebtTest extends TestCase
         ]);
 
         Carbon::setTestNow();
+    }
+
+    public function test_pass_through_payment_creates_expense_transaction(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $expenseCategory = Category::create([
+            'name' => 'Iklan',
+            'type' => 'pengeluaran',
+        ]);
+
+        $debt = Debt::create([
+            'user_id' => $user->id,
+            'description' => 'Invoices Iklan untuk Client A',
+            'related_party' => 'Client A',
+            'type' => Debt::TYPE_PASS_THROUGH,
+            'amount' => 5000,
+            'status' => Debt::STATUS_BELUM_LUNAS,
+            'due_date' => now()->addWeek(),
+            'category_id' => $expenseCategory->id,
+        ]);
+
+        $response = $this->post(route('debts.pay', $debt), [
+            'payment_amount' => 5000,
+            'category_id' => $expenseCategory->id,
+        ]);
+
+        $response->assertRedirect(route('debts.index'));
+        
+        // Verify debt is marked as paid
+        $this->assertDatabaseHas('debts', [
+            'id' => $debt->id,
+            'status' => Debt::STATUS_LUNAS,
+        ]);
+
+        // Verify transaction was created as expense (pengeluaran)
+        $this->assertDatabaseHas('transactions', [
+            'amount' => 5000,
+            'user_id' => $user->id,
+            'category_id' => $expenseCategory->id,
+        ]);
+
+        // Verify payment is linked to transaction
+        $payment = $debt->payments()->first();
+        $this->assertNotNull($payment);
+        $this->assertNotNull($payment->transaction_id);
+        $this->assertEquals(5000, $payment->amount);
+    }
+
+    public function test_down_payment_creates_income_transaction(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $incomeCategory = Category::create([
+            'name' => 'Down Payment',
+            'type' => 'pemasukan',
+        ]);
+
+        $debt = Debt::create([
+            'user_id' => $user->id,
+            'description' => 'Down Payment dari Client B',
+            'related_party' => 'Client B',
+            'type' => Debt::TYPE_DOWN_PAYMENT,
+            'amount' => 3000,
+            'status' => Debt::STATUS_BELUM_LUNAS,
+            'due_date' => now()->addWeek(),
+            'category_id' => $incomeCategory->id,
+        ]);
+
+        $response = $this->post(route('debts.pay', $debt), [
+            'payment_amount' => 3000,
+            'category_id' => $incomeCategory->id,
+        ]);
+
+        $response->assertRedirect(route('debts.index'));
+        
+        // Verify debt is marked as paid
+        $this->assertDatabaseHas('debts', [
+            'id' => $debt->id,
+            'status' => Debt::STATUS_LUNAS,
+        ]);
+
+        // Verify transaction was created as income (pemasukan)
+        $this->assertDatabaseHas('transactions', [
+            'amount' => 3000,
+            'user_id' => $user->id,
+            'category_id' => $incomeCategory->id,
+        ]);
+
+        // Verify payment is linked to transaction
+        $payment = $debt->payments()->first();
+        $this->assertNotNull($payment);
+        $this->assertNotNull($payment->transaction_id);
+        $this->assertEquals(3000, $payment->amount);
+    }
+
+    public function test_partial_payment_creates_transaction_for_each_payment(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $incomeCategory = Category::create([
+            'name' => 'Down Payment',
+            'type' => 'pemasukan',
+        ]);
+
+        $debt = Debt::create([
+            'user_id' => $user->id,
+            'description' => 'Down Payment Partial',
+            'related_party' => 'Client C',
+            'type' => Debt::TYPE_DOWN_PAYMENT,
+            'amount' => 10000,
+            'status' => Debt::STATUS_BELUM_LUNAS,
+            'due_date' => now()->addWeek(),
+            'category_id' => $incomeCategory->id,
+        ]);
+
+        // First payment
+        $this->post(route('debts.pay', $debt), [
+            'payment_amount' => 4000,
+            'category_id' => $incomeCategory->id,
+        ]);
+
+        // Verify first transaction
+        $this->assertDatabaseHas('transactions', [
+            'amount' => 4000,
+            'user_id' => $user->id,
+        ]);
+
+        // Second payment
+        $this->post(route('debts.pay', $debt), [
+            'payment_amount' => 6000,
+            'category_id' => $incomeCategory->id,
+        ]);
+
+        // Verify second transaction
+        $this->assertDatabaseHas('transactions', [
+            'amount' => 6000,
+            'user_id' => $user->id,
+        ]);
+
+        // Verify debt is now fully paid
+        $debt->refresh();
+        $this->assertEquals(Debt::STATUS_LUNAS, $debt->status);
+        $this->assertEquals(2, $debt->payments()->count());
+        
+        // Verify both payments are linked to transactions
+        foreach ($debt->payments as $payment) {
+            $this->assertNotNull($payment->transaction_id);
+        }
     }
 }

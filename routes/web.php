@@ -96,6 +96,7 @@ Route::middleware(['auth', 'role:admin,accountant,staff'])->group(function () {
     Route::post('debts/sync-missing', [DebtController::class, 'syncMissingDebts'])->name('debts.sync-missing');
     Route::post('debts/sync-completed-to-transactions', [DebtController::class, 'syncCompletedDebtsToTransactions'])->name('debts.sync-completed-to-transactions');
     Route::post('debts/fix-inconsistent-statuses', [DebtController::class, 'fixInconsistentDebtStatuses'])->name('debts.fix-inconsistent-statuses');
+    Route::post('debts/backfill-payment-transactions', [DebtController::class, 'backfillPaymentTransactions'])->name('debts.backfill-payment-transactions');
     Route::resource('debts', DebtController::class);
     Route::match(['GET', 'POST'], 'pass-through/packages', [PassThroughPackageController::class, 'store'])
         ->middleware('role:admin,accountant,staff')

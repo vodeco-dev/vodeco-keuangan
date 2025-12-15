@@ -94,11 +94,109 @@ class DebtService
             })
             ->sum('amount');
 
+        // Breakdown Belum Lunas by type
+        $belumLunasDownPayment = (clone $baseQuery)
+            ->where('status', Debt::STATUS_BELUM_LUNAS)
+            ->where('type', Debt::TYPE_DOWN_PAYMENT)
+            ->where(function ($query) {
+                $this->applyInvoiceFilter($query);
+            })
+            ->get()
+            ->sum('remaining_amount');
+
+        $belumLunasPassThrough = (clone $baseQuery)
+            ->where('status', Debt::STATUS_BELUM_LUNAS)
+            ->where('type', Debt::TYPE_PASS_THROUGH)
+            ->where(function ($query) {
+                $this->applyInvoiceFilter($query);
+            })
+            ->get()
+            ->sum('remaining_amount');
+
+        // Breakdown Lunas by type
+        $lunasDownPayment = (clone $baseQuery)
+            ->where('status', Debt::STATUS_LUNAS)
+            ->where('type', Debt::TYPE_DOWN_PAYMENT)
+            ->where(function ($query) {
+                $this->applyInvoiceFilter($query);
+            })
+            ->sum('amount');
+
+        $lunasPassThrough = (clone $baseQuery)
+            ->where('status', Debt::STATUS_LUNAS)
+            ->where('type', Debt::TYPE_PASS_THROUGH)
+            ->where(function ($query) {
+                $this->applyInvoiceFilter($query);
+            })
+            ->sum('amount');
+
+        // Breakdown Lunas by payment status (full vs partial)
+        $lunasDebts = (clone $baseQuery)
+            ->where('status', Debt::STATUS_LUNAS)
+            ->where(function ($query) {
+                $this->applyInvoiceFilter($query);
+            })
+            ->with('payments')
+            ->get();
+
+        $lunasFullAmount = 0;
+        $lunasPartialAmount = 0;
+        $lunasFullCount = 0;
+        $lunasPartialCount = 0;
+
+        foreach ($lunasDebts as $debt) {
+            if ($debt->paid_amount >= $debt->amount) {
+                $lunasFullAmount += $debt->amount;
+                $lunasFullCount++;
+            } else {
+                $lunasPartialAmount += $debt->amount;
+                $lunasPartialCount++;
+            }
+        }
+
+        // Breakdown Belum Lunas by payment status (sudah cicilan vs belum ada cicilan)
+        $belumLunasDebts = (clone $baseQuery)
+            ->where('status', Debt::STATUS_BELUM_LUNAS)
+            ->where(function ($query) {
+                $this->applyInvoiceFilter($query);
+            })
+            ->with('payments')
+            ->get();
+
+        $belumLunasSudahCicilanAmount = 0;
+        $belumLunasBelumCicilanAmount = 0;
+        $belumLunasSudahCicilanCount = 0;
+        $belumLunasBelumCicilanCount = 0;
+
+        foreach ($belumLunasDebts as $debt) {
+            if ($debt->paid_amount > 0) {
+                $belumLunasSudahCicilanAmount += $debt->remaining_amount;
+                $belumLunasSudahCicilanCount++;
+            } else {
+                $belumLunasBelumCicilanAmount += $debt->remaining_amount;
+                $belumLunasBelumCicilanCount++;
+            }
+        }
+
         return [
             'totalPassThrough' => $totalPassThrough,
             'totalDownPayment' => $totalDownPayment,
             'totalBelumLunas' => $totalBelumLunas,
             'totalLunas' => $totalLunas,
+            'belumLunasDownPayment' => $belumLunasDownPayment,
+            'belumLunasPassThrough' => $belumLunasPassThrough,
+            'lunasDownPayment' => $lunasDownPayment,
+            'lunasPassThrough' => $lunasPassThrough,
+            // Lunas breakdown by payment completion
+            'lunasFullAmount' => $lunasFullAmount,
+            'lunasPartialAmount' => $lunasPartialAmount,
+            'lunasFullCount' => $lunasFullCount,
+            'lunasPartialCount' => $lunasPartialCount,
+            // Belum Lunas breakdown by payment progress
+            'belumLunasSudahCicilanAmount' => $belumLunasSudahCicilanAmount,
+            'belumLunasBelumCicilanAmount' => $belumLunasBelumCicilanAmount,
+            'belumLunasSudahCicilanCount' => $belumLunasSudahCicilanCount,
+            'belumLunasBelumCicilanCount' => $belumLunasBelumCicilanCount,
         ];
     }
 
@@ -108,6 +206,7 @@ class DebtService
 
         $completedDebts = Debt::where('status', Debt::STATUS_LUNAS)
             ->whereNotNull('category_id')
+            ->with('payments') // Eager load payments to check for existing transactions
             ->get()
             ->filter(function ($debt) {
                 return $debt->paid_amount >= $debt->amount;
@@ -126,6 +225,18 @@ class DebtService
                 continue;
             }
 
+            // Check if all payments already have transactions linked
+            // If yes, skip creating a new transaction to prevent duplication
+            $paymentsWithTransactions = $debt->payments->filter(function ($payment) {
+                return $payment->transaction_id !== null;
+            });
+
+            // If all payments have transactions, the debt is already fully recorded
+            // No need to create another transaction (would be duplicate)
+            if ($debt->payments->isNotEmpty() && $paymentsWithTransactions->count() === $debt->payments->count()) {
+                continue; // Skip this debt, already recorded via installment transactions
+            }
+
             $description = $debt->description;
             if ($debt->invoice_id && $debt->invoice) {
                 $invoiceNumber = '(' . $debt->invoice->number . ')';
@@ -134,6 +245,7 @@ class DebtService
                 }
             }
 
+            // Check if a transaction for the total amount already exists
             $existingTransaction = \App\Models\Transaction::where('description', $description)
                 ->where('user_id', $debt->user_id)
                 ->where('amount', $debt->amount)
@@ -259,6 +371,126 @@ class DebtService
         }
 
         return $count;
+    }
+
+    public function backfillPaymentTransactions(): array
+    {
+        $created = 0;
+        $linked = 0;
+        $skipped = 0;
+
+        // Ambil semua payments yang belum punya transaction_id
+        $paymentsWithoutTransaction = \App\Models\Payment::whereNull('transaction_id')
+            ->with(['debt.invoice', 'debt.category', 'debt.user'])
+            ->get();
+
+        foreach ($paymentsWithoutTransaction as $payment) {
+            $debt = $payment->debt;
+
+            // Skip jika debt tidak ada atau tidak punya kategori
+            if (!$debt || !$debt->category_id) {
+                $skipped++;
+                continue;
+            }
+
+            // Cek apakah boleh masuk transaksi
+            $canEnterTransaction = true;
+            $isPassThroughDebt = $debt->type === Debt::TYPE_PASS_THROUGH;
+            $isDownPaymentDebt = $debt->type === Debt::TYPE_DOWN_PAYMENT;
+
+            if ($debt->invoice_id) {
+                $debt->loadMissing('invoice');
+                if ($debt->invoice) {
+                    $canEnterTransaction = $debt->invoice->canEnterTransactionWhenPaid();
+                }
+            }
+
+            if (!$isPassThroughDebt && !$canEnterTransaction) {
+                $skipped++;
+                continue;
+            }
+
+            // Buat deskripsi transaksi
+            $description = 'Pembayaran: ' . $debt->description;
+            if ($debt->invoice_id && $debt->invoice) {
+                $invoiceNumber = '(' . $debt->invoice->number . ')';
+                if (strpos($description, $invoiceNumber) === false) {
+                    $description = $description . ' ' . $invoiceNumber;
+                }
+            }
+
+            // Tentukan kategori transaksi
+            $transactionCategoryId = $debt->category_id;
+            
+            if ($isPassThroughDebt) {
+                // Pass through (iklan) goes to expense (pengeluaran)
+                $expenseCategory = \App\Models\Category::where('type', 'pengeluaran')
+                    ->where('name', 'like', '%iklan%')
+                    ->first();
+
+                if (!$expenseCategory) {
+                    $expenseCategory = \App\Models\Category::where('type', 'pengeluaran')
+                        ->where('name', 'like', '%pengeluaran%')
+                        ->first();
+                }
+
+                if ($expenseCategory) {
+                    $transactionCategoryId = $expenseCategory->id;
+                }
+            } elseif ($isDownPaymentDebt) {
+                // Down payment goes to income (pemasukan)
+                $debtCategory = \App\Models\Category::find($debt->category_id);
+                if ($debtCategory && $debtCategory->type !== 'pemasukan') {
+                    $incomeCategory = \App\Models\Category::where('type', 'pemasukan')
+                        ->where('name', 'like', '%down%payment%')
+                        ->first();
+
+                    if (!$incomeCategory) {
+                        $incomeCategory = \App\Models\Category::where('type', 'pemasukan')
+                            ->where('name', 'like', '%pemasukan%')
+                            ->first();
+                    }
+
+                    if ($incomeCategory) {
+                        $transactionCategoryId = $incomeCategory->id;
+                    }
+                }
+            }
+
+            // Cek apakah transaksi dengan spesifikasi yang sama sudah ada
+            $existingTransaction = \App\Models\Transaction::where('description', $description)
+                ->where('user_id', $debt->user_id)
+                ->where('amount', $payment->amount)
+                ->where('date', $payment->payment_date)
+                ->where('category_id', $transactionCategoryId)
+                ->first();
+
+            if ($existingTransaction) {
+                // Jika sudah ada, link saja
+                $payment->update(['transaction_id' => $existingTransaction->id]);
+                $linked++;
+            } else {
+                // Buat transaksi baru
+                $transaction = \App\Models\Transaction::create([
+                    'category_id' => $transactionCategoryId,
+                    'date' => $payment->payment_date,
+                    'amount' => $payment->amount,
+                    'description' => $description,
+                    'user_id' => $debt->user_id,
+                ]);
+
+                // Link payment dengan transaction
+                $payment->update(['transaction_id' => $transaction->id]);
+                $created++;
+            }
+        }
+
+        return [
+            'created' => $created,
+            'linked' => $linked,
+            'skipped' => $skipped,
+            'total' => $paymentsWithoutTransaction->count(),
+        ];
     }
 
     private function applyInvoiceFilter($query): void
