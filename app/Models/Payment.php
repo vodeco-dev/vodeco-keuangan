@@ -11,6 +11,7 @@ class Payment extends Model
 
     protected $fillable = [
         'debt_id',
+        'transaction_id',
         'amount',
         'payment_date',
         'notes',
@@ -19,5 +20,10 @@ class Payment extends Model
     public function debt()
     {
         return $this->belongsTo(Debt::class);
+    }
+
+    public function transaction()
+    {
+        return $this->belongsTo(Transaction::class);
     }
 }

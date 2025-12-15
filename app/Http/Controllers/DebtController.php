@@ -139,25 +139,28 @@ class DebtController extends Controller
 
         try {
             DB::transaction(function () use ($validated, $request, $debt, $categoryId) {
-                $debt->payments()->create([
-                    'amount' => $validated['payment_amount'],
-                    'payment_date' => $validated['payment_date'] ?? now(),
-                    'notes' => $validated['notes'] ?? null,
-                ]);
-
+                // Set category first if provided
                 if ($categoryId) {
                     $category = $this->resolveCategoryForDebt($debt, (int) $categoryId);
                     $debt->category()->associate($category);
                     $debt->save();
                 }
 
+                // Make sure category is set before creating payment
+                if (!$debt->category_id) {
+                    throw ValidationException::withMessages([
+                        'category_id' => 'Kategori wajib dipilih untuk mencatat pembayaran.',
+                    ]);
+                }
+
                 $debt->load('payments');
 
+                // Update invoice info if exists
                 $invoice = $debt->invoice;
                 if ($invoice) {
                     $invoice->loadMissing('items');
 
-                    $downPaymentTotal = $debt->payments->sum('amount');
+                    $downPaymentTotal = $debt->payments->sum('amount') + $validated['payment_amount'];
                     $invoice->down_payment = min($invoice->total, $downPaymentTotal);
                     $invoice->payment_date = $validated['payment_date'] ?? now();
 
@@ -178,61 +181,91 @@ class DebtController extends Controller
                         ?: ($invoice->client_whatsapp ?: 'Klien Invoice #' . $invoice->number);
                 }
 
-                if ($debt->paid_amount >= $debt->amount) {
-                    if (!$debt->category_id) {
-                        throw ValidationException::withMessages([
-                            'category_id' => 'Kategori wajib dipilih untuk mencatat pelunasan.',
-                        ]);
+                // Determine if this payment should create a transaction
+                $canEnterTransaction = true;
+                $isPassThroughDebt = $debt->type === Debt::TYPE_PASS_THROUGH;
+                $isDownPaymentDebt = $debt->type === Debt::TYPE_DOWN_PAYMENT;
+
+                if ($debt->invoice_id) {
+                    $debt->loadMissing('invoice');
+                    if ($debt->invoice) {
+                        $canEnterTransaction = $debt->invoice->canEnterTransactionWhenPaid();
                     }
+                }
 
-                    $debt->status = Debt::STATUS_LUNAS;
-
-                    $canEnterTransaction = true;
-                    $isPassThroughDebt = $debt->type === Debt::TYPE_PASS_THROUGH;
-
-                    if ($debt->invoice_id) {
-                        $debt->loadMissing('invoice');
-                        if ($debt->invoice) {
-                            $canEnterTransaction = $debt->invoice->canEnterTransactionWhenPaid();
+                // Create transaction for this payment
+                $transaction = null;
+                if ($isPassThroughDebt || $canEnterTransaction) {
+                    $description = 'Pembayaran: ' . $debt->description;
+                    if ($debt->invoice_id && $debt->invoice) {
+                        $invoiceNumber = '(' . $debt->invoice->number . ')';
+                        if (strpos($description, $invoiceNumber) === false) {
+                            $description = $description . ' ' . $invoiceNumber;
                         }
                     }
 
-                    if ($isPassThroughDebt || $canEnterTransaction) {
-                        $description = $debt->description;
-                        if ($debt->invoice_id && $debt->invoice) {
-                            $invoiceNumber = '(' . $debt->invoice->number . ')';
-                            if (strpos($description, $invoiceNumber) === false) {
-                                $description = $description . ' ' . $invoiceNumber;
-                            }
-                        }
+                    // Determine transaction category based on debt type
+                    $transactionCategoryId = $debt->category_id;
+                    
+                    if ($isPassThroughDebt) {
+                        // Pass through (iklan) goes to expense (pengeluaran)
+                        $expenseCategory = Category::where('type', 'pengeluaran')
+                            ->where('name', 'like', '%iklan%')
+                            ->first();
 
-                        $transactionCategoryId = $debt->category_id;
-                        if ($isPassThroughDebt) {
+                        if (!$expenseCategory) {
                             $expenseCategory = Category::where('type', 'pengeluaran')
-                                ->where('name', 'like', '%iklan%')
+                                ->where('name', 'like', '%pengeluaran%')
+                                ->first();
+                        }
+
+                        if ($expenseCategory) {
+                            $transactionCategoryId = $expenseCategory->id;
+                        }
+                    } elseif ($isDownPaymentDebt) {
+                        // Down payment goes to income (pemasukan)
+                        // Use the debt's category if it's already income type, otherwise find income category
+                        $debtCategory = Category::find($debt->category_id);
+                        if ($debtCategory && $debtCategory->type !== 'pemasukan') {
+                            $incomeCategory = Category::where('type', 'pemasukan')
+                                ->where('name', 'like', '%down%payment%')
                                 ->first();
 
-                            if (!$expenseCategory) {
-                                $expenseCategory = Category::where('type', 'pengeluaran')
-                                    ->where('name', 'like', '%pengeluaran%')
+                            if (!$incomeCategory) {
+                                $incomeCategory = Category::where('type', 'pemasukan')
+                                    ->where('name', 'like', '%pemasukan%')
                                     ->first();
                             }
 
-                            if ($expenseCategory) {
-                                $transactionCategoryId = $expenseCategory->id;
+                            if ($incomeCategory) {
+                                $transactionCategoryId = $incomeCategory->id;
                             }
                         }
-
-                        Transaction::create([
-                            'category_id' => $transactionCategoryId,
-                            'date' => $validated['payment_date'] ?? now(),
-                            'amount' => $debt->amount,
-                            'description' => $description,
-                            'user_id' => $request->user()->id,
-                        ]);
-
-                        $this->transactionService->clearSummaryCacheForUser($request->user());
                     }
+
+                    $transaction = Transaction::create([
+                        'category_id' => $transactionCategoryId,
+                        'date' => $validated['payment_date'] ?? now(),
+                        'amount' => $validated['payment_amount'],
+                        'description' => $description,
+                        'user_id' => $request->user()->id,
+                    ]);
+
+                    $this->transactionService->clearSummaryCacheForUser($request->user());
+                }
+
+                // Create payment and link to transaction
+                $payment = $debt->payments()->create([
+                    'amount' => $validated['payment_amount'],
+                    'payment_date' => $validated['payment_date'] ?? now(),
+                    'notes' => $validated['notes'] ?? null,
+                    'transaction_id' => $transaction ? $transaction->id : null,
+                ]);
+
+                // Update debt status
+                $debt->load('payments');
+                if ($debt->paid_amount >= $debt->amount) {
+                    $debt->status = Debt::STATUS_LUNAS;
                 } else {
                     $debt->status = Debt::STATUS_BELUM_LUNAS;
                 }
@@ -656,5 +689,28 @@ class DebtController extends Controller
 
         return redirect()->route('debts.index')
             ->with('success', "Berhasil membuat {$count} catatan hutang yang hilang.");
+    }
+
+    public function backfillPaymentTransactions(Request $request): RedirectResponse|JsonResponse
+    {
+        $this->authorize('viewAny', Debt::class);
+
+        $result = $this->debtService->backfillPaymentTransactions();
+
+        $this->transactionService->clearAllSummaryCache();
+
+        $message = sprintf(
+            'Backfill selesai: %d transaksi dibuat, %d transaksi yang ada di-link, %d pembayaran dilewati dari total %d pembayaran.',
+            $result['created'],
+            $result['linked'],
+            $result['skipped'],
+            $result['total']
+        );
+
+        if ($this->isApiRequest($request)) {
+            return $this->apiSuccess($result, $message);
+        }
+
+        return redirect()->route('debts.index')->with('success', $message);
     }
 }
