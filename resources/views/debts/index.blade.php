@@ -835,6 +835,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Tanggal Pembayaran</label>
                         <input type="date" name="payment_date" value="{{ date('Y-m-d') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        <p class="mt-1 text-xs text-gray-500">Anda dapat memasukkan tanggal di masa lalu jika pembayaran sudah terjadi sebelumnya.</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Catatan (Opsional)</label>

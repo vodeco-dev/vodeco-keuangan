@@ -579,6 +579,7 @@
                                 <input type="date" name="payment_date" id="payment_date"
                                     x-model="paymentDate"
                                     class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                                <p class="mt-1 text-xs text-gray-500">Anda dapat memasukkan tanggal di masa lalu jika pembayaran sudah terjadi sebelumnya.</p>
                             </div>
                         </div>
                         <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse">

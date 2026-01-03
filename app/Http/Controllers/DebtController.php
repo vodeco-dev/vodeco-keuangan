@@ -284,10 +284,23 @@ class DebtController extends Controller
             }
             throw $e;
         } catch (\Exception $e) {
+            \Log::error('Error saat menyimpan pembayaran hutang', [
+                'debt_id' => $debt->id,
+                'payment_amount' => $validated['payment_amount'] ?? null,
+                'payment_date' => $validated['payment_date'] ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             if ($this->isApiRequest($request)) {
                 return $this->apiError('Terjadi kesalahan saat menyimpan pembayaran.', 500);
             }
-            return back()->withErrors('Terjadi kesalahan saat menyimpan pembayaran.');
+            
+            $errorMessage = config('app.debug') 
+                ? 'Terjadi kesalahan: ' . $e->getMessage()
+                : 'Terjadi kesalahan saat menyimpan pembayaran.';
+            
+            return back()->withErrors($errorMessage);
         }
     }
 
