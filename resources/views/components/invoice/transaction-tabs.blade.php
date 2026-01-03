@@ -110,6 +110,9 @@ $forwardedAttributes = $attributes->except([
                     placeholder="{{ $downPaymentPlaceholder }}"
                     data-transaction-scope="down-payment"
                     data-down-payment-required="{{ $downPaymentRequired ? 'true' : 'false' }}"
+                    x-bind:disabled="activeTab !== 'down_payment'"
+                    inputmode="numeric"
+                    x-on:input="$event.target.value = $event.target.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')"
                 >
                 @if ($downPaymentHelp)
                     <p class="mt-1 text-xs text-gray-500">{{ $downPaymentHelp }}</p>

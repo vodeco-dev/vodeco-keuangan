@@ -235,7 +235,7 @@
                                                     </div>
                                                     <div>
                                                         <label for="client_whatsapp" class="block text-sm font-medium text-gray-700">Nomor WhatsApp Klien</label>
-                                                        <input type="text" name="client_whatsapp" id="client_whatsapp" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="{{ old('client_whatsapp') }}" :required="activeTab !== 'settlement'" :disabled="activeTab === 'settlement'">
+                                                        <input type="tel" name="client_whatsapp" id="client_whatsapp" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" value="{{ old('client_whatsapp') }}" :required="activeTab !== 'settlement'" :disabled="activeTab === 'settlement'" inputmode="numeric" x-on:input="$event.target.value = $event.target.value.replace(/[^0-9]/g, '')">
                                                     </div>
                                                     <div>
                                                         <label for="due_date" class="block text-sm font-medium text-gray-700">Tanggal Jatuh Tempo</label>
